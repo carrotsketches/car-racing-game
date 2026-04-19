@@ -336,9 +336,6 @@
 
         if (state.keys.left) state.player.x -= 7;
         if (state.keys.right) state.player.x += 7;
-        if (state.keys.up) state.speed = Math.min(state.maxSpeed, state.speed + 0.05);
-        if (state.keys.down) state.speed = Math.max(3, state.speed - 0.08);
-
         state.player.x = Math.max(4, Math.min(W - CAR_W - 4, state.player.x));
 
         for (const s of state.stripes) {
@@ -375,7 +372,12 @@
         }
         state.coins = state.coins.filter((c) => c.y <= H);
 
-        state.speed = Math.min(state.maxSpeed, state.baseSpeed + state.score * 0.003);
+        // Cruise speed rises gently with score; boost/brake nudge off that target
+        const cruise = Math.min(state.maxSpeed, state.baseSpeed + state.score * 0.003);
+        let target = cruise;
+        if (state.keys.up) target = Math.min(9, cruise * 1.6);
+        else if (state.keys.down) target = Math.max(1.5, cruise * 0.55);
+        state.speed += (target - state.speed) * 0.08;
 
         // Forgiving hitbox: a bit smaller than the drawn car
         const PAD_X = 6;
