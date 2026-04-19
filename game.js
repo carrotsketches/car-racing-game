@@ -10,6 +10,14 @@
     const overlayMsg = document.getElementById("overlay-msg");
     const startBtn = document.getElementById("start-btn");
     const carPicker = document.getElementById("car-picker");
+    const nameInput = document.getElementById("name-input");
+    const playerNameEl = document.getElementById("player-name");
+    const leaderboardListEl = document.getElementById("leaderboard-list");
+
+    const LB_KEY = "highway-dash-leaderboard";
+    const NAME_KEY = "highway-dash-last-name";
+    const LB_MAX = 20;
+    const LB_SHOW = 10;
 
     const W = canvas.width;
     const H = canvas.height;
@@ -27,23 +35,100 @@
     const state = {
         running: false,
         player: { x: W / 2 - CAR_W / 2, y: H - CAR_H - 30, color: PLAYER_COLORS[0] },
+        playerName: "",
         obstacles: [],
         coins: [],
         stripes: [],
         score: 0,
         coinCount: 0,
-        best: Number(localStorage.getItem("highway-dash-best") || 0),
+        leaderboard: loadLeaderboard(),
+        lastRank: null,
         hearts: MAX_HEARTS,
         invincibleUntil: 0,
-        speed: 5,
-        baseSpeed: 5,
-        maxSpeed: 12,
+        speed: 3,
+        baseSpeed: 3,
+        maxSpeed: 7,
         spawnTimer: 0,
         coinTimer: 0,
         keys: {},
     };
 
-    bestEl.textContent = state.best;
+    function loadLeaderboard() {
+        try {
+            const raw = localStorage.getItem(LB_KEY);
+            const arr = raw ? JSON.parse(raw) : [];
+            return Array.isArray(arr) ? arr : [];
+        } catch (_) {
+            return [];
+        }
+    }
+
+    function saveLeaderboard() {
+        try {
+            localStorage.setItem(LB_KEY, JSON.stringify(state.leaderboard));
+        } catch (_) {}
+    }
+
+    function sanitizeName(raw) {
+        const trimmed = (raw || "").trim().slice(0, 12);
+        return trimmed || "Player";
+    }
+
+    function personalBest(name) {
+        let best = 0;
+        for (const entry of state.leaderboard) {
+            if (entry.name === name && entry.score > best) best = entry.score;
+        }
+        return best;
+    }
+
+    function renderLeaderboard() {
+        leaderboardListEl.innerHTML = "";
+        const top = state.leaderboard.slice(0, LB_SHOW);
+        if (top.length === 0) {
+            const li = document.createElement("li");
+            li.className = "empty";
+            li.textContent = "No races yet — be the first!";
+            leaderboardListEl.appendChild(li);
+            return;
+        }
+        top.forEach((entry, i) => {
+            const li = document.createElement("li");
+            const isMe = state.lastRank != null && state.leaderboard[state.lastRank] === entry;
+            if (isMe) li.classList.add("me");
+            const rank = document.createElement("span");
+            rank.className = "rank";
+            rank.textContent = i + 1;
+            const name = document.createElement("span");
+            name.className = "name";
+            name.textContent = entry.name;
+            const score = document.createElement("span");
+            score.className = "score";
+            score.textContent = entry.score;
+            li.append(rank, name, score);
+            leaderboardListEl.appendChild(li);
+        });
+    }
+
+    function updateBestDisplay() {
+        bestEl.textContent = state.playerName ? personalBest(state.playerName) : 0;
+    }
+
+    // Prefill name input from storage
+    const savedName = localStorage.getItem(NAME_KEY) || "";
+    if (savedName) {
+        nameInput.value = savedName;
+        playerNameEl.textContent = savedName;
+        bestEl.textContent = personalBest(savedName);
+    }
+
+    nameInput.addEventListener("input", () => {
+        const name = nameInput.value.trim().slice(0, 12);
+        playerNameEl.textContent = name || "—";
+        bestEl.textContent = name ? personalBest(name) : 0;
+    });
+
+    renderLeaderboard();
 
     const STRIPE_COUNT = 10;
     for (let i = 0; i < STRIPE_COUNT; i++) {
@@ -125,7 +210,21 @@
     }
 
     function spawnObstacle() {
-        const lane = Math.floor(Math.random() * LANE_COUNT);
+        // Keep at least one lane clear near the top so it's always dodgeable
+        const SAFE_BAND = 320;
+        const occupiedLanes = new Set();
+        for (const o of state.obstacles) {
+            if (o.y < SAFE_BAND) {
+                occupiedLanes.add(Math.round((o.x - (LANE_WIDTH / 2 - CAR_W / 2)) / LANE_WIDTH));
+            }
+        }
+        if (occupiedLanes.size >= LANE_COUNT - 1) return; // would wall off the road
+
+        const choices = [];
+        for (let l = 0; l < LANE_COUNT; l++) {
+            if (!occupiedLanes.has(l)) choices.push(l);
+        }
+        const lane = choices[Math.floor(Math.random() * choices.length)];
         const color = OBSTACLE_COLORS[Math.floor(Math.random() * OBSTACLE_COLORS.length)];
         state.obstacles.push({
             x: laneX(lane),
@@ -157,8 +256,8 @@
         state.hearts = MAX_HEARTS;
         state.invincibleUntil = 0;
         state.speed = state.baseSpeed;
-        state.spawnTimer = 0;
-        state.coinTimer = 800;
+        state.spawnTimer = 1500; // grace period before first car
+        state.coinTimer = 900;
         scoreEl.textContent = 0;
         coinsEl.textContent = 0;
         updateHeartsDisplay();
@@ -166,22 +265,44 @@
 
     function startGame() {
         ensureAudio();
+        state.playerName = sanitizeName(nameInput.value);
+        nameInput.value = state.playerName;
+        localStorage.setItem(NAME_KEY, state.playerName);
+        playerNameEl.textContent = state.playerName;
+        state.lastRank = null;
+        updateBestDisplay();
         reset();
         overlay.classList.add("hidden");
         state.running = true;
         playStart();
     }
 
+    function recordScore() {
+        const entry = {
+            name: state.playerName,
+            score: state.score,
+            coins: state.coinCount,
+            at: Date.now(),
+        };
+        state.leaderboard.push(entry);
+        state.leaderboard.sort((a, b) => b.score - a.score);
+        state.leaderboard = state.leaderboard.slice(0, LB_MAX);
+        state.lastRank = state.leaderboard.indexOf(entry);
+        saveLeaderboard();
+        renderLeaderboard();
+        updateBestDisplay();
+        return state.lastRank;
+    }
+
     function gameOver() {
         state.running = false;
         playCrash();
-        if (state.score > state.best) {
-            state.best = state.score;
-            localStorage.setItem("highway-dash-best", state.best);
-            bestEl.textContent = state.best;
-        }
+        const rank = recordScore();
+        let msg = `${state.playerName} scored ${state.score} with ${state.coinCount} coins.`;
+        if (rank === 0) msg += " 🏆 New top score!";
+        else if (rank >= 0 && rank < LB_SHOW) msg += ` You're rank #${rank + 1}!`;
         overlayTitle.textContent = "Crashed!";
-        overlayMsg.textContent = `You scored ${state.score} and grabbed ${state.coinCount} coins. Try again?`;
+        overlayMsg.textContent = msg;
         startBtn.textContent = "Race Again";
         overlay.classList.remove("hidden");
     }
@@ -203,8 +324,8 @@
     function update(dt) {
         if (!state.running) return;
 
-        if (state.keys.left) state.player.x -= 6;
-        if (state.keys.right) state.player.x += 6;
+        if (state.keys.left) state.player.x -= 7;
+        if (state.keys.right) state.player.x += 7;
         if (state.keys.up) state.speed = Math.min(state.maxSpeed, state.speed + 0.05);
         if (state.keys.down) state.speed = Math.max(3, state.speed - 0.08);
 
@@ -218,7 +339,7 @@
         state.spawnTimer -= dt;
         if (state.spawnTimer <= 0) {
             spawnObstacle();
-            state.spawnTimer = Math.max(350, 900 - state.score * 2);
+            state.spawnTimer = Math.max(700, 1400 - state.score * 0.8);
         }
 
         state.coinTimer -= dt;
@@ -244,13 +365,22 @@
         }
         state.coins = state.coins.filter((c) => c.y <= H);
 
-        state.speed = Math.min(state.maxSpeed, state.baseSpeed + state.score * 0.01);
+        state.speed = Math.min(state.maxSpeed, state.baseSpeed + state.score * 0.003);
 
-        const player = { x: state.player.x, y: state.player.y, w: CAR_W, h: CAR_H };
+        // Forgiving hitbox: a bit smaller than the drawn car
+        const PAD_X = 6;
+        const PAD_Y = 8;
+        const playerHit = {
+            x: state.player.x + PAD_X,
+            y: state.player.y + PAD_Y,
+            w: CAR_W - PAD_X * 2,
+            h: CAR_H - PAD_Y * 2,
+        };
 
-        // Coin pickups
+        // Coin pickups use the full player rect (easier to grab)
+        const playerFull = { x: state.player.x, y: state.player.y, w: CAR_W, h: CAR_H };
         state.coins = state.coins.filter((c) => {
-            if (rectsOverlap(player, { x: c.x, y: c.y, w: COIN_SIZE, h: COIN_SIZE })) {
+            if (rectsOverlap(playerFull, { x: c.x, y: c.y, w: COIN_SIZE, h: COIN_SIZE })) {
                 state.coinCount += 1;
                 state.score += 5;
                 playCoin();
@@ -259,9 +389,10 @@
             return true;
         });
 
-        // Obstacle collisions
+        // Obstacle collisions use the smaller hitbox
         for (const o of state.obstacles) {
-            if (rectsOverlap(player, { x: o.x, y: o.y, w: CAR_W, h: CAR_H })) {
+            const obsHit = { x: o.x + PAD_X, y: o.y + PAD_Y, w: CAR_W - PAD_X * 2, h: CAR_H - PAD_Y * 2 };
+            if (rectsOverlap(playerHit, obsHit)) {
                 // push obstacle past the player so one hit doesn't register repeatedly
                 o.y = H + CAR_H;
                 hitObstacle();
@@ -371,6 +502,7 @@
     requestAnimationFrame(loop);
 
     window.addEventListener("keydown", (e) => {
+        if (e.target === nameInput) return;
         if (["ArrowLeft", "a", "A"].includes(e.key)) state.keys.left = true;
         if (["ArrowRight", "d", "D"].includes(e.key)) state.keys.right = true;
         if (["ArrowUp", "w", "W"].includes(e.key)) state.keys.up = true;
