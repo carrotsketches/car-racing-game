@@ -13,6 +13,7 @@
     const nameInput = document.getElementById("name-input");
     const playerNameEl = document.getElementById("player-name");
     const leaderboardListEl = document.getElementById("leaderboard-list");
+    const clearLbBtn = document.getElementById("clear-lb");
 
     const LB_KEY = "highway-dash-leaderboard";
     const NAME_KEY = "highway-dash-last-name";
@@ -126,6 +127,15 @@
         const name = nameInput.value.trim().slice(0, 12);
         playerNameEl.textContent = name || "—";
         bestEl.textContent = name ? personalBest(name) : 0;
+    });
+
+    clearLbBtn.addEventListener("click", () => {
+        if (!confirm("Clear the leaderboard? This can't be undone.")) return;
+        state.leaderboard = [];
+        state.lastRank = null;
+        saveLeaderboard();
+        renderLeaderboard();
+        updateBestDisplay();
     });
 
     renderLeaderboard();
