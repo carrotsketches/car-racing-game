@@ -45,9 +45,9 @@
         lastRank: null,
         hearts: MAX_HEARTS,
         invincibleUntil: 0,
-        speed: 5,
-        baseSpeed: 5,
-        maxSpeed: 12,
+        speed: 3,
+        baseSpeed: 3,
+        maxSpeed: 7,
         spawnTimer: 0,
         coinTimer: 0,
         keys: {},
@@ -210,7 +210,21 @@
     }
 
     function spawnObstacle() {
-        const lane = Math.floor(Math.random() * LANE_COUNT);
+        // Keep at least one lane clear near the top so it's always dodgeable
+        const SAFE_BAND = 320;
+        const occupiedLanes = new Set();
+        for (const o of state.obstacles) {
+            if (o.y < SAFE_BAND) {
+                occupiedLanes.add(Math.round((o.x - (LANE_WIDTH / 2 - CAR_W / 2)) / LANE_WIDTH));
+            }
+        }
+        if (occupiedLanes.size >= LANE_COUNT - 1) return; // would wall off the road
+
+        const choices = [];
+        for (let l = 0; l < LANE_COUNT; l++) {
+            if (!occupiedLanes.has(l)) choices.push(l);
+        }
+        const lane = choices[Math.floor(Math.random() * choices.length)];
         const color = OBSTACLE_COLORS[Math.floor(Math.random() * OBSTACLE_COLORS.length)];
         state.obstacles.push({
             x: laneX(lane),
@@ -242,8 +256,8 @@
         state.hearts = MAX_HEARTS;
         state.invincibleUntil = 0;
         state.speed = state.baseSpeed;
-        state.spawnTimer = 0;
-        state.coinTimer = 800;
+        state.spawnTimer = 1500; // grace period before first car
+        state.coinTimer = 900;
         scoreEl.textContent = 0;
         coinsEl.textContent = 0;
         updateHeartsDisplay();
@@ -310,8 +324,8 @@
     function update(dt) {
         if (!state.running) return;
 
-        if (state.keys.left) state.player.x -= 6;
-        if (state.keys.right) state.player.x += 6;
+        if (state.keys.left) state.player.x -= 7;
+        if (state.keys.right) state.player.x += 7;
         if (state.keys.up) state.speed = Math.min(state.maxSpeed, state.speed + 0.05);
         if (state.keys.down) state.speed = Math.max(3, state.speed - 0.08);
 
@@ -325,7 +339,7 @@
         state.spawnTimer -= dt;
         if (state.spawnTimer <= 0) {
             spawnObstacle();
-            state.spawnTimer = Math.max(350, 900 - state.score * 2);
+            state.spawnTimer = Math.max(700, 1400 - state.score * 0.8);
         }
 
         state.coinTimer -= dt;
@@ -351,13 +365,22 @@
         }
         state.coins = state.coins.filter((c) => c.y <= H);
 
-        state.speed = Math.min(state.maxSpeed, state.baseSpeed + state.score * 0.01);
+        state.speed = Math.min(state.maxSpeed, state.baseSpeed + state.score * 0.003);
 
-        const player = { x: state.player.x, y: state.player.y, w: CAR_W, h: CAR_H };
+        // Forgiving hitbox: a bit smaller than the drawn car
+        const PAD_X = 6;
+        const PAD_Y = 8;
+        const playerHit = {
+            x: state.player.x + PAD_X,
+            y: state.player.y + PAD_Y,
+            w: CAR_W - PAD_X * 2,
+            h: CAR_H - PAD_Y * 2,
+        };
 
-        // Coin pickups
+        // Coin pickups use the full player rect (easier to grab)
+        const playerFull = { x: state.player.x, y: state.player.y, w: CAR_W, h: CAR_H };
         state.coins = state.coins.filter((c) => {
-            if (rectsOverlap(player, { x: c.x, y: c.y, w: COIN_SIZE, h: COIN_SIZE })) {
+            if (rectsOverlap(playerFull, { x: c.x, y: c.y, w: COIN_SIZE, h: COIN_SIZE })) {
                 state.coinCount += 1;
                 state.score += 5;
                 playCoin();
@@ -366,9 +389,10 @@
             return true;
         });
 
-        // Obstacle collisions
+        // Obstacle collisions use the smaller hitbox
         for (const o of state.obstacles) {
-            if (rectsOverlap(player, { x: o.x, y: o.y, w: CAR_W, h: CAR_H })) {
+            const obsHit = { x: o.x + PAD_X, y: o.y + PAD_Y, w: CAR_W - PAD_X * 2, h: CAR_H - PAD_Y * 2 };
+            if (rectsOverlap(playerHit, obsHit)) {
                 // push obstacle past the player so one hit doesn't register repeatedly
                 o.y = H + CAR_H;
                 hitObstacle();
