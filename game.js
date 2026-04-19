@@ -387,5 +387,35 @@
 
     startBtn.addEventListener("click", startGame);
 
+    // ----- Touch / on-screen buttons -----
+    const touchButtons = document.querySelectorAll(".touch-btn");
+    touchButtons.forEach((btn) => {
+        const key = btn.dataset.key;
+        const press = (e) => {
+            e.preventDefault();
+            state.keys[key] = true;
+            btn.classList.add("pressed");
+            if (btn.setPointerCapture && e.pointerId != null) {
+                try { btn.setPointerCapture(e.pointerId); } catch (_) {}
+            }
+            ensureAudio();
+        };
+        const release = (e) => {
+            e.preventDefault();
+            state.keys[key] = false;
+            btn.classList.remove("pressed");
+        };
+        btn.addEventListener("pointerdown", press);
+        btn.addEventListener("pointerup", release);
+        btn.addEventListener("pointercancel", release);
+        btn.addEventListener("pointerleave", release);
+        btn.addEventListener("contextmenu", (e) => e.preventDefault());
+    });
+
+    // Block double-tap zoom / scroll on the play area
+    ["touchstart", "touchmove", "touchend"].forEach((evt) => {
+        canvas.addEventListener(evt, (e) => e.preventDefault(), { passive: false });
+    });
+
     updateHeartsDisplay();
 })();
