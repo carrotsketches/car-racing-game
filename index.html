@@ -38,7 +38,15 @@
                     <input id="name-input" type="text" maxlength="12" autocomplete="off"
                            spellcheck="false" placeholder="Player" />
                 </label>
-                <div class="car-picker" id="car-picker" role="radiogroup" aria-label="Pick your car"></div>
+                <div class="car-designer">
+                    <canvas id="car-preview" width="60" height="96" aria-label="Your car preview"></canvas>
+                    <div class="part-picker" role="radiogroup" aria-label="Pick a car part">
+                        <button type="button" class="part-btn selected" data-part="body">Body</button>
+                        <button type="button" class="part-btn" data-part="roof">Windows</button>
+                        <button type="button" class="part-btn" data-part="wheels">Wheels</button>
+                    </div>
+                    <div class="color-palette" id="color-palette" aria-label="Pick a color"></div>
+                </div>
                 <button id="start-btn">Start</button>
                 <div class="leaderboard" id="leaderboard">
                     <h3>🏆 Leaderboard</h3>

@@ -9,7 +9,10 @@
     const overlayTitle = document.getElementById("overlay-title");
     const overlayMsg = document.getElementById("overlay-msg");
     const startBtn = document.getElementById("start-btn");
-    const carPicker = document.getElementById("car-picker");
+    const carPreview = document.getElementById("car-preview");
+    const previewCtx = carPreview.getContext("2d");
+    const partPicker = document.querySelector(".part-picker");
+    const colorPalette = document.getElementById("color-palette");
     const nameInput = document.getElementById("name-input");
     const playerNameEl = document.getElementById("player-name");
     const leaderboardListEl = document.getElementById("leaderboard-list");
@@ -20,11 +23,21 @@
 
     const LB_KEY = "highway-dash-leaderboard";
     const NAME_KEY = "highway-dash-last-name";
+    const CARS_KEY = "highway-dash-cars";
     const LB_MAX = 20;
     const LB_SHOW = 10;
     const COINS_PER_LEVEL = 5;
     const BASE_SPEED_LV1 = 3;
     const MAX_SPEED_LV1 = 7;
+
+    const DEFAULT_CAR = { body: "#f5c451", roof: "#1b2735", wheels: "#111111" };
+    const PALETTE = [
+        "#e74c3c", "#ff7a59", "#f5c451", "#2ecc71", "#1abc9c", "#3498db",
+        "#9b59b6", "#e84393", "#f1c40f", "#ecf0f1", "#34495e", "#111111",
+    ];
+    const PART_LABELS = { body: "body", roof: "windows", wheels: "wheels" };
+    const OBSTACLE_WINDOW = "rgba(20, 20, 30, 0.75)";
+    const OBSTACLE_WHEELS = "#111";
 
     const W = canvas.width;
     const H = canvas.height;
@@ -36,13 +49,13 @@
     const MAX_HEARTS = 3;
     const INVINCIBLE_MS = 1500;
 
-    const PLAYER_COLORS = ["#f5c451", "#e74c3c", "#3498db", "#2ecc71", "#9b59b6"];
     const OBSTACLE_COLORS = ["#e67e22", "#1abc9c", "#ecf0f1", "#34495e", "#e84393"];
 
     const state = {
         running: false,
-        player: { x: W / 2 - CAR_W / 2, y: H - CAR_H - 30, color: PLAYER_COLORS[0] },
+        player: { x: W / 2 - CAR_W / 2, y: H - CAR_H - 30, colors: { ...DEFAULT_CAR } },
         playerName: "",
+        selectedPart: "body",
         obstacles: [],
         coins: [],
         stripes: [],
@@ -131,11 +144,15 @@
         playerNameEl.textContent = savedName;
         bestEl.textContent = personalBest(savedName);
     }
+    state.player.colors = getCarFor(savedName);
 
     nameInput.addEventListener("input", () => {
         const name = nameInput.value.trim().slice(0, 12);
         playerNameEl.textContent = name || "—";
         bestEl.textContent = name ? personalBest(name) : 0;
+        state.player.colors = getCarFor(name);
+        renderCarPreview();
+        highlightSelectedColor();
     });
 
     clearLbBtn.addEventListener("click", () => {
@@ -154,27 +171,97 @@
         state.stripes.push({ y: (H / STRIPE_COUNT) * i });
     }
 
-    // ----- Car picker -----
-    function buildCarPicker() {
-        PLAYER_COLORS.forEach((color, i) => {
-            const btn = document.createElement("button");
-            btn.className = "car-swatch" + (i === 0 ? " selected" : "");
-            btn.style.background = color;
-            btn.type = "button";
-            btn.setAttribute("role", "radio");
-            btn.setAttribute("aria-checked", i === 0 ? "true" : "false");
-            btn.addEventListener("click", () => {
-                state.player.color = color;
-                carPicker.querySelectorAll(".car-swatch").forEach((el) => {
-                    el.classList.toggle("selected", el === btn);
-                    el.setAttribute("aria-checked", el === btn ? "true" : "false");
-                });
-                playBlip();
-            });
-            carPicker.appendChild(btn);
+    // ----- Car designer (per-player colors) -----
+    function loadCarConfigs() {
+        try {
+            const raw = localStorage.getItem(CARS_KEY);
+            const obj = raw ? JSON.parse(raw) : {};
+            return obj && typeof obj === "object" ? obj : {};
+        } catch (_) {
+            return {};
+        }
+    }
+
+    function saveCarConfigs(configs) {
+        try {
+            localStorage.setItem(CARS_KEY, JSON.stringify(configs));
+        } catch (_) {}
+    }
+
+    function configKey(name) {
+        return (name || "").trim().toLowerCase();
+    }
+
+    function getCarFor(name) {
+        const configs = loadCarConfigs();
+        const key = configKey(name);
+        if (key && configs[key]) return { ...DEFAULT_CAR, ...configs[key] };
+        return { ...DEFAULT_CAR };
+    }
+
+    function saveCarFor(name, colors) {
+        const key = configKey(name);
+        if (!key) return;
+        const configs = loadCarConfigs();
+        configs[key] = { ...colors };
+        saveCarConfigs(configs);
+    }
+
+    function renderCarPreview() {
+        previewCtx.clearRect(0, 0, carPreview.width, carPreview.height);
+        drawCar(previewCtx, 8, 12, state.player.colors);
+    }
+
+    function highlightSelectedColor() {
+        const currentColor = state.player.colors[state.selectedPart];
+        colorPalette.querySelectorAll(".color-dot").forEach((dot) => {
+            dot.classList.toggle("selected", dot.dataset.color === currentColor);
         });
     }
-    buildCarPicker();
+
+    function buildColorPalette() {
+        PALETTE.forEach((color) => {
+            const dot = document.createElement("button");
+            dot.type = "button";
+            dot.className = "color-dot";
+            dot.dataset.color = color;
+            dot.style.background = color;
+            dot.setAttribute("aria-label", `Set ${PART_LABELS[state.selectedPart]} to ${color}`);
+            dot.addEventListener("click", () => {
+                state.player.colors = { ...state.player.colors, [state.selectedPart]: color };
+                renderCarPreview();
+                highlightSelectedColor();
+                saveCarFor(state.playerName || nameInput.value, state.player.colors);
+                playBlip();
+            });
+            colorPalette.appendChild(dot);
+        });
+    }
+
+    function bindPartPicker() {
+        partPicker.querySelectorAll(".part-btn").forEach((btn) => {
+            btn.addEventListener("click", () => {
+                state.selectedPart = btn.dataset.part;
+                partPicker.querySelectorAll(".part-btn").forEach((el) => {
+                    el.classList.toggle("selected", el === btn);
+                });
+                highlightSelectedColor();
+                playBlip();
+            });
+        });
+    }
+
+    function loadCarFromName() {
+        const name = nameInput.value || state.playerName;
+        state.player.colors = getCarFor(name);
+        renderCarPreview();
+        highlightSelectedColor();
+    }
+
+    buildColorPalette();
+    bindPartPicker();
+    renderCarPreview();
+    highlightSelectedColor();
 
     // ----- Sounds (Web Audio synth, no files) -----
     let audio = null;
@@ -347,6 +434,7 @@
         state.playerName = sanitizeName(nameInput.value);
         nameInput.value = state.playerName;
         localStorage.setItem(NAME_KEY, state.playerName);
+        saveCarFor(state.playerName, state.player.colors);
         playerNameEl.textContent = state.playerName;
         state.lastRank = null;
         updateBestDisplay();
@@ -530,22 +618,22 @@
         }
     }
 
-    function drawCar(x, y, color) {
-        ctx.fillStyle = color;
-        roundRect(ctx, x, y, CAR_W, CAR_H, 8);
-        ctx.fill();
+    function drawCar(targetCtx, x, y, colors) {
+        targetCtx.fillStyle = colors.body;
+        roundRect(targetCtx, x, y, CAR_W, CAR_H, 8);
+        targetCtx.fill();
 
-        ctx.fillStyle = "rgba(20, 20, 30, 0.75)";
-        roundRect(ctx, x + 6, y + 10, CAR_W - 12, 18, 4);
-        ctx.fill();
-        roundRect(ctx, x + 6, y + CAR_H - 28, CAR_W - 12, 18, 4);
-        ctx.fill();
+        targetCtx.fillStyle = colors.roof;
+        roundRect(targetCtx, x + 6, y + 10, CAR_W - 12, 18, 4);
+        targetCtx.fill();
+        roundRect(targetCtx, x + 6, y + CAR_H - 28, CAR_W - 12, 18, 4);
+        targetCtx.fill();
 
-        ctx.fillStyle = "#111";
-        ctx.fillRect(x - 3, y + 8, 4, 14);
-        ctx.fillRect(x + CAR_W - 1, y + 8, 4, 14);
-        ctx.fillRect(x - 3, y + CAR_H - 22, 4, 14);
-        ctx.fillRect(x + CAR_W - 1, y + CAR_H - 22, 4, 14);
+        targetCtx.fillStyle = colors.wheels;
+        targetCtx.fillRect(x - 3, y + 8, 4, 14);
+        targetCtx.fillRect(x + CAR_W - 1, y + 8, 4, 14);
+        targetCtx.fillRect(x - 3, y + CAR_H - 22, 4, 14);
+        targetCtx.fillRect(x + CAR_W - 1, y + CAR_H - 22, 4, 14);
     }
 
     function drawCoin(c) {
@@ -586,13 +674,15 @@
 
     function render() {
         drawRoad();
-        for (const o of state.obstacles) drawCar(o.x, o.y, o.color);
+        for (const o of state.obstacles) {
+            drawCar(ctx, o.x, o.y, { body: o.color, roof: OBSTACLE_WINDOW, wheels: OBSTACLE_WHEELS });
+        }
         for (const c of state.coins) drawCoin(c);
 
         const now = performance.now();
         const invincible = now < state.invincibleUntil;
         const blink = invincible && Math.floor(now / 100) % 2 === 0;
-        if (!blink) drawCar(state.player.x, state.player.y, state.player.color);
+        if (!blink) drawCar(ctx, state.player.x, state.player.y, state.player.colors);
 
         for (const p of state.confetti) {
             ctx.save();
