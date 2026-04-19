@@ -14,6 +14,7 @@
             <h1>Highway Dash</h1>
             <div class="hud">
                 <div class="stat" id="player-tag">👤 <span id="player-name">—</span></div>
+                <div class="stat">Lv <span id="level">1</span></div>
                 <div class="stat">Score: <span id="score">0</span></div>
                 <div class="stat"><span id="coins">0</span> <span class="icon">🪙</span></div>
                 <div class="stat hearts" id="hearts" aria-label="lives">❤️❤️❤️</div>
@@ -23,6 +24,10 @@
 
         <div class="stage">
             <canvas id="game" width="400" height="600"></canvas>
+
+            <div id="level-banner" class="level-banner hidden" aria-hidden="true">
+                <span id="level-banner-text">Level 2!</span>
+            </div>
 
             <div id="overlay" class="overlay">
             <div class="panel">

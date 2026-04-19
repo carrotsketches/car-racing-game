@@ -14,11 +14,17 @@
     const playerNameEl = document.getElementById("player-name");
     const leaderboardListEl = document.getElementById("leaderboard-list");
     const clearLbBtn = document.getElementById("clear-lb");
+    const levelEl = document.getElementById("level");
+    const levelBanner = document.getElementById("level-banner");
+    const levelBannerText = document.getElementById("level-banner-text");
 
     const LB_KEY = "highway-dash-leaderboard";
     const NAME_KEY = "highway-dash-last-name";
     const LB_MAX = 20;
     const LB_SHOW = 10;
+    const COINS_PER_LEVEL = 5;
+    const BASE_SPEED_LV1 = 3;
+    const MAX_SPEED_LV1 = 7;
 
     const W = canvas.width;
     const H = canvas.height;
@@ -42,15 +48,18 @@
         stripes: [],
         score: 0,
         coinCount: 0,
+        level: 1,
         leaderboard: loadLeaderboard(),
         lastRank: null,
         hearts: MAX_HEARTS,
         invincibleUntil: 0,
-        speed: 3,
-        baseSpeed: 3,
-        maxSpeed: 7,
+        speed: BASE_SPEED_LV1,
+        baseSpeed: BASE_SPEED_LV1,
+        maxSpeed: MAX_SPEED_LV1,
         spawnTimer: 0,
         coinTimer: 0,
+        confetti: [],
+        bannerTimer: 0,
         keys: {},
     };
 
@@ -209,6 +218,60 @@
     function playStart() {
         tone({ freq: 440, endFreq: 880, type: "triangle", duration: 0.2, volume: 0.2 });
     }
+    function playLevelUp() {
+        tone({ freq: 523, type: "triangle", duration: 0.12, volume: 0.2 });
+        setTimeout(() => tone({ freq: 659, type: "triangle", duration: 0.12, volume: 0.2 }), 110);
+        setTimeout(() => tone({ freq: 784, type: "triangle", duration: 0.18, volume: 0.22 }), 220);
+        setTimeout(() => tone({ freq: 1046, type: "triangle", duration: 0.22, volume: 0.22 }), 360);
+    }
+
+    // ----- Levels -----
+    const CONFETTI_COLORS = ["#f5c451", "#e74c3c", "#3498db", "#2ecc71", "#9b59b6", "#ff7a59", "#ecf0f1"];
+
+    function applyLevelDifficulty() {
+        state.baseSpeed = Math.min(5, BASE_SPEED_LV1 + (state.level - 1) * 0.3);
+        state.maxSpeed = Math.min(10, MAX_SPEED_LV1 + (state.level - 1) * 0.5);
+    }
+
+    function spawnConfetti() {
+        for (let i = 0; i < 70; i++) {
+            state.confetti.push({
+                x: W / 2 + (Math.random() - 0.5) * 80,
+                y: H * 0.35,
+                vx: (Math.random() - 0.5) * 9,
+                vy: -3 - Math.random() * 7,
+                size: 4 + Math.random() * 5,
+                color: CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)],
+                rot: Math.random() * Math.PI * 2,
+                vrot: (Math.random() - 0.5) * 0.4,
+                life: 1600,
+            });
+        }
+    }
+
+    function showLevelBanner(text) {
+        levelBannerText.textContent = text;
+        levelBanner.classList.remove("hidden");
+        levelBanner.classList.remove("show");
+        // restart CSS animation
+        void levelBanner.offsetWidth;
+        levelBanner.classList.add("show");
+        state.bannerTimer = 1500;
+    }
+
+    function hideLevelBanner() {
+        levelBanner.classList.add("hidden");
+        levelBanner.classList.remove("show");
+    }
+
+    function levelUp() {
+        state.level += 1;
+        levelEl.textContent = state.level;
+        applyLevelDifficulty();
+        showLevelBanner(`Level ${state.level}!`);
+        spawnConfetti();
+        playLevelUp();
+    }
 
     // ----- Helpers -----
     function laneX(lane) {
@@ -261,15 +324,21 @@
         state.player.x = W / 2 - CAR_W / 2;
         state.obstacles = [];
         state.coins = [];
+        state.confetti = [];
         state.score = 0;
         state.coinCount = 0;
+        state.level = 1;
         state.hearts = MAX_HEARTS;
         state.invincibleUntil = 0;
+        applyLevelDifficulty();
         state.speed = state.baseSpeed;
         state.spawnTimer = 1500; // grace period before first car
         state.coinTimer = 900;
+        state.bannerTimer = 0;
+        hideLevelBanner();
         scoreEl.textContent = 0;
         coinsEl.textContent = 0;
+        levelEl.textContent = 1;
         updateHeartsDisplay();
     }
 
@@ -308,7 +377,7 @@
         state.running = false;
         playCrash();
         const rank = recordScore();
-        let msg = `${state.playerName} scored ${state.score} with ${state.coinCount} coins.`;
+        let msg = `${state.playerName} reached Level ${state.level}, scored ${state.score} with ${state.coinCount} coins.`;
         if (rank === 0) msg += " 🏆 New top score!";
         else if (rank >= 0 && rank < LB_SHOW) msg += ` You're rank #${rank + 1}!`;
         overlayTitle.textContent = "Crashed!";
@@ -336,9 +405,6 @@
 
         if (state.keys.left) state.player.x -= 7;
         if (state.keys.right) state.player.x += 7;
-        if (state.keys.up) state.speed = Math.min(state.maxSpeed, state.speed + 0.05);
-        if (state.keys.down) state.speed = Math.max(3, state.speed - 0.08);
-
         state.player.x = Math.max(4, Math.min(W - CAR_W - 4, state.player.x));
 
         for (const s of state.stripes) {
@@ -349,7 +415,8 @@
         state.spawnTimer -= dt;
         if (state.spawnTimer <= 0) {
             spawnObstacle();
-            state.spawnTimer = Math.max(700, 1400 - state.score * 0.8);
+            const floor = Math.max(450, 700 - (state.level - 1) * 50);
+            state.spawnTimer = Math.max(floor, 1400 - state.score * 0.8);
         }
 
         state.coinTimer -= dt;
@@ -375,7 +442,12 @@
         }
         state.coins = state.coins.filter((c) => c.y <= H);
 
-        state.speed = Math.min(state.maxSpeed, state.baseSpeed + state.score * 0.003);
+        // Cruise speed rises gently with score; boost/brake nudge off that target
+        const cruise = Math.min(state.maxSpeed, state.baseSpeed + state.score * 0.003);
+        let target = cruise;
+        if (state.keys.up) target = Math.min(9, cruise * 1.6);
+        else if (state.keys.down) target = Math.max(1.5, cruise * 0.55);
+        state.speed += (target - state.speed) * 0.08;
 
         // Forgiving hitbox: a bit smaller than the drawn car
         const PAD_X = 6;
@@ -389,15 +461,37 @@
 
         // Coin pickups use the full player rect (easier to grab)
         const playerFull = { x: state.player.x, y: state.player.y, w: CAR_W, h: CAR_H };
+        let pickedUp = 0;
         state.coins = state.coins.filter((c) => {
             if (rectsOverlap(playerFull, { x: c.x, y: c.y, w: COIN_SIZE, h: COIN_SIZE })) {
                 state.coinCount += 1;
                 state.score += 5;
+                pickedUp += 1;
                 playCoin();
                 return false;
             }
             return true;
         });
+        if (pickedUp > 0) {
+            const targetLevel = 1 + Math.floor(state.coinCount / COINS_PER_LEVEL);
+            if (targetLevel > state.level) levelUp();
+        }
+
+        // Confetti particles
+        for (const p of state.confetti) {
+            p.x += p.vx;
+            p.y += p.vy;
+            p.vy += 0.25;
+            p.rot += p.vrot;
+            p.life -= dt;
+        }
+        state.confetti = state.confetti.filter((p) => p.life > 0 && p.y < H + 30);
+
+        // Banner auto-hide
+        if (state.bannerTimer > 0) {
+            state.bannerTimer -= dt;
+            if (state.bannerTimer <= 0) hideLevelBanner();
+        }
 
         // Obstacle collisions use the smaller hitbox
         for (const o of state.obstacles) {
@@ -499,6 +593,15 @@
         const invincible = now < state.invincibleUntil;
         const blink = invincible && Math.floor(now / 100) % 2 === 0;
         if (!blink) drawCar(state.player.x, state.player.y, state.player.color);
+
+        for (const p of state.confetti) {
+            ctx.save();
+            ctx.translate(p.x, p.y);
+            ctx.rotate(p.rot);
+            ctx.fillStyle = p.color;
+            ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 0.6);
+            ctx.restore();
+        }
     }
 
     let lastTime = performance.now();
