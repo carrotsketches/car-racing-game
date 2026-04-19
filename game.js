@@ -10,6 +10,14 @@
     const overlayMsg = document.getElementById("overlay-msg");
     const startBtn = document.getElementById("start-btn");
     const carPicker = document.getElementById("car-picker");
+    const nameInput = document.getElementById("name-input");
+    const playerNameEl = document.getElementById("player-name");
+    const leaderboardListEl = document.getElementById("leaderboard-list");
+
+    const LB_KEY = "highway-dash-leaderboard";
+    const NAME_KEY = "highway-dash-last-name";
+    const LB_MAX = 20;
+    const LB_SHOW = 10;
 
     const W = canvas.width;
     const H = canvas.height;
@@ -27,12 +35,14 @@
     const state = {
         running: false,
         player: { x: W / 2 - CAR_W / 2, y: H - CAR_H - 30, color: PLAYER_COLORS[0] },
+        playerName: "",
         obstacles: [],
         coins: [],
         stripes: [],
         score: 0,
         coinCount: 0,
-        best: Number(localStorage.getItem("highway-dash-best") || 0),
+        leaderboard: loadLeaderboard(),
+        lastRank: null,
         hearts: MAX_HEARTS,
         invincibleUntil: 0,
         speed: 5,
@@ -43,7 +53,82 @@
         keys: {},
     };
 
-    bestEl.textContent = state.best;
+    function loadLeaderboard() {
+        try {
+            const raw = localStorage.getItem(LB_KEY);
+            const arr = raw ? JSON.parse(raw) : [];
+            return Array.isArray(arr) ? arr : [];
+        } catch (_) {
+            return [];
+        }
+    }
+
+    function saveLeaderboard() {
+        try {
+            localStorage.setItem(LB_KEY, JSON.stringify(state.leaderboard));
+        } catch (_) {}
+    }
+
+    function sanitizeName(raw) {
+        const trimmed = (raw || "").trim().slice(0, 12);
+        return trimmed || "Player";
+    }
+
+    function personalBest(name) {
+        let best = 0;
+        for (const entry of state.leaderboard) {
+            if (entry.name === name && entry.score > best) best = entry.score;
+        }
+        return best;
+    }
+
+    function renderLeaderboard() {
+        leaderboardListEl.innerHTML = "";
+        const top = state.leaderboard.slice(0, LB_SHOW);
+        if (top.length === 0) {
+            const li = document.createElement("li");
+            li.className = "empty";
+            li.textContent = "No races yet — be the first!";
+            leaderboardListEl.appendChild(li);
+            return;
+        }
+        top.forEach((entry, i) => {
+            const li = document.createElement("li");
+            const isMe = state.lastRank != null && state.leaderboard[state.lastRank] === entry;
+            if (isMe) li.classList.add("me");
+            const rank = document.createElement("span");
+            rank.className = "rank";
+            rank.textContent = i + 1;
+            const name = document.createElement("span");
+            name.className = "name";
+            name.textContent = entry.name;
+            const score = document.createElement("span");
+            score.className = "score";
+            score.textContent = entry.score;
+            li.append(rank, name, score);
+            leaderboardListEl.appendChild(li);
+        });
+    }
+
+    function updateBestDisplay() {
+        bestEl.textContent = state.playerName ? personalBest(state.playerName) : 0;
+    }
+
+    // Prefill name input from storage
+    const savedName = localStorage.getItem(NAME_KEY) || "";
+    if (savedName) {
+        nameInput.value = savedName;
+        playerNameEl.textContent = savedName;
+        bestEl.textContent = personalBest(savedName);
+    }
+
+    nameInput.addEventListener("input", () => {
+        const name = nameInput.value.trim().slice(0, 12);
+        playerNameEl.textContent = name || "—";
+        bestEl.textContent = name ? personalBest(name) : 0;
+    });
+
+    renderLeaderboard();
 
     const STRIPE_COUNT = 10;
     for (let i = 0; i < STRIPE_COUNT; i++) {
@@ -166,22 +251,44 @@
 
     function startGame() {
         ensureAudio();
+        state.playerName = sanitizeName(nameInput.value);
+        nameInput.value = state.playerName;
+        localStorage.setItem(NAME_KEY, state.playerName);
+        playerNameEl.textContent = state.playerName;
+        state.lastRank = null;
+        updateBestDisplay();
         reset();
         overlay.classList.add("hidden");
         state.running = true;
         playStart();
     }
 
+    function recordScore() {
+        const entry = {
+            name: state.playerName,
+            score: state.score,
+            coins: state.coinCount,
+            at: Date.now(),
+        };
+        state.leaderboard.push(entry);
+        state.leaderboard.sort((a, b) => b.score - a.score);
+        state.leaderboard = state.leaderboard.slice(0, LB_MAX);
+        state.lastRank = state.leaderboard.indexOf(entry);
+        saveLeaderboard();
+        renderLeaderboard();
+        updateBestDisplay();
+        return state.lastRank;
+    }
+
     function gameOver() {
         state.running = false;
         playCrash();
-        if (state.score > state.best) {
-            state.best = state.score;
-            localStorage.setItem("highway-dash-best", state.best);
-            bestEl.textContent = state.best;
-        }
+        const rank = recordScore();
+        let msg = `${state.playerName} scored ${state.score} with ${state.coinCount} coins.`;
+        if (rank === 0) msg += " 🏆 New top score!";
+        else if (rank >= 0 && rank < LB_SHOW) msg += ` You're rank #${rank + 1}!`;
         overlayTitle.textContent = "Crashed!";
-        overlayMsg.textContent = `You scored ${state.score} and grabbed ${state.coinCount} coins. Try again?`;
+        overlayMsg.textContent = msg;
         startBtn.textContent = "Race Again";
         overlay.classList.remove("hidden");
     }
@@ -371,6 +478,7 @@
     requestAnimationFrame(loop);
 
     window.addEventListener("keydown", (e) => {
+        if (e.target === nameInput) return;
         if (["ArrowLeft", "a", "A"].includes(e.key)) state.keys.left = true;
         if (["ArrowRight", "d", "D"].includes(e.key)) state.keys.right = true;
         if (["ArrowUp", "w", "W"].includes(e.key)) state.keys.up = true;
