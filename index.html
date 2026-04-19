@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Car Racing Game</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-wrapper">
+        <header>
+            <h1>Highway Dash</h1>
+            <div class="hud">
+                <div class="stat">Score: <span id="score">0</span></div>
+                <div class="stat">Best: <span id="best">0</span></div>
+                <div class="stat">Speed: <span id="speed">0</span> mph</div>
+            </div>
+        </header>
+
+        <canvas id="game" width="400" height="600"></canvas>
+
+        <div id="overlay" class="overlay">
+            <div class="panel">
+                <h2 id="overlay-title">Ready to Race?</h2>
+                <p id="overlay-msg">Use Arrow keys or WASD to steer. Avoid the traffic!</p>
+                <button id="start-btn">Start</button>
+            </div>
+        </div>
+
+        <footer>
+            <p>Controls: &larr; &rarr; or A / D to steer &middot; &uarr; / &darr; to change speed</p>
+        </footer>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
