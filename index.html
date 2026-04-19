@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
     <title>Car Racing Game</title>
     <link rel="stylesheet" href="style.css">
 </head>
@@ -12,23 +14,33 @@
             <h1>Highway Dash</h1>
             <div class="hud">
                 <div class="stat">Score: <span id="score">0</span></div>
+                <div class="stat"><span id="coins">0</span> <span class="icon">🪙</span></div>
+                <div class="stat hearts" id="hearts" aria-label="lives">❤️❤️❤️</div>
                 <div class="stat">Best: <span id="best">0</span></div>
-                <div class="stat">Speed: <span id="speed">0</span> mph</div>
             </div>
         </header>
 
-        <canvas id="game" width="400" height="600"></canvas>
+        <div class="stage">
+            <canvas id="game" width="400" height="600"></canvas>
 
-        <div id="overlay" class="overlay">
+            <div id="overlay" class="overlay">
             <div class="panel">
                 <h2 id="overlay-title">Ready to Race?</h2>
-                <p id="overlay-msg">Use Arrow keys or WASD to steer. Avoid the traffic!</p>
+                <p id="overlay-msg">Pick your car, then press Start!</p>
+                <div class="car-picker" id="car-picker" role="radiogroup" aria-label="Pick your car"></div>
                 <button id="start-btn">Start</button>
             </div>
         </div>
+        </div>
+
+        <div class="touch-controls" id="touch-controls" aria-label="Touch controls">
+            <button class="touch-btn" data-key="left" aria-label="Steer left">◀</button>
+            <button class="touch-btn boost" data-key="up" aria-label="Boost">▲</button>
+            <button class="touch-btn" data-key="right" aria-label="Steer right">▶</button>
+        </div>
 
         <footer>
-            <p>Controls: &larr; &rarr; or A / D to steer &middot; &uarr; / &darr; to change speed</p>
+            <p>Tap the buttons or use &larr; &rarr; &uarr; keys to drive!</p>
         </footer>
     </div>
 
