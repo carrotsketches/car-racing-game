@@ -194,6 +194,27 @@ h1 {
     padding: 6px;
 }
 
+.clear-lb {
+    display: block;
+    margin: 10px auto 0;
+    padding: 6px 14px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #cfd7e3;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 999px;
+    letter-spacing: 0.3px;
+    cursor: pointer;
+}
+
+.clear-lb:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+    transform: none;
+    box-shadow: none;
+}
+
 .panel {
     max-height: 88vh;
     overflow-y: auto;
