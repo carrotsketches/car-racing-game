@@ -101,6 +101,11 @@ h1 {
     border-color: rgba(245, 196, 81, 0.4);
 }
 
+.game-card.whack-a-mole {
+    background: linear-gradient(135deg, rgba(141, 217, 163, 0.22), rgba(46, 204, 113, 0.16));
+    border-color: rgba(141, 217, 163, 0.4);
+}
+
 .game-card.coming-soon {
     opacity: 0.55;
     cursor: default;
