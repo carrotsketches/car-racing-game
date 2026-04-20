@@ -384,6 +384,47 @@ h1 {
     color: #1b5e20;
 }
 
+.cheer {
+    position: absolute;
+    top: 40%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    font-size: clamp(1.6rem, 6vw, 2.3rem);
+    font-weight: 900;
+    color: #fff;
+    background: linear-gradient(135deg, #ffb347, #ffcc33);
+    padding: 10px 22px;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(255, 140, 0, 0.45);
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 10;
+    opacity: 0;
+}
+
+.cheer.show {
+    animation: cheerPop 1100ms cubic-bezier(.2, 1.6, .5, 1) forwards;
+}
+
+@keyframes cheerPop {
+    0%   { transform: translate(-50%, -30%) scale(0) rotate(-12deg); opacity: 0; }
+    25%  { transform: translate(-50%, -55%) scale(1.15) rotate(4deg); opacity: 1; }
+    55%  { transform: translate(-50%, -55%) scale(1) rotate(0); opacity: 1; }
+    100% { transform: translate(-50%, -95%) scale(0.9) rotate(0); opacity: 0; }
+}
+
+.problem-correct {
+    animation: problemFlash 700ms ease-out;
+}
+
+@keyframes problemFlash {
+    0% { box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5), inset 0 4px 0 rgba(255, 255, 255, 0.6); }
+    40% { box-shadow: 0 0 0 6px rgba(76, 175, 80, 0.4), 0 12px 40px rgba(76, 175, 80, 0.35), inset 0 4px 0 rgba(255, 255, 255, 0.6); }
+    100% { box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5), inset 0 4px 0 rgba(255, 255, 255, 0.6); }
+}
+
 .overlay {
     position: absolute;
     inset: 0;
