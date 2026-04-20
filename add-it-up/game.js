@@ -30,6 +30,21 @@
     const levelBtns = document.querySelectorAll(".toggle-btn[data-level]");
     const countBtns = document.querySelectorAll(".toggle-btn[data-count]");
     const opBtns = document.querySelectorAll(".toggle-btn[data-op]");
+    const cheerEl = document.getElementById("cheer");
+    const padEl = document.getElementById("pad");
+
+    const CHEERS = [
+        "Hooray! 🎉",
+        "You got it! ⭐",
+        "Great job! 🌟",
+        "Awesome! 🎊",
+        "Nice one! 👍",
+        "Woohoo! 🥳",
+        "Perfect! 🏆",
+        "Amazing! ✨",
+        "Brilliant! 💡",
+        "Super! 🚀",
+    ];
 
     const ALLOWED_COUNTS = [5, 8, 10];
     const DEFAULT_COUNT = 10;
@@ -331,8 +346,12 @@
         hAnsEl.classList.remove("wrong");
         updateHAnsDisplay();
         playTap();
-        // auto-submit when 2 digits are entered
-        if (state.hInput.length === 2) {
+        // Auto-submit as soon as the typed value matches the correct answer,
+        // or once 2 digits are entered (catches wrong guesses).
+        const guess = Number(state.hInput);
+        if (guess === state.current.result) {
+            setTimeout(() => submitHorizontal(), 180);
+        } else if (state.hInput.length === 2) {
             setTimeout(() => submitHorizontal(), 180);
         }
     }
@@ -632,11 +651,28 @@
             hintEl.className = "hint good";
             const sym = opSymbol(state.current.op);
             hintEl.textContent = `✓ ${state.current.a} ${sym} ${state.current.b} = ${state.current.result}  (+${gained})`;
+            showCheer();
+            flashPad();
         }
         setTimeout(() => {
             state.qIndex += 1;
             nextProblem();
-        }, 1100);
+        }, 1250);
+    }
+
+    function showCheer() {
+        const msg = CHEERS[Math.floor(Math.random() * CHEERS.length)];
+        cheerEl.textContent = msg;
+        cheerEl.classList.remove("show");
+        // force reflow so the animation restarts even on repeat hits
+        void cheerEl.offsetWidth;
+        cheerEl.classList.add("show");
+    }
+
+    function flashPad() {
+        padEl.classList.remove("problem-correct");
+        void padEl.offsetWidth;
+        padEl.classList.add("problem-correct");
     }
 
     function endGame() {
