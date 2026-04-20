@@ -3,6 +3,7 @@
     const scoreEl = document.getElementById("score");
     const bestEl = document.getElementById("best");
     const timeEl = document.getElementById("time");
+    const timeStatEl = document.getElementById("time-stat");
     const overlay = document.getElementById("overlay");
     const overlayTitle = document.getElementById("overlay-title");
     const overlayMsg = document.getElementById("overlay-msg");
@@ -19,20 +20,42 @@
     const BEE_CHANCE = 0.22;
     const MAX_ACTIVE = 3;
     const NAME_KEY = "highway-dash-last-name"; // share with other games
-    const BEST_KEY = "whack-a-mole-best";
+    const LB_KEY = "whack-a-mole-leaderboard";
+    const LB_MAX = 20;
+
+    function loadLeaderboard() {
+        try {
+            const raw = localStorage.getItem(LB_KEY);
+            const arr = raw ? JSON.parse(raw) : [];
+            return Array.isArray(arr) ? arr : [];
+        } catch (_) {
+            return [];
+        }
+    }
+
+    function saveLeaderboard() {
+        try { localStorage.setItem(LB_KEY, JSON.stringify(state.leaderboard)); } catch (_) {}
+    }
+
+    function personalBest(name) {
+        let best = 0;
+        for (const e of state.leaderboard) {
+            if (e.name === name && e.score > best) best = e.score;
+        }
+        return best;
+    }
 
     const state = {
         running: false,
         score: 0,
-        best: Number(localStorage.getItem(BEST_KEY) || 0),
+        leaderboard: loadLeaderboard(),
         timeLeft: ROUND_MS,
         slots: [],
         lastSpawn: 0,
         nextSpawnIn: 0,
         playerName: "",
+        timeLow: false,
     };
-
-    bestEl.textContent = state.best;
 
     // Build holes
     for (let i = 0; i < HOLES; i++) {
@@ -50,15 +73,23 @@
         state.slots.push({ hole, pop, type: null, until: 0 });
     }
 
+    function updateBestDisplay() {
+        const name = (nameInput.value || state.playerName || "").trim().slice(0, 12);
+        bestEl.textContent = name ? personalBest(name) : 0;
+    }
+
     // Name prefill from shared key
     const savedName = localStorage.getItem(NAME_KEY) || "";
     if (savedName) {
         nameInput.value = savedName;
         playerNameEl.textContent = savedName;
     }
+    updateBestDisplay();
+
     nameInput.addEventListener("input", () => {
         const n = nameInput.value.trim().slice(0, 12);
         playerNameEl.textContent = n || "—";
+        updateBestDisplay();
     });
 
     function sanitizeName(raw) {
@@ -181,6 +212,8 @@
         state.timeLeft = ROUND_MS;
         state.lastSpawn = 0;
         state.nextSpawnIn = 600;
+        state.timeLow = false;
+        timeStatEl.classList.remove("low");
         scoreEl.textContent = 0;
         timeEl.textContent = Math.ceil(ROUND_MS / 1000);
         for (let i = 0; i < state.slots.length; i++) hideSlot(i, false);
@@ -199,15 +232,24 @@
 
     function endGame() {
         state.running = false;
+        timeStatEl.classList.remove("low");
+        state.timeLow = false;
         playEnd();
         for (let i = 0; i < state.slots.length; i++) hideSlot(i, false);
-        if (state.score > state.best) {
-            state.best = state.score;
-            localStorage.setItem(BEST_KEY, state.best);
-            bestEl.textContent = state.best;
-        }
+
+        const entry = { name: state.playerName, score: state.score, at: Date.now() };
+        state.leaderboard.push(entry);
+        state.leaderboard.sort((a, b) => b.score - a.score);
+        state.leaderboard = state.leaderboard.slice(0, LB_MAX);
+        saveLeaderboard();
+        updateBestDisplay();
+
+        const rank = state.leaderboard.indexOf(entry);
+        let msg = `${state.playerName} whacked ${state.score} moles!`;
+        if (rank === 0) msg += " 🏆 New top score!";
+        else if (rank >= 0 && rank < 10) msg += ` You're rank #${rank + 1}.`;
         overlayTitle.textContent = "Time's up!";
-        overlayMsg.textContent = `${state.playerName} whacked ${state.score} moles!`;
+        overlayMsg.textContent = msg;
         startBtn.textContent = "Play Again";
         overlay.classList.remove("hidden");
     }
@@ -228,6 +270,11 @@
                 if (curr !== prev) {
                     timeEl.textContent = curr;
                     if (curr <= 5) playTick();
+                }
+                const low = curr <= 10;
+                if (low !== state.timeLow) {
+                    state.timeLow = low;
+                    timeStatEl.classList.toggle("low", low);
                 }
                 // Auto-hide expired slots
                 for (let i = 0; i < state.slots.length; i++) {

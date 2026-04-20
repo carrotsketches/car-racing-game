@@ -14,18 +14,20 @@
         <p class="subtitle">Pick a game to start</p>
 
         <div class="game-grid">
-            <a class="game-card highway-dash" href="highway-dash/">
+            <a class="game-card highway-dash" href="highway-dash/" data-lb="highway-dash-leaderboard">
                 <div class="emoji" aria-hidden="true">🚗</div>
                 <div class="title">Highway Dash</div>
                 <div class="desc">Dodge traffic and grab coins!</div>
                 <div class="badge">Play</div>
+                <div class="card-leaderboard"></div>
             </a>
 
-            <a class="game-card whack-a-mole" href="whack-a-mole/">
+            <a class="game-card whack-a-mole" href="whack-a-mole/" data-lb="whack-a-mole-leaderboard">
                 <div class="emoji" aria-hidden="true">🐹</div>
                 <div class="title">Whack-a-Mole</div>
                 <div class="desc">Tap the moles, skip the bees!</div>
                 <div class="badge">Play</div>
+                <div class="card-leaderboard"></div>
             </a>
 
             <div class="game-card coming-soon" aria-disabled="true">
@@ -35,5 +37,56 @@
             </div>
         </div>
     </main>
+
+    <script>
+    (function () {
+        function readLB(key) {
+            try {
+                const raw = localStorage.getItem(key);
+                const arr = raw ? JSON.parse(raw) : [];
+                return Array.isArray(arr) ? arr : [];
+            } catch (_) {
+                return [];
+            }
+        }
+
+        function renderCardLB(card) {
+            const key = card.dataset.lb;
+            const container = card.querySelector(".card-leaderboard");
+            if (!container) return;
+            const entries = readLB(key).slice().sort((a, b) => b.score - a.score).slice(0, 3);
+            container.innerHTML = "";
+            const header = document.createElement("div");
+            header.className = "lb-header";
+            header.textContent = "🏆 Top scores";
+            container.appendChild(header);
+            if (entries.length === 0) {
+                const empty = document.createElement("div");
+                empty.className = "lb-empty";
+                empty.textContent = "No scores yet — be the first!";
+                container.appendChild(empty);
+                return;
+            }
+            const ol = document.createElement("ol");
+            entries.forEach((e, i) => {
+                const li = document.createElement("li");
+                const rank = document.createElement("span");
+                rank.className = "lb-rank";
+                rank.textContent = (i + 1) + ".";
+                const name = document.createElement("span");
+                name.className = "lb-name";
+                name.textContent = e.name || "Player";
+                const score = document.createElement("span");
+                score.className = "lb-score";
+                score.textContent = e.score;
+                li.append(rank, name, score);
+                ol.appendChild(li);
+            });
+            container.appendChild(ol);
+        }
+
+        document.querySelectorAll(".game-card[data-lb]").forEach(renderCardLB);
+    })();
+    </script>
 </body>
 </html>
