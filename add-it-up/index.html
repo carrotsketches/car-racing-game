@@ -22,40 +22,61 @@
         </header>
 
         <div class="stage">
-            <div class="pad">
-                <div class="problem" id="problem">
-                    <div class="col-labels">
-                        <span class="lbl lbl-tens">Tens</span>
-                        <span class="lbl lbl-ones">Ones</span>
+            <div class="pad" id="pad">
+                <div class="toggle-row">
+                    <div class="mode-toggle" role="group" aria-label="Switch difficulty">
+                        <button type="button" class="toggle-btn selected" data-level="easy">Easy 1–10</button>
+                        <button type="button" class="toggle-btn" data-level="medium">Medium 1–20</button>
                     </div>
-
-                    <div class="row row-a">
-                        <span class="op"></span>
-                        <span class="digit" id="a-tens"></span>
-                        <span class="digit" id="a-ones"></span>
-                    </div>
-
-                    <div class="row row-b">
-                        <span class="op">+</span>
-                        <span class="digit" id="b-tens"></span>
-                        <span class="digit" id="b-ones"></span>
-                    </div>
-
-                    <div class="bar"></div>
-
-                    <div class="row row-ans">
-                        <span class="op"></span>
-                        <span class="slot" id="ans-tens">
-                            <span class="carry" id="carry"></span>
-                            <span class="slot-digit" id="ans-tens-digit"></span>
-                        </span>
-                        <span class="slot" id="ans-ones">
-                            <span class="slot-digit" id="ans-ones-digit"></span>
-                        </span>
+                    <div class="mode-toggle" role="group" aria-label="Switch layout">
+                        <button type="button" class="toggle-btn selected" data-mode="horizontal">Across</button>
+                        <button type="button" class="toggle-btn" data-mode="vertical">Stacked</button>
                     </div>
                 </div>
 
-                <div class="hint" id="hint">Tap digits. Start with ones →</div>
+                <div class="problem mode-horizontal" id="problem">
+                    <div class="h-layout" id="h-layout">
+                        <span class="h-num" id="h-a">0</span>
+                        <span class="h-op">+</span>
+                        <span class="h-num" id="h-b">0</span>
+                        <span class="h-op">=</span>
+                        <span class="h-ans" id="h-ans"></span>
+                    </div>
+
+                    <div class="v-layout" id="v-layout">
+                        <div class="col-labels">
+                            <span class="lbl lbl-tens">Tens</span>
+                            <span class="lbl lbl-ones">Ones</span>
+                        </div>
+
+                        <div class="row row-a">
+                            <span class="op"></span>
+                            <span class="digit" id="a-tens"></span>
+                            <span class="digit" id="a-ones"></span>
+                        </div>
+
+                        <div class="row row-b">
+                            <span class="op">+</span>
+                            <span class="digit" id="b-tens"></span>
+                            <span class="digit" id="b-ones"></span>
+                        </div>
+
+                        <div class="bar"></div>
+
+                        <div class="row row-ans">
+                            <span class="op"></span>
+                            <span class="slot" id="ans-tens">
+                                <span class="carry" id="carry"></span>
+                                <span class="slot-digit" id="ans-tens-digit"></span>
+                            </span>
+                            <span class="slot" id="ans-ones">
+                                <span class="slot-digit" id="ans-ones-digit"></span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="hint" id="hint">Type the answer →</div>
 
                 <div class="keypad" id="keypad" aria-label="Number keypad">
                     <button class="key" data-k="1">1</button>
@@ -76,19 +97,20 @@
             <div id="overlay" class="overlay">
                 <div class="panel">
                     <h2 id="overlay-title">Ready?</h2>
-                    <p id="overlay-msg">Add numbers 1–20 using column form. Stack the digits and add ones first, then tens!</p>
+                    <p id="overlay-msg">Add numbers 1–20! Swap between Across and Stacked layouts any time with the toggle at the top.</p>
                     <label class="name-row" for="name-input">
                         <span>Name</span>
                         <input id="name-input" type="text" maxlength="12" autocomplete="off"
                                spellcheck="false" placeholder="Player" />
                     </label>
+
                     <button id="start-btn">Start</button>
                 </div>
             </div>
         </div>
 
         <footer>
-            <p>10 questions. Fill in ones first, then tens.</p>
+            <p id="footer-text">10 questions. Type your answer and press ✓.</p>
         </footer>
     </div>
 
