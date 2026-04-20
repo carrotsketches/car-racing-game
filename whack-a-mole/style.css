@@ -73,6 +73,37 @@ h1 {
     color: #8dd9a3;
 }
 
+.time-stat {
+    font-size: 1rem;
+    background: rgba(141, 217, 163, 0.15);
+    border: 1px solid rgba(141, 217, 163, 0.35);
+    padding: 4px 12px;
+    border-radius: 10px;
+}
+
+.time-stat span {
+    font-size: 1.4rem;
+    color: #8dd9a3;
+    display: inline-block;
+    min-width: 1.8em;
+    text-align: center;
+}
+
+.time-stat.low {
+    background: rgba(231, 76, 60, 0.2);
+    border-color: rgba(231, 76, 60, 0.55);
+}
+
+.time-stat.low span {
+    color: #ff8a7a;
+    animation: timePulse 500ms ease-in-out infinite;
+}
+
+@keyframes timePulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.25); }
+}
+
 .stage {
     position: relative;
     width: 100%;
@@ -122,9 +153,10 @@ h1 {
     right: 0;
     bottom: -60%;
     margin: auto;
-    width: 72%;
+    width: 100%;
+    padding: 0 4%;
     text-align: center;
-    font-size: clamp(2rem, 8vw, 3.4rem);
+    font-size: clamp(3rem, 18vw, 6rem);
     line-height: 1;
     transition: bottom 140ms ease-out;
     pointer-events: none;

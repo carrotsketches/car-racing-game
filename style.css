@@ -82,6 +82,68 @@ h1 {
     color: #cfd7e3;
 }
 
+.card-leaderboard {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px dashed rgba(255, 255, 255, 0.15);
+    text-align: left;
+    font-size: 0.8rem;
+    color: #cfd7e3;
+}
+
+.card-leaderboard .lb-header {
+    color: #f5c451;
+    font-weight: 700;
+    font-size: 0.78rem;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+    text-align: center;
+}
+
+.card-leaderboard ol {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.card-leaderboard li {
+    display: grid;
+    grid-template-columns: 20px 1fr auto;
+    gap: 6px;
+    align-items: center;
+    padding: 3px 6px;
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.card-leaderboard .lb-rank {
+    color: #f5c451;
+    font-weight: 700;
+    text-align: center;
+}
+
+.card-leaderboard .lb-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #e8eef7;
+}
+
+.card-leaderboard .lb-score {
+    font-weight: 700;
+    color: #fff;
+}
+
+.card-leaderboard .lb-empty {
+    text-align: center;
+    font-style: italic;
+    color: #8892a5;
+    padding: 4px 0;
+}
+
 .game-card .badge {
     position: absolute;
     top: 12px;
