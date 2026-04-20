@@ -1,4 +1,5 @@
 (() => {
+    const problemEl = document.getElementById("problem");
     const aTens = document.getElementById("a-tens");
     const aOnes = document.getElementById("a-ones");
     const bTens = document.getElementById("b-tens");
@@ -8,6 +9,9 @@
     const ansTensDigit = document.getElementById("ans-tens-digit");
     const ansOnesDigit = document.getElementById("ans-ones-digit");
     const carryEl = document.getElementById("carry");
+    const hAEl = document.getElementById("h-a");
+    const hBEl = document.getElementById("h-b");
+    const hAnsEl = document.getElementById("h-ans");
     const keypad = document.getElementById("keypad");
     const hintEl = document.getElementById("hint");
     const scoreEl = document.getElementById("score");
@@ -20,12 +24,16 @@
     const startBtn = document.getElementById("start-btn");
     const nameInput = document.getElementById("name-input");
     const playerNameEl = document.getElementById("player-name");
+    const modeBtns = document.querySelectorAll(".toggle-btn[data-mode]");
+    const levelBtns = document.querySelectorAll(".toggle-btn[data-level]");
 
     const TOTAL_QUESTIONS = 10;
     const POINTS_FIRST_TRY = 10;
     const POINTS_RETRY = 5;
     const NAME_KEY = "highway-dash-last-name"; // shared across games
     const LB_KEY = "add-it-up-leaderboard";
+    const MODE_KEY = "add-it-up-mode";
+    const LEVEL_KEY = "add-it-up-level";
     const LB_MAX = 20;
 
     function loadLeaderboard() {
@@ -50,12 +58,20 @@
         return best;
     }
 
+    const savedMode = localStorage.getItem(MODE_KEY) === "vertical" ? "vertical" : "horizontal";
+    const savedLevel = localStorage.getItem(LEVEL_KEY) === "medium" ? "medium" : "easy";
+
     const state = {
         running: false,
         score: 0,
         qIndex: 0,
         current: null,
+        mode: savedMode,
+        level: savedLevel,
+        // vertical state
         active: "ones", // "ones" | "tens" | "done"
+        // horizontal state
+        hInput: "",     // digits typed in horizontal mode
         mistakes: 0,
         leaderboard: loadLeaderboard(),
         playerName: "",
@@ -63,6 +79,9 @@
     };
 
     qTotalEl.textContent = TOTAL_QUESTIONS;
+    applyModeClass();
+    updateModeUI();
+    updateLevelUI();
 
     // ----- Name handling -----
     const savedName = localStorage.getItem(NAME_KEY) || "";
@@ -130,27 +149,29 @@
 
     // ----- Problem generation -----
     function genProblem() {
-        // a + b where 1 <= a,b, a + b <= 20
-        // weight to include variety: simple, crossing 10, teens
         let a, b;
-        const r = Math.random();
-        if (r < 0.35) {
-            // both single digit, sum <= 9 (simple warmup)
-            a = 1 + Math.floor(Math.random() * 8);
-            b = 1 + Math.floor(Math.random() * (9 - a));
-        } else if (r < 0.75) {
-            // both single digit, sum between 11 and 18 (carry practice)
-            a = 2 + Math.floor(Math.random() * 7); // 2..8
-            const minB = Math.max(2, 11 - a);
-            const maxB = 9;
-            b = minB + Math.floor(Math.random() * (maxB - minB + 1));
-        } else {
-            // teen + single, no carry, sum <= 20
-            a = 10 + Math.floor(Math.random() * 9); // 10..18
-            const maxB = 20 - a;
+        if (state.level === "easy") {
+            // Easy: a + b with a,b >= 1 and sum <= 10 (single-digit answers)
+            a = 1 + Math.floor(Math.random() * 8); // 1..8
+            const maxB = 10 - a;
             b = 1 + Math.floor(Math.random() * maxB);
+        } else {
+            // Medium: a + b with a,b >= 1 and sum <= 20 (mix carry & teens)
+            const r = Math.random();
+            if (r < 0.25) {
+                a = 1 + Math.floor(Math.random() * 8);
+                b = 1 + Math.floor(Math.random() * (9 - a));
+            } else if (r < 0.75) {
+                a = 2 + Math.floor(Math.random() * 7);
+                const minB = Math.max(2, 11 - a);
+                const maxB = 9;
+                b = minB + Math.floor(Math.random() * (maxB - minB + 1));
+            } else {
+                a = 10 + Math.floor(Math.random() * 9);
+                const maxB = 20 - a;
+                b = 1 + Math.floor(Math.random() * maxB);
+            }
         }
-        // 50% chance to swap for variety
         if (Math.random() < 0.5) { const t = a; a = b; b = t; }
         const sum = a + b;
         return {
@@ -167,12 +188,119 @@
         };
     }
 
-    // ----- Rendering -----
+    // ----- Rendering: shared -----
     function showDigit(el, value) {
         el.textContent = value === 0 || value ? String(value) : "";
     }
 
-    function renderProblem(p) {
+    function applyModeClass() {
+        problemEl.classList.toggle("mode-horizontal", state.mode === "horizontal");
+        problemEl.classList.toggle("mode-vertical", state.mode === "vertical");
+    }
+
+    function updateModeUI() {
+        modeBtns.forEach((b) => {
+            b.classList.toggle("selected", b.dataset.mode === state.mode);
+        });
+    }
+
+    function updateLevelUI() {
+        levelBtns.forEach((b) => {
+            b.classList.toggle("selected", b.dataset.level === state.level);
+        });
+    }
+
+    function renderProblem() {
+        if (!state.current) return;
+        const p = state.current;
+        if (state.mode === "horizontal") {
+            renderHorizontal(p);
+        } else {
+            renderVertical(p);
+        }
+        qNumEl.textContent = state.qIndex + 1;
+    }
+
+    // ----- Horizontal rendering + input -----
+    function renderHorizontal(p) {
+        hAEl.textContent = String(p.a);
+        hBEl.textContent = String(p.b);
+        hAnsEl.classList.remove("correct", "wrong", "filled");
+        hAnsEl.classList.add("active");
+        updateHAnsDisplay();
+        updateHint();
+    }
+
+    function updateHAnsDisplay() {
+        const val = state.hInput;
+        hAnsEl.textContent = val;
+        hAnsEl.classList.toggle("filled", val.length > 0);
+        // add caret to show typing position
+        const caret = document.createElement("span");
+        caret.className = "caret";
+        hAnsEl.appendChild(caret);
+    }
+
+    function handleHorizontalKey(k) {
+        if (k === "back") {
+            if (state.hInput.length === 0) return;
+            state.hInput = state.hInput.slice(0, -1);
+            hAnsEl.classList.remove("correct", "wrong");
+            updateHAnsDisplay();
+            playTap();
+            return;
+        }
+        if (k === "check") {
+            submitHorizontal();
+            return;
+        }
+        const digit = Number(k);
+        if (Number.isNaN(digit)) return;
+        if (state.hInput.length >= 2) return;
+        state.hInput += String(digit);
+        hAnsEl.classList.remove("wrong");
+        updateHAnsDisplay();
+        playTap();
+        // auto-submit when 2 digits are entered
+        if (state.hInput.length === 2) {
+            setTimeout(() => submitHorizontal(), 180);
+        }
+    }
+
+    function submitHorizontal() {
+        if (state.locked) return;
+        if (state.hInput.length === 0) {
+            hintEl.className = "hint bad";
+            hintEl.textContent = "Type a number first!";
+            return;
+        }
+        const guess = Number(state.hInput);
+        const p = state.current;
+        if (guess === p.sum) {
+            hAnsEl.classList.remove("active");
+            hAnsEl.classList.add("correct");
+            hAnsEl.textContent = state.hInput; // drop the caret
+            playGood();
+            finishProblem(true);
+        } else {
+            hAnsEl.classList.add("wrong");
+            state.mistakes += 1;
+            playBad();
+            hintEl.className = "hint bad";
+            hintEl.textContent = "Not quite — try again!";
+            state.locked = true;
+            setTimeout(() => {
+                state.locked = false;
+                state.hInput = "";
+                hAnsEl.classList.remove("wrong");
+                updateHAnsDisplay();
+                updateHint();
+            }, 800);
+        }
+    }
+
+    // ----- Vertical rendering + input -----
+    function renderVertical(p) {
         showDigit(aTens, p.aTens || "");
         showDigit(aOnes, p.aOnes);
         showDigit(bTens, p.bTens || "");
@@ -184,7 +312,6 @@
         resetSlot(ansTensSlot);
         resetSlot(ansOnesSlot);
         setActive("ones");
-        qNumEl.textContent = state.qIndex + 1;
     }
 
     function resetSlot(slot) {
@@ -201,6 +328,11 @@
     }
 
     function updateHint() {
+        if (state.mode === "horizontal") {
+            hintEl.className = "hint";
+            hintEl.textContent = "Type the answer left to right";
+            return;
+        }
         if (state.active === "ones") {
             hintEl.className = "hint";
             hintEl.textContent = "Add the ones first";
@@ -209,42 +341,12 @@
             hintEl.textContent = state.current.hasCarry
                 ? "Carry 1! Now add the tens"
                 : "Now add the tens";
-        } else {
-            // done — hint is set by feedback
         }
     }
 
-    // ----- Game flow -----
-    function startGame() {
-        ensureAudio();
-        state.playerName = sanitizeName(nameInput.value);
-        nameInput.value = state.playerName;
-        localStorage.setItem(NAME_KEY, state.playerName);
-        playerNameEl.textContent = state.playerName;
-        state.score = 0;
-        state.qIndex = 0;
-        scoreEl.textContent = 0;
-        overlay.classList.add("hidden");
-        state.running = true;
-        nextProblem();
-    }
-
-    function nextProblem() {
-        if (state.qIndex >= TOTAL_QUESTIONS) {
-            endGame();
-            return;
-        }
-        state.current = genProblem();
-        state.mistakes = 0;
-        state.locked = false;
-        renderProblem(state.current);
-    }
-
-    function handleKey(k) {
-        if (!state.running || state.locked) return;
+    function handleVerticalKey(k) {
         if (k === "back") {
             if (state.active === "tens" && ansTensDigit.textContent === "" && ansOnesDigit.textContent !== "") {
-                // backspace from empty tens slot -> clear ones and go back
                 ansOnesDigit.textContent = "";
                 resetSlot(ansOnesSlot);
                 carryEl.classList.remove("show");
@@ -259,10 +361,7 @@
             playTap();
             return;
         }
-        if (k === "check") {
-            // optional manual submit; auto-submit happens per digit
-            return;
-        }
+        if (k === "check") return;
         const digit = Number(k);
         if (Number.isNaN(digit)) return;
         playTap();
@@ -280,25 +379,21 @@
     function checkOnes(digit) {
         const p = state.current;
         if (digit === p.sumOnes) {
-            // correct ones
             ansOnesSlot.classList.add("correct");
             playGood();
             if (p.hasCarry) {
-                // show animated carry on tens column
                 setTimeout(() => {
                     carryEl.textContent = "1";
                     carryEl.classList.add("show");
                     playCarry();
                 }, 200);
             }
-            // after a short beat, move to tens
             state.locked = true;
             setTimeout(() => {
                 state.locked = false;
                 ansOnesSlot.classList.remove("correct");
                 ansOnesSlot.classList.add("filled");
                 if (p.sumTens === 0) {
-                    // single-digit answer: auto-fill tens as 0 and complete
                     ansTensDigit.textContent = "0";
                     ansTensSlot.classList.add("filled");
                     finishProblem(true);
@@ -343,6 +438,75 @@
                 updateHint();
             }, 800);
         }
+    }
+
+    // ----- Shared key dispatch -----
+    function handleKey(k) {
+        if (!state.running || state.locked) return;
+        if (state.mode === "horizontal") {
+            handleHorizontalKey(k);
+        } else {
+            handleVerticalKey(k);
+        }
+    }
+
+    // ----- Mode / Level switching (mid-game safe) -----
+    function switchMode(newMode) {
+        if (newMode !== "horizontal" && newMode !== "vertical") return;
+        if (newMode === state.mode) return;
+        state.mode = newMode;
+        localStorage.setItem(MODE_KEY, newMode);
+        applyModeClass();
+        updateModeUI();
+        if (state.running && state.current) {
+            state.hInput = "";
+            state.mistakes = 0;
+            state.locked = false;
+            renderProblem();
+        }
+    }
+
+    function switchLevel(newLevel) {
+        if (newLevel !== "easy" && newLevel !== "medium") return;
+        if (newLevel === state.level) return;
+        state.level = newLevel;
+        localStorage.setItem(LEVEL_KEY, newLevel);
+        updateLevelUI();
+        if (state.running) {
+            // Regenerate the current question under the new difficulty
+            state.hInput = "";
+            state.mistakes = 0;
+            state.locked = false;
+            state.current = genProblem();
+            renderProblem();
+        }
+    }
+
+    // ----- Game flow -----
+    function startGame() {
+        ensureAudio();
+        state.playerName = sanitizeName(nameInput.value);
+        nameInput.value = state.playerName;
+        localStorage.setItem(NAME_KEY, state.playerName);
+        playerNameEl.textContent = state.playerName;
+        state.score = 0;
+        state.qIndex = 0;
+        scoreEl.textContent = 0;
+        overlay.classList.add("hidden");
+        state.running = true;
+        nextProblem();
+    }
+
+    function nextProblem() {
+        if (state.qIndex >= TOTAL_QUESTIONS) {
+            endGame();
+            return;
+        }
+        state.current = genProblem();
+        state.mistakes = 0;
+        state.locked = false;
+        state.hInput = "";
+        renderProblem();
     }
 
     function finishProblem(correct) {
@@ -390,12 +554,21 @@
         handleKey(btn.dataset.k);
     });
 
+    modeBtns.forEach((btn) => {
+        btn.addEventListener("click", () => switchMode(btn.dataset.mode));
+    });
+    levelBtns.forEach((btn) => {
+        btn.addEventListener("click", () => switchLevel(btn.dataset.level));
+    });
+
     window.addEventListener("keydown", (e) => {
         if (!state.running) return;
         if (e.key >= "0" && e.key <= "9") {
             handleKey(e.key);
         } else if (e.key === "Backspace") {
             handleKey("back");
+        } else if (e.key === "Enter") {
+            handleKey("check");
         }
     });
 

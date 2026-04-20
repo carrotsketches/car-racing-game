@@ -95,6 +95,90 @@ h1 {
     font-family: "Courier New", Courier, monospace;
 }
 
+.problem.mode-horizontal .v-layout { display: none; }
+.problem.mode-vertical .h-layout { display: none; }
+
+.h-layout {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 18px 6px;
+    flex-wrap: wrap;
+}
+
+.h-num {
+    font-size: 2.8rem;
+    font-weight: 800;
+    color: #2a1f30;
+    min-width: 1.5ch;
+    text-align: center;
+}
+
+.h-op {
+    font-size: 2.4rem;
+    font-weight: 800;
+    color: #d15b96;
+}
+
+.h-ans {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 100px;
+    padding: 6px 14px;
+    height: 72px;
+    font-size: 2.8rem;
+    font-weight: 800;
+    color: #2a1f30;
+    border: 3px dashed #d4a0c2;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.65);
+    letter-spacing: 4px;
+    position: relative;
+}
+
+.h-ans.active {
+    border-style: solid;
+    border-color: #d15b96;
+    background: #fff;
+    box-shadow: 0 0 0 4px rgba(209, 91, 150, 0.18);
+    animation: slotPulse 1.2s ease-in-out infinite;
+}
+
+.h-ans.filled {
+    border-style: solid;
+    background: #fff;
+}
+
+.h-ans.correct {
+    border-color: #4caf50;
+    background: #dff5dc;
+    color: #1b5e20;
+    animation: slotBounce 360ms ease-out;
+}
+
+.h-ans.wrong {
+    border-color: #e53935;
+    background: #fde0dd;
+    color: #b71c1c;
+    animation: slotShake 360ms ease-in-out;
+}
+
+.h-ans .caret {
+    display: inline-block;
+    width: 2px;
+    height: 2.4rem;
+    background: #d15b96;
+    margin-left: 2px;
+    animation: caretBlink 0.9s infinite;
+}
+
+@keyframes caretBlink {
+    0%, 49% { opacity: 1; }
+    50%, 100% { opacity: 0; }
+}
+
 .col-labels,
 .row {
     display: grid;
@@ -358,6 +442,53 @@ h1 {
     outline: none;
     border-color: #f3b8d9;
     background: rgba(255, 255, 255, 0.12);
+}
+
+.toggle-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: -4px 0 6px;
+}
+
+.mode-toggle {
+    display: inline-flex;
+    background: rgba(209, 91, 150, 0.12);
+    border: 1px solid rgba(209, 91, 150, 0.35);
+    border-radius: 999px;
+    padding: 3px;
+    gap: 2px;
+}
+
+.toggle-btn {
+    padding: 5px 14px;
+    background: transparent;
+    border: none;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: #7a5c78;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+    font-family: inherit;
+}
+
+.toggle-btn:hover {
+    color: #d15b96;
+}
+
+.toggle-btn.selected {
+    background: #d15b96;
+    color: #fff;
+    box-shadow: 0 2px 6px rgba(209, 91, 150, 0.35);
+}
+
+.pad {
+    display: flex;
+    flex-direction: column;
 }
 
 button#start-btn {
