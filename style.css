@@ -178,6 +178,11 @@ h1 {
     border-color: rgba(166, 184, 255, 0.4);
 }
 
+.game-card.bus-route-rush {
+    background: linear-gradient(135deg, rgba(108, 196, 255, 0.22), rgba(255, 209, 102, 0.18));
+    border-color: rgba(108, 196, 255, 0.4);
+}
+
 .game-card.coming-soon {
     opacity: 0.55;
     cursor: default;
