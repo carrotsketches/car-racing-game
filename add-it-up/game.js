@@ -11,6 +11,8 @@
     const carryEl = document.getElementById("carry");
     const hAEl = document.getElementById("h-a");
     const hBEl = document.getElementById("h-b");
+    const hOpEl = document.getElementById("h-op");
+    const vOpEl = document.getElementById("v-op");
     const hAnsEl = document.getElementById("h-ans");
     const keypad = document.getElementById("keypad");
     const hintEl = document.getElementById("hint");
@@ -27,6 +29,7 @@
     const modeBtns = document.querySelectorAll(".toggle-btn[data-mode]");
     const levelBtns = document.querySelectorAll(".toggle-btn[data-level]");
     const countBtns = document.querySelectorAll(".toggle-btn[data-count]");
+    const opBtns = document.querySelectorAll(".toggle-btn[data-op]");
 
     const ALLOWED_COUNTS = [5, 8, 10];
     const DEFAULT_COUNT = 10;
@@ -37,6 +40,7 @@
     const MODE_KEY = "add-it-up-mode";
     const LEVEL_KEY = "add-it-up-level";
     const COUNT_KEY = "add-it-up-count";
+    const OP_KEY = "add-it-up-op";
     const LB_MAX = 20;
 
     function loadLeaderboard() {
@@ -65,6 +69,7 @@
     const savedLevel = localStorage.getItem(LEVEL_KEY) === "medium" ? "medium" : "easy";
     const savedCountRaw = Number(localStorage.getItem(COUNT_KEY));
     const savedCount = ALLOWED_COUNTS.includes(savedCountRaw) ? savedCountRaw : DEFAULT_COUNT;
+    const savedOp = localStorage.getItem(OP_KEY) === "sub" ? "sub" : "add";
 
     const state = {
         running: false,
@@ -74,6 +79,7 @@
         mode: savedMode,
         level: savedLevel,
         qTotal: savedCount,
+        op: savedOp,
         // vertical state
         active: "ones", // "ones" | "tens" | "done"
         // horizontal state
@@ -89,6 +95,7 @@
     updateModeUI();
     updateLevelUI();
     updateCountUI();
+    updateOpUI();
 
     // ----- Name handling -----
     const savedName = localStorage.getItem(NAME_KEY) || "";
@@ -155,15 +162,13 @@
     }
 
     // ----- Problem generation -----
-    function genProblem() {
+    function genAddPair() {
         let a, b;
         if (state.level === "easy") {
-            // Easy: a + b with a,b >= 1 and sum <= 10 (single-digit answers)
-            a = 1 + Math.floor(Math.random() * 8); // 1..8
-            const maxB = 10 - a;
-            b = 1 + Math.floor(Math.random() * maxB);
+            // a + b >= 1 and sum <= 10
+            a = 1 + Math.floor(Math.random() * 8);
+            b = 1 + Math.floor(Math.random() * (10 - a));
         } else {
-            // Medium: a + b with a,b >= 1 and sum <= 20 (mix carry & teens)
             const r = Math.random();
             if (r < 0.25) {
                 a = 1 + Math.floor(Math.random() * 8);
@@ -180,20 +185,65 @@
             }
         }
         if (Math.random() < 0.5) { const t = a; a = b; b = t; }
-        const sum = a + b;
+        return { a, b };
+    }
+
+    function genSubPair() {
+        let a, b;
+        if (state.level === "easy") {
+            // a in 2..10, b in 1..(a-1); result in 1..9
+            a = 2 + Math.floor(Math.random() * 9); // 2..10
+            b = 1 + Math.floor(Math.random() * (a - 1));
+        } else {
+            const r = Math.random();
+            if (r < 0.2) {
+                // simple single-digit
+                a = 3 + Math.floor(Math.random() * 7); // 3..9
+                b = 1 + Math.floor(Math.random() * (a - 1));
+            } else if (r < 0.65) {
+                // teen - single, WITH borrow: aOnes < b
+                a = 11 + Math.floor(Math.random() * 8); // 11..18
+                const aOnes = a % 10;
+                // b in (aOnes+1)..9 (forces borrow)
+                b = (aOnes + 1) + Math.floor(Math.random() * (9 - aOnes));
+            } else {
+                // teen - something, NO borrow: b <= aOnes (avoid 20 minus 0)
+                a = 11 + Math.floor(Math.random() * 10); // 11..20
+                const aOnes = a % 10;
+                if (aOnes === 0) {
+                    // a=20: b=10 => 10 (tens subtraction, simple)
+                    b = 10;
+                } else {
+                    b = 1 + Math.floor(Math.random() * aOnes);
+                }
+            }
+        }
+        return { a, b };
+    }
+
+    function genProblem() {
+        const { a, b } = state.op === "sub" ? genSubPair() : genAddPair();
+        const op = state.op;
+        const result = op === "sub" ? a - b : a + b;
+        const aOnes = a % 10;
+        const bOnes = b % 10;
         return {
             a,
             b,
-            sum,
+            op,
+            result,
             aTens: Math.floor(a / 10),
-            aOnes: a % 10,
+            aOnes,
             bTens: Math.floor(b / 10),
-            bOnes: b % 10,
-            sumTens: Math.floor(sum / 10),
-            sumOnes: sum % 10,
-            hasCarry: (a % 10) + (b % 10) >= 10,
+            bOnes,
+            resultTens: Math.floor(result / 10),
+            resultOnes: result % 10,
+            hasCarry: op === "add" && aOnes + bOnes >= 10,
+            hasBorrow: op === "sub" && aOnes < bOnes,
         };
     }
+
+    function opSymbol(op) { return op === "sub" ? "−" : "+"; }
 
     // ----- Rendering: shared -----
     function showDigit(el, value) {
@@ -223,6 +273,12 @@
         });
     }
 
+    function updateOpUI() {
+        opBtns.forEach((b) => {
+            b.classList.toggle("selected", b.dataset.op === state.op);
+        });
+    }
+
     function renderProblem() {
         if (!state.current) return;
         const p = state.current;
@@ -238,6 +294,7 @@
     function renderHorizontal(p) {
         hAEl.textContent = String(p.a);
         hBEl.textContent = String(p.b);
+        hOpEl.textContent = opSymbol(p.op);
         hAnsEl.classList.remove("correct", "wrong", "filled");
         hAnsEl.classList.add("active");
         updateHAnsDisplay();
@@ -289,7 +346,7 @@
         }
         const guess = Number(state.hInput);
         const p = state.current;
-        if (guess === p.sum) {
+        if (guess === p.result) {
             hAnsEl.classList.remove("active");
             hAnsEl.classList.add("correct");
             hAnsEl.textContent = state.hInput; // drop the caret
@@ -318,9 +375,10 @@
         showDigit(aOnes, p.aOnes);
         showDigit(bTens, p.bTens || "");
         showDigit(bOnes, p.bOnes);
+        vOpEl.textContent = opSymbol(p.op);
         ansTensDigit.textContent = "";
         ansOnesDigit.textContent = "";
-        carryEl.classList.remove("show");
+        carryEl.classList.remove("show", "borrow");
         carryEl.textContent = "";
         resetSlot(ansTensSlot);
         resetSlot(ansOnesSlot);
@@ -346,14 +404,21 @@
             hintEl.textContent = "Type the answer left to right";
             return;
         }
+        const verb = state.op === "sub" ? "subtract" : "add";
+        const Verb = state.op === "sub" ? "Subtract" : "Add";
         if (state.active === "ones") {
             hintEl.className = "hint";
-            hintEl.textContent = "Add the ones first";
+            hintEl.textContent = `${Verb} the ones first`;
         } else if (state.active === "tens") {
             hintEl.className = "hint";
-            hintEl.textContent = state.current.hasCarry
-                ? "Carry 1! Now add the tens"
-                : "Now add the tens";
+            const p = state.current;
+            if (p.hasCarry) {
+                hintEl.textContent = `Carry 1! Now ${verb} the tens`;
+            } else if (p.hasBorrow) {
+                hintEl.textContent = `Borrow 1! Now ${verb} the tens`;
+            } else {
+                hintEl.textContent = `Now ${verb} the tens`;
+            }
         }
     }
 
@@ -391,12 +456,13 @@
 
     function checkOnes(digit) {
         const p = state.current;
-        if (digit === p.sumOnes) {
+        if (digit === p.resultOnes) {
             ansOnesSlot.classList.add("correct");
             playGood();
-            if (p.hasCarry) {
+            if (p.hasCarry || p.hasBorrow) {
                 setTimeout(() => {
-                    carryEl.textContent = "1";
+                    carryEl.textContent = p.hasBorrow ? "−1" : "1";
+                    carryEl.classList.toggle("borrow", !!p.hasBorrow);
                     carryEl.classList.add("show");
                     playCarry();
                 }, 200);
@@ -406,7 +472,7 @@
                 state.locked = false;
                 ansOnesSlot.classList.remove("correct");
                 ansOnesSlot.classList.add("filled");
-                if (p.sumTens === 0) {
+                if (p.resultTens === 0) {
                     ansTensDigit.textContent = "0";
                     ansTensSlot.classList.add("filled");
                     finishProblem(true);
@@ -419,7 +485,7 @@
             state.mistakes += 1;
             playBad();
             hintEl.className = "hint bad";
-            hintEl.textContent = "Try again! Ones = " + p.aOnes + " + " + p.bOnes;
+            hintEl.textContent = "Try again! Ones = " + p.aOnes + " " + opSymbol(p.op) + " " + p.bOnes;
             state.locked = true;
             setTimeout(() => {
                 ansOnesSlot.classList.remove("wrong", "filled");
@@ -432,7 +498,7 @@
 
     function checkTens(digit) {
         const p = state.current;
-        if (digit === p.sumTens) {
+        if (digit === p.resultTens) {
             ansTensSlot.classList.add("correct");
             playGood();
             finishProblem(true);
@@ -440,9 +506,13 @@
             ansTensSlot.classList.add("wrong");
             state.mistakes += 1;
             playBad();
-            const carryHint = p.hasCarry ? " (don't forget to carry 1!)" : "";
+            const adjustHint = p.hasCarry
+                ? " (don't forget to carry 1!)"
+                : p.hasBorrow
+                    ? " (don't forget you borrowed 1!)"
+                    : "";
             hintEl.className = "hint bad";
-            hintEl.textContent = "Try the tens again" + carryHint;
+            hintEl.textContent = "Try the tens again" + adjustHint;
             state.locked = true;
             setTimeout(() => {
                 ansTensSlot.classList.remove("wrong", "filled");
@@ -487,6 +557,22 @@
         updateLevelUI();
         if (state.running) {
             // Regenerate the current question under the new difficulty
+            state.hInput = "";
+            state.mistakes = 0;
+            state.locked = false;
+            state.current = genProblem();
+            renderProblem();
+        }
+    }
+
+    function switchOp(newOp) {
+        if (newOp !== "add" && newOp !== "sub") return;
+        if (newOp === state.op) return;
+        state.op = newOp;
+        localStorage.setItem(OP_KEY, newOp);
+        updateOpUI();
+        if (state.running) {
+            // Regenerate the current question under the new operation
             state.hInput = "";
             state.mistakes = 0;
             state.locked = false;
@@ -544,7 +630,8 @@
             state.score += gained;
             scoreEl.textContent = state.score;
             hintEl.className = "hint good";
-            hintEl.textContent = `✓ ${state.current.a} + ${state.current.b} = ${state.current.sum}  (+${gained})`;
+            const sym = opSymbol(state.current.op);
+            hintEl.textContent = `✓ ${state.current.a} ${sym} ${state.current.b} = ${state.current.result}  (+${gained})`;
         }
         setTimeout(() => {
             state.qIndex += 1;
@@ -589,6 +676,9 @@
     });
     countBtns.forEach((btn) => {
         btn.addEventListener("click", () => switchCount(btn.dataset.count));
+    });
+    opBtns.forEach((btn) => {
+        btn.addEventListener("click", () => switchOp(btn.dataset.op));
     });
 
     window.addEventListener("keydown", (e) => {

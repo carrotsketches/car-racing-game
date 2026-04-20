@@ -24,6 +24,10 @@
         <div class="stage">
             <div class="pad" id="pad">
                 <div class="toggle-row">
+                    <div class="mode-toggle" role="group" aria-label="Pick operation">
+                        <button type="button" class="toggle-btn selected" data-op="add" aria-label="Addition">+</button>
+                        <button type="button" class="toggle-btn" data-op="sub" aria-label="Subtraction">−</button>
+                    </div>
                     <div class="mode-toggle" role="group" aria-label="Switch difficulty">
                         <button type="button" class="toggle-btn selected" data-level="easy">Easy 1–10</button>
                         <button type="button" class="toggle-btn" data-level="medium">Medium 1–20</button>
@@ -43,7 +47,7 @@
                 <div class="problem mode-horizontal" id="problem">
                     <div class="h-layout" id="h-layout">
                         <span class="h-num" id="h-a">0</span>
-                        <span class="h-op">+</span>
+                        <span class="h-op" id="h-op">+</span>
                         <span class="h-num" id="h-b">0</span>
                         <span class="h-op">=</span>
                         <span class="h-ans" id="h-ans"></span>
@@ -62,7 +66,7 @@
                         </div>
 
                         <div class="row row-b">
-                            <span class="op">+</span>
+                            <span class="op" id="v-op">+</span>
                             <span class="digit" id="b-tens"></span>
                             <span class="digit" id="b-ones"></span>
                         </div>
@@ -103,7 +107,7 @@
             <div id="overlay" class="overlay">
                 <div class="panel">
                     <h2 id="overlay-title">Ready?</h2>
-                    <p id="overlay-msg">Add numbers 1–20! Swap between Across and Stacked layouts any time with the toggle at the top.</p>
+                    <p id="overlay-msg">Practice + and − up to 20. Switch op, level, layout, or question count any time with the pill toggles at the top.</p>
                     <label class="name-row" for="name-input">
                         <span>Name</span>
                         <input id="name-input" type="text" maxlength="12" autocomplete="off"
