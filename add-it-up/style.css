@@ -455,11 +455,20 @@ h1 {
 
 .mode-toggle {
     display: inline-flex;
+    align-items: center;
     background: rgba(209, 91, 150, 0.12);
     border: 1px solid rgba(209, 91, 150, 0.35);
     border-radius: 999px;
     padding: 3px;
     gap: 2px;
+}
+
+.toggle-label {
+    padding: 0 8px 0 6px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #7a5c78;
+    letter-spacing: 0.5px;
 }
 
 .toggle-btn {

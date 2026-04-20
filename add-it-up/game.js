@@ -26,14 +26,17 @@
     const playerNameEl = document.getElementById("player-name");
     const modeBtns = document.querySelectorAll(".toggle-btn[data-mode]");
     const levelBtns = document.querySelectorAll(".toggle-btn[data-level]");
+    const countBtns = document.querySelectorAll(".toggle-btn[data-count]");
 
-    const TOTAL_QUESTIONS = 10;
+    const ALLOWED_COUNTS = [5, 8, 10];
+    const DEFAULT_COUNT = 10;
     const POINTS_FIRST_TRY = 10;
     const POINTS_RETRY = 5;
     const NAME_KEY = "highway-dash-last-name"; // shared across games
     const LB_KEY = "add-it-up-leaderboard";
     const MODE_KEY = "add-it-up-mode";
     const LEVEL_KEY = "add-it-up-level";
+    const COUNT_KEY = "add-it-up-count";
     const LB_MAX = 20;
 
     function loadLeaderboard() {
@@ -60,6 +63,8 @@
 
     const savedMode = localStorage.getItem(MODE_KEY) === "vertical" ? "vertical" : "horizontal";
     const savedLevel = localStorage.getItem(LEVEL_KEY) === "medium" ? "medium" : "easy";
+    const savedCountRaw = Number(localStorage.getItem(COUNT_KEY));
+    const savedCount = ALLOWED_COUNTS.includes(savedCountRaw) ? savedCountRaw : DEFAULT_COUNT;
 
     const state = {
         running: false,
@@ -68,6 +73,7 @@
         current: null,
         mode: savedMode,
         level: savedLevel,
+        qTotal: savedCount,
         // vertical state
         active: "ones", // "ones" | "tens" | "done"
         // horizontal state
@@ -78,10 +84,11 @@
         locked: false,
     };
 
-    qTotalEl.textContent = TOTAL_QUESTIONS;
+    qTotalEl.textContent = state.qTotal;
     applyModeClass();
     updateModeUI();
     updateLevelUI();
+    updateCountUI();
 
     // ----- Name handling -----
     const savedName = localStorage.getItem(NAME_KEY) || "";
@@ -207,6 +214,12 @@
     function updateLevelUI() {
         levelBtns.forEach((b) => {
             b.classList.toggle("selected", b.dataset.level === state.level);
+        });
+    }
+
+    function updateCountUI() {
+        countBtns.forEach((b) => {
+            b.classList.toggle("selected", Number(b.dataset.count) === state.qTotal);
         });
     }
 
@@ -482,6 +495,20 @@
         }
     }
 
+    function switchCount(newCount) {
+        const n = Number(newCount);
+        if (!ALLOWED_COUNTS.includes(n)) return;
+        if (n === state.qTotal) return;
+        state.qTotal = n;
+        localStorage.setItem(COUNT_KEY, String(n));
+        qTotalEl.textContent = n;
+        updateCountUI();
+        if (state.running && state.qIndex >= n) {
+            // Already answered enough questions — wrap up
+            endGame();
+        }
+    }
+
     // ----- Game flow -----
     function startGame() {
         ensureAudio();
@@ -498,7 +525,7 @@
     }
 
     function nextProblem() {
-        if (state.qIndex >= TOTAL_QUESTIONS) {
+        if (state.qIndex >= state.qTotal) {
             endGame();
             return;
         }
@@ -537,7 +564,7 @@
         updateBestDisplay();
 
         const rank = state.leaderboard.indexOf(entry);
-        let msg = `${state.playerName} scored ${state.score} / ${TOTAL_QUESTIONS * POINTS_FIRST_TRY}!`;
+        let msg = `${state.playerName} scored ${state.score} / ${state.qTotal * POINTS_FIRST_TRY}!`;
         if (rank === 0) msg += " 🏆 New top score!";
         else if (rank >= 0 && rank < 10) msg += ` You're rank #${rank + 1}.`;
         overlayTitle.textContent = "All done!";
@@ -559,6 +586,9 @@
     });
     levelBtns.forEach((btn) => {
         btn.addEventListener("click", () => switchLevel(btn.dataset.level));
+    });
+    countBtns.forEach((btn) => {
+        btn.addEventListener("click", () => switchCount(btn.dataset.count));
     });
 
     window.addEventListener("keydown", (e) => {
