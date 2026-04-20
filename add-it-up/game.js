@@ -203,12 +203,12 @@
     function updateHint() {
         if (state.active === "ones") {
             hintEl.className = "hint";
-            hintEl.textContent = "先算个位 (ones first)";
+            hintEl.textContent = "Add the ones first";
         } else if (state.active === "tens") {
             hintEl.className = "hint";
             hintEl.textContent = state.current.hasCarry
-                ? "进位 1！再加十位 (carry 1, now tens)"
-                : "再算十位 (now the tens)";
+                ? "Carry 1! Now add the tens"
+                : "Now add the tens";
         } else {
             // done — hint is set by feedback
         }
@@ -311,7 +311,7 @@
             state.mistakes += 1;
             playBad();
             hintEl.className = "hint bad";
-            hintEl.textContent = "再试一次！个位 = " + p.aOnes + " + " + p.bOnes;
+            hintEl.textContent = "Try again! Ones = " + p.aOnes + " + " + p.bOnes;
             state.locked = true;
             setTimeout(() => {
                 ansOnesSlot.classList.remove("wrong", "filled");
@@ -332,9 +332,9 @@
             ansTensSlot.classList.add("wrong");
             state.mistakes += 1;
             playBad();
-            const carryHint = p.hasCarry ? "（别忘了进位 1！）" : "";
+            const carryHint = p.hasCarry ? " (don't forget to carry 1!)" : "";
             hintEl.className = "hint bad";
-            hintEl.textContent = "再试一次十位" + carryHint;
+            hintEl.textContent = "Try the tens again" + carryHint;
             state.locked = true;
             setTimeout(() => {
                 ansTensSlot.classList.remove("wrong", "filled");
