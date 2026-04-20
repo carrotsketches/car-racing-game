@@ -2,72 +2,31 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <title>Car Racing Game</title>
+    <title>Fun Games</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="game-wrapper">
-        <header>
-            <h1>Highway Dash</h1>
-            <div class="hud">
-                <div class="stat" id="player-tag">👤 <span id="player-name">—</span></div>
-                <div class="stat">Lv <span id="level">1</span></div>
-                <div class="stat">Score: <span id="score">0</span></div>
-                <div class="stat"><span id="coins">0</span> <span class="icon">🪙</span></div>
-                <div class="stat hearts" id="hearts" aria-label="lives">❤️❤️❤️</div>
-                <div class="stat">Best: <span id="best">0</span></div>
-            </div>
-        </header>
+    <main class="home">
+        <h1>🎮 Let's Play!</h1>
+        <p class="subtitle">Pick a game to start</p>
 
-        <div class="stage">
-            <canvas id="game" width="400" height="600"></canvas>
+        <div class="game-grid">
+            <a class="game-card highway-dash" href="highway-dash/">
+                <div class="emoji" aria-hidden="true">🚗</div>
+                <div class="title">Highway Dash</div>
+                <div class="desc">Dodge traffic and grab coins!</div>
+                <div class="badge">Play</div>
+            </a>
 
-            <div id="level-banner" class="level-banner hidden" aria-hidden="true">
-                <span id="level-banner-text">Level 2!</span>
-            </div>
-
-            <div id="overlay" class="overlay">
-            <div class="panel">
-                <h2 id="overlay-title">Ready to Race?</h2>
-                <p id="overlay-msg">Type your name, pick a car, then Start!</p>
-                <label class="name-row" for="name-input">
-                    <span>Name</span>
-                    <input id="name-input" type="text" maxlength="12" autocomplete="off"
-                           spellcheck="false" placeholder="Player" />
-                </label>
-                <div class="car-designer">
-                    <canvas id="car-preview" width="60" height="96" aria-label="Your car preview"></canvas>
-                    <div class="part-picker" role="radiogroup" aria-label="Pick a car part">
-                        <button type="button" class="part-btn selected" data-part="body">Body</button>
-                        <button type="button" class="part-btn" data-part="roof">Windows</button>
-                        <button type="button" class="part-btn" data-part="wheels">Wheels</button>
-                    </div>
-                    <div class="color-palette" id="color-palette" aria-label="Pick a color"></div>
-                </div>
-                <button id="start-btn">Start</button>
-                <div class="leaderboard" id="leaderboard">
-                    <h3>🏆 Leaderboard</h3>
-                    <ol id="leaderboard-list"></ol>
-                    <button type="button" class="clear-lb" id="clear-lb">Clear leaderboard</button>
-                </div>
+            <div class="game-card coming-soon" aria-disabled="true">
+                <div class="emoji" aria-hidden="true">⭐</div>
+                <div class="title">More soon!</div>
+                <div class="desc">Another game is on the way</div>
             </div>
         </div>
-        </div>
-
-        <div class="touch-controls" id="touch-controls" aria-label="Touch controls">
-            <button class="touch-btn" data-key="left" aria-label="Steer left">◀</button>
-            <button class="touch-btn boost" data-key="up" aria-label="Boost">▲</button>
-            <button class="touch-btn" data-key="right" aria-label="Steer right">▶</button>
-        </div>
-
-        <footer>
-            <p>Tap the buttons or use &larr; &rarr; &uarr; keys to drive!</p>
-        </footer>
-    </div>
-
-    <script src="game.js"></script>
+    </main>
 </body>
 </html>
