@@ -168,6 +168,11 @@ h1 {
     border-color: rgba(141, 217, 163, 0.4);
 }
 
+.game-card.add-it-up {
+    background: linear-gradient(135deg, rgba(243, 184, 217, 0.22), rgba(209, 91, 150, 0.18));
+    border-color: rgba(243, 184, 217, 0.4);
+}
+
 .game-card.coming-soon {
     opacity: 0.55;
     cursor: default;

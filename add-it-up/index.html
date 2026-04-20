@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>Add It Up! 竖式加法</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-wrapper">
+        <a class="home-link" href="../">← Games</a>
+        <header>
+            <h1>Add It Up!</h1>
+            <div class="hud">
+                <div class="stat" id="player-tag">👤 <span id="player-name">—</span></div>
+                <div class="stat">Q <span id="q-num">0</span>/<span id="q-total">10</span></div>
+                <div class="stat">Score: <span id="score">0</span></div>
+                <div class="stat">Best: <span id="best">0</span></div>
+            </div>
+        </header>
+
+        <div class="stage">
+            <div class="pad">
+                <div class="problem" id="problem">
+                    <div class="col-labels">
+                        <span class="lbl lbl-tens">十</span>
+                        <span class="lbl lbl-ones">个</span>
+                    </div>
+
+                    <div class="row row-a">
+                        <span class="op"></span>
+                        <span class="digit" id="a-tens"></span>
+                        <span class="digit" id="a-ones"></span>
+                    </div>
+
+                    <div class="row row-b">
+                        <span class="op">+</span>
+                        <span class="digit" id="b-tens"></span>
+                        <span class="digit" id="b-ones"></span>
+                    </div>
+
+                    <div class="bar"></div>
+
+                    <div class="row row-ans">
+                        <span class="op"></span>
+                        <span class="slot" id="ans-tens">
+                            <span class="carry" id="carry"></span>
+                            <span class="slot-digit" id="ans-tens-digit"></span>
+                        </span>
+                        <span class="slot" id="ans-ones">
+                            <span class="slot-digit" id="ans-ones-digit"></span>
+                        </span>
+                    </div>
+                </div>
+
+                <div class="hint" id="hint">Tap digits. Start with 个 (ones) →</div>
+
+                <div class="keypad" id="keypad" aria-label="Number keypad">
+                    <button class="key" data-k="1">1</button>
+                    <button class="key" data-k="2">2</button>
+                    <button class="key" data-k="3">3</button>
+                    <button class="key" data-k="4">4</button>
+                    <button class="key" data-k="5">5</button>
+                    <button class="key" data-k="6">6</button>
+                    <button class="key" data-k="7">7</button>
+                    <button class="key" data-k="8">8</button>
+                    <button class="key" data-k="9">9</button>
+                    <button class="key key-back" data-k="back">⌫</button>
+                    <button class="key" data-k="0">0</button>
+                    <button class="key key-check" data-k="check">✓</button>
+                </div>
+            </div>
+
+            <div id="overlay" class="overlay">
+                <div class="panel">
+                    <h2 id="overlay-title">Ready?</h2>
+                    <p id="overlay-msg">Add numbers 1–20 using 竖式 (column form). Stack the digits and add ones first, then tens!</p>
+                    <label class="name-row" for="name-input">
+                        <span>Name</span>
+                        <input id="name-input" type="text" maxlength="12" autocomplete="off"
+                               spellcheck="false" placeholder="Player" />
+                    </label>
+                    <button id="start-btn">Start</button>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>10 questions. Fill in 个 (ones) first, then 十 (tens).</p>
+        </footer>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
