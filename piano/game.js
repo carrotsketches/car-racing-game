@@ -10,6 +10,9 @@
     const startBtn = document.getElementById("start-btn");
     const nameInput = document.getElementById("name-input");
     const playerNameEl = document.getElementById("player-name");
+    const hud = document.getElementById("hud");
+    const footerText = document.getElementById("footer-text");
+    const modeButtons = document.querySelectorAll(".toggle-btn[data-mode]");
 
     const NOTES = [
         { name: "C", freq: 261.63 },
@@ -50,6 +53,7 @@
     }
 
     const state = {
+        mode: "memory",
         running: false,
         acceptingInput: false,
         sequence: [],
@@ -228,8 +232,8 @@
     }
 
     function onKeyTap(i) {
-        if (!state.running) {
-            // Allow free-play tones before game starts
+        if (state.mode === "free" || !state.running) {
+            // Free play — tap keys freely
             ensureAudio();
             pressKey(i);
             playNote(NOTES[i].freq, 0.5);
@@ -282,12 +286,46 @@
         else if (state.score > 0 && rank >= 0 && rank < 10) msg += ` You're rank #${rank + 1}.`;
 
         setTimeout(() => {
+            if (state.mode !== "memory") return;
             overlayTitle.textContent = "Game Over";
             overlayMsg.textContent = msg;
             startBtn.textContent = "Play Again";
             overlay.classList.remove("hidden");
         }, 900);
     }
+
+    function setMode(mode) {
+        if (state.mode === mode) return;
+        state.mode = mode;
+        modeButtons.forEach((btn) => {
+            btn.classList.toggle("selected", btn.dataset.mode === mode);
+        });
+
+        // Stop any in-progress memory game
+        state.running = false;
+        state.acceptingInput = false;
+        keyEls.forEach((el) => el.classList.remove("glow", "wrong", "active"));
+
+        if (mode === "free") {
+            hud.classList.add("free-mode");
+            piano.classList.remove("locked");
+            overlay.classList.add("hidden");
+            setStatus("Free play — tap any key!", "your-turn");
+            footerText.textContent = "Tap any key to play that note.";
+        } else {
+            hud.classList.remove("free-mode");
+            overlayTitle.textContent = "Ready?";
+            overlayMsg.textContent = "Listen to the tune, then tap it back. Each round adds one new note!";
+            startBtn.textContent = "Start";
+            overlay.classList.remove("hidden");
+            setStatus("Press Start to play");
+            footerText.textContent = "Tap the keys in the same order you hear them.";
+        }
+    }
+
+    modeButtons.forEach((btn) => {
+        btn.addEventListener("click", () => setMode(btn.dataset.mode));
+    });
 
     startBtn.addEventListener("click", startGame);
 

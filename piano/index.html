@@ -13,13 +13,18 @@
         <a class="home-link" href="../">← Games</a>
         <header>
             <h1>Piano Memory</h1>
-            <div class="hud">
+            <div class="hud" id="hud">
                 <div class="stat" id="player-tag">👤 <span id="player-name">—</span></div>
-                <div class="stat">Round: <span id="round">0</span></div>
-                <div class="stat">Score: <span id="score">0</span></div>
-                <div class="stat">Best: <span id="best">0</span></div>
+                <div class="stat memory-only">Round: <span id="round">0</span></div>
+                <div class="stat memory-only">Score: <span id="score">0</span></div>
+                <div class="stat memory-only">Best: <span id="best">0</span></div>
             </div>
         </header>
+
+        <div class="mode-toggle" role="group" aria-label="Pick mode">
+            <button type="button" class="toggle-btn selected" data-mode="memory">Memory</button>
+            <button type="button" class="toggle-btn" data-mode="free">Free Play</button>
+        </div>
 
         <div class="stage">
             <div class="status" id="status" aria-live="polite">Press Start to play</div>
@@ -41,7 +46,7 @@
         </div>
 
         <footer>
-            <p>Tap the keys in the same order you hear them.</p>
+            <p id="footer-text">Tap the keys in the same order you hear them.</p>
         </footer>
     </div>
 
