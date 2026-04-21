@@ -533,17 +533,31 @@
 
         ctx.restore();
 
-        // Carried "count" tag above bus (unrotated) — a friendly hint for kids
+        // Row of colored dots above the bus — one per rider — so kids can
+        // see at a glance which colors are on board.
         if (state.carried.length > 0) {
+            const dotR = 6;
+            const gap = 4;
             const tagY = cy - CELL * 0.42;
+            const rowW = state.carried.length * (dotR * 2) + (state.carried.length - 1) * gap;
+            const padX = 6;
+            const padY = 4;
             ctx.fillStyle = "rgba(0,0,0,0.55)";
-            roundRect(ctx, cx - 18, tagY - 8, 36, 16, 8);
+            roundRect(ctx, cx - rowW / 2 - padX, tagY - dotR - padY,
+                rowW + padX * 2, dotR * 2 + padY * 2, dotR + padY);
             ctx.fill();
-            ctx.fillStyle = "#fff";
-            ctx.font = "bold 11px Segoe UI, Roboto, sans-serif";
-            ctx.textAlign = "center";
-            ctx.textBaseline = "middle";
-            ctx.fillText("👥 " + state.carried.length, cx, tagY);
+            let dx = cx - rowW / 2 + dotR;
+            for (const idx of state.carried) {
+                const p = PALETTE[idx];
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(dx, tagY, dotR, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = "rgba(0,0,0,0.35)";
+                ctx.lineWidth = 1;
+                ctx.stroke();
+                dx += dotR * 2 + gap;
+            }
         }
     }
 
