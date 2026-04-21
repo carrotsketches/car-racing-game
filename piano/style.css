@@ -73,6 +73,39 @@ h1 {
     color: #a6b8ff;
 }
 
+.mode-toggle {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 999px;
+    padding: 4px;
+    align-self: center;
+}
+
+.toggle-btn {
+    background: transparent;
+    color: #cfd7e3;
+    padding: 6px 16px;
+    border-radius: 999px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    border: none;
+    cursor: pointer;
+    transition: background 0.12s ease, color 0.12s ease;
+}
+
+.toggle-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    box-shadow: none;
+    transform: none;
+}
+
+.toggle-btn.selected {
+    background: #a6b8ff;
+    color: #1b2735;
+}
+
 .stage {
     position: relative;
     display: flex;
@@ -82,6 +115,10 @@ h1 {
     background: linear-gradient(180deg, #2a2035 0%, #1a1422 100%);
     border-radius: 16px;
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5), inset 0 4px 0 rgba(255, 255, 255, 0.06);
+}
+
+.hud.free-mode .stat.memory-only {
+    display: none;
 }
 
 .status {
