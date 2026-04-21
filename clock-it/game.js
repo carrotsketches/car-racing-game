@@ -199,12 +199,12 @@
         let hour = 1 + Math.floor(Math.random() * 12); // 1..12
         let minute;
         if (state.level === "easy") {
-            minute = 0;
-        } else if (state.level === "medium") {
             minute = Math.random() < 0.5 ? 0 : 30;
-        } else {
+        } else if (state.level === "medium") {
             const opts = [0, 15, 30, 45];
             minute = opts[Math.floor(Math.random() * opts.length)];
+        } else {
+            minute = Math.floor(Math.random() * 12) * 5; // 0,5,...,55
         }
         // Avoid repeating the exact same time twice in a row
         if (state.current && state.current.hour === hour && state.current.minute === minute) {
