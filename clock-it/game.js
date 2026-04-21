@@ -3,114 +3,13 @@
     const minuteHand = document.getElementById("minute-hand");
     const ticksGroup = document.getElementById("ticks");
     const numbersGroup = document.getElementById("numbers");
-    const choicesEl = document.getElementById("choices");
-    const choiceBtns = Array.from(choicesEl.querySelectorAll(".choice"));
-    const hintEl = document.getElementById("hint");
-    const scoreEl = document.getElementById("score");
-    const bestEl = document.getElementById("best");
-    const qNumEl = document.getElementById("q-num");
-    const qTotalEl = document.getElementById("q-total");
-    const overlay = document.getElementById("overlay");
-    const overlayTitle = document.getElementById("overlay-title");
-    const overlayMsg = document.getElementById("overlay-msg");
-    const startBtn = document.getElementById("start-btn");
-    const nameInput = document.getElementById("name-input");
-    const playerNameEl = document.getElementById("player-name");
-    const countBtns = document.querySelectorAll(".toggle-btn[data-count]");
-    const cheerEl = document.getElementById("cheer");
-    const padEl = document.getElementById("pad");
+    const hourInput = document.getElementById("hour-input");
+    const minuteInput = document.getElementById("minute-input");
+    const adjustBtns = document.querySelectorAll(".adjust");
 
-    const CHEERS = [
-        "Right on time! ⏰",
-        "Tick tock! 🎉",
-        "Spot on! ⭐",
-        "Nailed it! 🌟",
-        "Clockwork! 🛠️",
-        "Awesome! 🎊",
-        "Perfect! 🏆",
-        "On the dot! ✨",
-        "Brilliant! 💡",
-        "Time master! 🚀",
-    ];
-
-    const ALLOWED_COUNTS = [5, 8, 10];
-    const DEFAULT_COUNT = 5;
-    const POINTS_FIRST_TRY = 10;
-    const POINTS_RETRY = 5;
-    const NAME_KEY = "highway-dash-last-name";
-    const LB_KEY = "clock-it-leaderboard";
-    const COUNT_KEY = "clock-it-count";
-    const LB_MAX = 20;
-    const MINUTES_POOL = [0, 15, 30, 45];
-
-    function loadLeaderboard() {
-        try {
-            const raw = localStorage.getItem(LB_KEY);
-            const arr = raw ? JSON.parse(raw) : [];
-            return Array.isArray(arr) ? arr : [];
-        } catch (_) {
-            return [];
-        }
-    }
-
-    function saveLeaderboard() {
-        try { localStorage.setItem(LB_KEY, JSON.stringify(state.leaderboard)); } catch (_) {}
-    }
-
-    function personalBest(name) {
-        let best = 0;
-        for (const e of state.leaderboard) {
-            if (e.name === name && e.score > best) best = e.score;
-        }
-        return best;
-    }
-
-    const savedCountRaw = Number(localStorage.getItem(COUNT_KEY));
-    const savedCount = ALLOWED_COUNTS.includes(savedCountRaw) ? savedCountRaw : DEFAULT_COUNT;
-
-    const state = {
-        running: false,
-        score: 0,
-        qIndex: 0,
-        current: null,
-        options: [],
-        qTotal: savedCount,
-        mistakes: 0,
-        tried: new Set(),
-        leaderboard: loadLeaderboard(),
-        playerName: "",
-        locked: false,
-    };
-
-    qTotalEl.textContent = state.qTotal;
     buildClockFace();
-    updateCountUI();
 
-    // ----- Name handling -----
-    const savedName = localStorage.getItem(NAME_KEY) || "";
-    if (savedName) {
-        nameInput.value = savedName;
-        playerNameEl.textContent = savedName;
-    }
-    updateBestDisplay();
-
-    nameInput.addEventListener("input", () => {
-        const n = nameInput.value.trim().slice(0, 12);
-        playerNameEl.textContent = n || "—";
-        updateBestDisplay();
-    });
-
-    function updateBestDisplay() {
-        const name = (nameInput.value || state.playerName || "").trim().slice(0, 12);
-        bestEl.textContent = name ? personalBest(name) : 0;
-    }
-
-    function sanitizeName(raw) {
-        const trimmed = (raw || "").trim().slice(0, 12);
-        return trimmed || "Player";
-    }
-
-    // ----- Audio -----
+    // Audio (lazy) — a soft tick when the time changes
     let audio = null;
     function ensureAudio() {
         if (!audio) {
@@ -120,30 +19,20 @@
         if (audio && audio.state === "suspended") audio.resume();
         return audio;
     }
-    function tone({ freq = 440, endFreq = null, type = "sine", duration = 0.15, volume = 0.2 }) {
+    function playTick() {
         const ac = ensureAudio();
         if (!ac) return;
         const osc = ac.createOscillator();
         const gain = ac.createGain();
-        osc.type = type;
-        osc.frequency.setValueAtTime(freq, ac.currentTime);
-        if (endFreq != null) osc.frequency.linearRampToValueAtTime(endFreq, ac.currentTime + duration);
-        gain.gain.setValueAtTime(volume, ac.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + duration);
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(620, ac.currentTime);
+        gain.gain.setValueAtTime(0.12, ac.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.08);
         osc.connect(gain).connect(ac.destination);
         osc.start();
-        osc.stop(ac.currentTime + duration);
-    }
-    function playTap() { tone({ freq: 520, type: "triangle", duration: 0.06, volume: 0.14 }); }
-    function playGood() { tone({ freq: 660, endFreq: 990, type: "sine", duration: 0.12, volume: 0.2 }); }
-    function playBad() { tone({ freq: 240, endFreq: 140, type: "square", duration: 0.22, volume: 0.18 }); }
-    function playWin() {
-        tone({ freq: 523, type: "triangle", duration: 0.15, volume: 0.22 });
-        setTimeout(() => tone({ freq: 659, type: "triangle", duration: 0.15, volume: 0.22 }), 130);
-        setTimeout(() => tone({ freq: 784, type: "triangle", duration: 0.25, volume: 0.24 }), 260);
+        osc.stop(ac.currentTime + 0.08);
     }
 
-    // ----- Clock face -----
     function buildClockFace() {
         const SVG = "http://www.w3.org/2000/svg";
         const cx = 100, cy = 100;
@@ -185,199 +74,57 @@
         minuteHand.setAttribute("transform", `rotate(${minuteAngle} 100 100)`);
     }
 
-    // ----- Problem generation -----
-    function genProblem() {
-        let hour = 1 + Math.floor(Math.random() * 12);
-        let minute = MINUTES_POOL[Math.floor(Math.random() * MINUTES_POOL.length)];
-        if (state.current && state.current.hour === hour && state.current.minute === minute) {
-            hour = (hour % 12) + 1;
-        }
+    function wrap(value, min, max) {
+        const span = max - min + 1;
+        let v = ((value - min) % span + span) % span + min;
+        return v;
+    }
+
+    function readTime() {
+        const hRaw = parseInt(hourInput.value, 10);
+        const mRaw = parseInt(minuteInput.value, 10);
+        const hour = Number.isFinite(hRaw) ? hRaw : 12;
+        const minute = Number.isFinite(mRaw) ? mRaw : 0;
         return { hour, minute };
     }
 
-    function sameTime(a, b) { return a.hour === b.hour && a.minute === b.minute; }
-
-    function buildOptions(target) {
-        const pool = [];
-        for (let h = 1; h <= 12; h++) {
-            for (const m of MINUTES_POOL) {
-                if (!(h === target.hour && m === target.minute)) pool.push({ hour: h, minute: m });
-            }
-        }
-        // Fisher–Yates shuffle
-        for (let i = pool.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [pool[i], pool[j]] = [pool[j], pool[i]];
-        }
-        const opts = [target, pool[0], pool[1], pool[2]];
-        for (let i = opts.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [opts[i], opts[j]] = [opts[j], opts[i]];
-        }
-        return opts;
+    function applyTime({ silent = false } = {}) {
+        const { hour, minute } = readTime();
+        setClock(hour, minute);
+        if (!silent) playTick();
     }
 
-    function formatTime(t) {
-        return `${t.hour}:${String(t.minute).padStart(2, "0")}`;
-    }
-
-    // ----- Rendering -----
-    function updateCountUI() {
-        countBtns.forEach((b) => {
-            b.classList.toggle("selected", Number(b.dataset.count) === state.qTotal);
-        });
-    }
-
-    function renderChoices() {
-        choiceBtns.forEach((btn, i) => {
-            const opt = state.options[i];
-            btn.textContent = opt ? formatTime(opt) : "—";
-            btn.className = "choice";
-            btn.disabled = !state.running;
-        });
-    }
-
-    function renderProblem() {
-        if (!state.current) return;
-        setClock(state.current.hour, state.current.minute);
-        state.tried = new Set();
-        renderChoices();
-        qNumEl.textContent = state.qIndex + 1;
-        hintEl.className = "hint";
-        hintEl.textContent = "What time does the clock show?";
-    }
-
-    // ----- Input -----
-    function handleChoice(idx) {
-        if (!state.running || state.locked) return;
-        if (state.tried.has(idx)) return;
-        const opt = state.options[idx];
-        if (!opt) return;
-        const btn = choiceBtns[idx];
-        if (sameTime(opt, state.current)) {
-            btn.classList.add("correct");
-            playGood();
-            finishProblem(true);
+    function clampOnBlur(input, min, max) {
+        const raw = parseInt(input.value, 10);
+        if (!Number.isFinite(raw)) {
+            input.value = String(min);
         } else {
-            btn.classList.add("wrong");
-            btn.disabled = true;
-            state.tried.add(idx);
-            state.mistakes += 1;
-            playBad();
-            hintEl.className = "hint bad";
-            hintEl.textContent = "Not quite — look again!";
+            input.value = String(Math.min(max, Math.max(min, raw)));
         }
+        applyTime({ silent: true });
     }
 
-    // ----- Count switching -----
-    function switchCount(newCount) {
-        const n = Number(newCount);
-        if (!ALLOWED_COUNTS.includes(n)) return;
-        if (n === state.qTotal) return;
-        state.qTotal = n;
-        localStorage.setItem(COUNT_KEY, String(n));
-        qTotalEl.textContent = n;
-        updateCountUI();
-        if (state.running && state.qIndex >= n) {
-            endGame();
-        }
-    }
+    hourInput.addEventListener("input", () => applyTime());
+    minuteInput.addEventListener("input", () => applyTime());
+    hourInput.addEventListener("blur", () => clampOnBlur(hourInput, 1, 12));
+    minuteInput.addEventListener("blur", () => clampOnBlur(minuteInput, 0, 59));
 
-    // ----- Game flow -----
-    function startGame() {
-        ensureAudio();
-        state.playerName = sanitizeName(nameInput.value);
-        nameInput.value = state.playerName;
-        localStorage.setItem(NAME_KEY, state.playerName);
-        playerNameEl.textContent = state.playerName;
-        state.score = 0;
-        state.qIndex = 0;
-        scoreEl.textContent = 0;
-        overlay.classList.add("hidden");
-        state.running = true;
-        nextProblem();
-    }
-
-    function nextProblem() {
-        if (state.qIndex >= state.qTotal) {
-            endGame();
-            return;
-        }
-        state.current = genProblem();
-        state.options = buildOptions(state.current);
-        state.mistakes = 0;
-        state.locked = false;
-        renderProblem();
-    }
-
-    function finishProblem(correct) {
-        state.locked = true;
-        if (correct) {
-            const gained = state.mistakes === 0 ? POINTS_FIRST_TRY : POINTS_RETRY;
-            state.score += gained;
-            scoreEl.textContent = state.score;
-            hintEl.className = "hint good";
-            hintEl.textContent = `✓ ${formatTime(state.current)}  (+${gained})`;
-            showCheer();
-            flashPad();
-        }
-        choiceBtns.forEach(b => b.disabled = true);
-        setTimeout(() => {
-            state.qIndex += 1;
-            nextProblem();
-        }, 1200);
-    }
-
-    function showCheer() {
-        const msg = CHEERS[Math.floor(Math.random() * CHEERS.length)];
-        cheerEl.textContent = msg;
-        cheerEl.classList.remove("show");
-        void cheerEl.offsetWidth;
-        cheerEl.classList.add("show");
-    }
-
-    function flashPad() {
-        padEl.classList.remove("problem-correct");
-        void padEl.offsetWidth;
-        padEl.classList.add("problem-correct");
-    }
-
-    function endGame() {
-        state.running = false;
-        playWin();
-
-        const entry = { name: state.playerName, score: state.score, at: Date.now() };
-        state.leaderboard.push(entry);
-        state.leaderboard.sort((a, b) => b.score - a.score);
-        state.leaderboard = state.leaderboard.slice(0, LB_MAX);
-        saveLeaderboard();
-        updateBestDisplay();
-
-        const rank = state.leaderboard.indexOf(entry);
-        let msg = `${state.playerName} scored ${state.score} / ${state.qTotal * POINTS_FIRST_TRY}!`;
-        if (rank === 0) msg += " 🏆 New top score!";
-        else if (rank >= 0 && rank < 10) msg += ` You're rank #${rank + 1}.`;
-        overlayTitle.textContent = "Time's up!";
-        overlayMsg.textContent = msg;
-        startBtn.textContent = "Play Again";
-        overlay.classList.remove("hidden");
-    }
-
-    // ----- Event wiring -----
-    choicesEl.addEventListener("pointerdown", (e) => {
-        const btn = e.target.closest("button.choice");
-        if (!btn || btn.disabled) return;
-        e.preventDefault();
-        playTap();
-        handleChoice(Number(btn.dataset.idx));
+    adjustBtns.forEach((btn) => {
+        btn.addEventListener("click", () => {
+            const dir = Number(btn.dataset.dir);
+            if (btn.dataset.unit === "hour") {
+                const cur = parseInt(hourInput.value, 10);
+                const base = Number.isFinite(cur) ? cur : 12;
+                hourInput.value = String(wrap(base + dir, 1, 12));
+            } else {
+                const cur = parseInt(minuteInput.value, 10);
+                const base = Number.isFinite(cur) ? cur : 0;
+                minuteInput.value = String(wrap(base + dir, 0, 59));
+            }
+            applyTime();
+        });
     });
 
-    countBtns.forEach((btn) => {
-        btn.addEventListener("click", () => switchCount(btn.dataset.count));
-    });
-
-    startBtn.addEventListener("click", startGame);
-
-    // Friendly default while idle
-    setClock(10, 10);
+    // Initial render
+    applyTime({ silent: true });
 })();

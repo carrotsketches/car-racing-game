@@ -13,26 +13,10 @@
         <a class="home-link" href="../">← Games</a>
         <header>
             <h1>Clock It!</h1>
-            <div class="hud">
-                <div class="stat" id="player-tag">👤 <span id="player-name">—</span></div>
-                <div class="stat">Q <span id="q-num">0</span>/<span id="q-total">5</span></div>
-                <div class="stat">Score: <span id="score">0</span></div>
-                <div class="stat">Best: <span id="best">0</span></div>
-            </div>
         </header>
 
         <div class="stage">
-            <div class="cheer" id="cheer" aria-live="polite"></div>
             <div class="pad" id="pad">
-                <div class="toggle-row">
-                    <div class="mode-toggle" role="group" aria-label="Pick number of questions">
-                        <span class="toggle-label">Q:</span>
-                        <button type="button" class="toggle-btn selected" data-count="5">5</button>
-                        <button type="button" class="toggle-btn" data-count="8">8</button>
-                        <button type="button" class="toggle-btn" data-count="10">10</button>
-                    </div>
-                </div>
-
                 <div class="clock-wrap">
                     <svg class="clock" viewBox="0 0 200 200" aria-label="Analog clock" role="img">
                         <circle class="face" cx="100" cy="100" r="94" />
@@ -45,33 +29,32 @@
                     </svg>
                 </div>
 
-                <div class="hint" id="hint">What time does the clock show?</div>
-
-                <div class="choices" id="choices" aria-label="Time choices">
-                    <button class="choice" data-idx="0">—</button>
-                    <button class="choice" data-idx="1">—</button>
-                    <button class="choice" data-idx="2">—</button>
-                    <button class="choice" data-idx="3">—</button>
+                <div class="digital">
+                    <div class="unit unit-hour">
+                        <span class="unit-label">Hour</span>
+                        <div class="spinner">
+                            <button type="button" class="adjust" data-unit="hour" data-dir="-1" aria-label="Hour down">−</button>
+                            <input type="number" id="hour-input" inputmode="numeric" min="1" max="12" value="3" aria-label="Hour">
+                            <button type="button" class="adjust" data-unit="hour" data-dir="1" aria-label="Hour up">+</button>
+                        </div>
+                    </div>
+                    <div class="colon">:</div>
+                    <div class="unit unit-minute">
+                        <span class="unit-label">Minute</span>
+                        <div class="spinner">
+                            <button type="button" class="adjust" data-unit="minute" data-dir="-1" aria-label="Minute down">−</button>
+                            <input type="number" id="minute-input" inputmode="numeric" min="0" max="59" value="0" aria-label="Minute">
+                            <button type="button" class="adjust" data-unit="minute" data-dir="1" aria-label="Minute up">+</button>
+                        </div>
+                    </div>
                 </div>
-            </div>
 
-            <div id="overlay" class="overlay">
-                <div class="panel">
-                    <h2 id="overlay-title">Ready?</h2>
-                    <p id="overlay-msg">Look at the clock, then tap the time you see.</p>
-                    <label class="name-row" for="name-input">
-                        <span>Name</span>
-                        <input id="name-input" type="text" maxlength="12" autocomplete="off"
-                               spellcheck="false" placeholder="Player" />
-                    </label>
-
-                    <button id="start-btn">Start</button>
-                </div>
+                <div class="hint" id="hint">Type a time — watch the hands move!</div>
             </div>
         </div>
 
         <footer>
-            <p>Short hand = hour. Long hand = minute. Tap the right time!</p>
+            <p>Blue hand = hour. Orange hand = minute.</p>
         </footer>
     </div>
 
