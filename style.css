@@ -136,6 +136,11 @@ h1 {
     border-color: rgba(255, 158, 199, 0.4);
 }
 
+.game-card.flappy-bird {
+    background: linear-gradient(135deg, rgba(255, 214, 107, 0.22), rgba(78, 192, 255, 0.18));
+    border-color: rgba(255, 214, 107, 0.4);
+}
+
 .game-card.coming-soon {
     opacity: 0.55;
     cursor: default;

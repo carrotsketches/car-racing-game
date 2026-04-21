@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>Flappy Bird</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-wrapper">
+        <a class="home-link" href="../">← Games</a>
+        <header>
+            <h1>Flappy Bird</h1>
+            <div class="hud">
+                <div class="stat" id="player-tag">👤 <span id="player-name">—</span></div>
+                <div class="stat">Score: <span id="score">0</span></div>
+                <div class="stat">Best: <span id="best">0</span></div>
+            </div>
+        </header>
+
+        <div class="stage">
+            <canvas id="game" width="400" height="600"></canvas>
+
+            <div id="overlay" class="overlay">
+                <div class="panel">
+                    <h2 id="overlay-title">Ready?</h2>
+                    <p id="overlay-msg">Tap, click, or press Space to flap. Dodge the pipes!</p>
+                    <label class="name-row" for="name-input">
+                        <span>Name</span>
+                        <input id="name-input" type="text" maxlength="12" autocomplete="off"
+                               spellcheck="false" placeholder="Player" />
+                    </label>
+                    <button id="start-btn">Start</button>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>Tap / click / Space to flap. Don't hit the pipes!</p>
+        </footer>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
