@@ -16,7 +16,6 @@
     const startBtn = document.getElementById("start-btn");
     const nameInput = document.getElementById("name-input");
     const playerNameEl = document.getElementById("player-name");
-    const levelBtns = document.querySelectorAll(".toggle-btn[data-level]");
     const countBtns = document.querySelectorAll(".toggle-btn[data-count]");
     const cheerEl = document.getElementById("cheer");
     const padEl = document.getElementById("pad");
@@ -40,9 +39,9 @@
     const POINTS_RETRY = 5;
     const NAME_KEY = "highway-dash-last-name";
     const LB_KEY = "clock-it-leaderboard";
-    const LEVEL_KEY = "clock-it-level";
     const COUNT_KEY = "clock-it-count";
     const LB_MAX = 20;
+    const MINUTES_POOL = [0, 15, 30, 45];
 
     function loadLeaderboard() {
         try {
@@ -66,8 +65,6 @@
         return best;
     }
 
-    const savedLevelRaw = localStorage.getItem(LEVEL_KEY);
-    const savedLevel = ["easy", "hard"].includes(savedLevelRaw) ? savedLevelRaw : "easy";
     const savedCountRaw = Number(localStorage.getItem(COUNT_KEY));
     const savedCount = ALLOWED_COUNTS.includes(savedCountRaw) ? savedCountRaw : DEFAULT_COUNT;
 
@@ -77,7 +74,6 @@
         qIndex: 0,
         current: null,
         options: [],
-        level: savedLevel,
         qTotal: savedCount,
         mistakes: 0,
         tried: new Set(),
@@ -88,7 +84,6 @@
 
     qTotalEl.textContent = state.qTotal;
     buildClockFace();
-    updateLevelUI();
     updateCountUI();
 
     // ----- Name handling -----
@@ -191,14 +186,9 @@
     }
 
     // ----- Problem generation -----
-    function minutesForLevel() {
-        return state.level === "easy" ? [0, 30] : [0, 15, 30, 45];
-    }
-
     function genProblem() {
         let hour = 1 + Math.floor(Math.random() * 12);
-        const mins = minutesForLevel();
-        let minute = mins[Math.floor(Math.random() * mins.length)];
+        let minute = MINUTES_POOL[Math.floor(Math.random() * MINUTES_POOL.length)];
         if (state.current && state.current.hour === hour && state.current.minute === minute) {
             hour = (hour % 12) + 1;
         }
@@ -208,10 +198,9 @@
     function sameTime(a, b) { return a.hour === b.hour && a.minute === b.minute; }
 
     function buildOptions(target) {
-        const mins = minutesForLevel();
         const pool = [];
         for (let h = 1; h <= 12; h++) {
-            for (const m of mins) {
+            for (const m of MINUTES_POOL) {
                 if (!(h === target.hour && m === target.minute)) pool.push({ hour: h, minute: m });
             }
         }
@@ -233,12 +222,6 @@
     }
 
     // ----- Rendering -----
-    function updateLevelUI() {
-        levelBtns.forEach((b) => {
-            b.classList.toggle("selected", b.dataset.level === state.level);
-        });
-    }
-
     function updateCountUI() {
         countBtns.forEach((b) => {
             b.classList.toggle("selected", Number(b.dataset.count) === state.qTotal);
@@ -286,22 +269,7 @@
         }
     }
 
-    // ----- Level / count switching -----
-    function switchLevel(newLevel) {
-        if (!["easy", "hard"].includes(newLevel)) return;
-        if (newLevel === state.level) return;
-        state.level = newLevel;
-        localStorage.setItem(LEVEL_KEY, newLevel);
-        updateLevelUI();
-        if (state.running) {
-            state.mistakes = 0;
-            state.locked = false;
-            state.current = genProblem();
-            state.options = buildOptions(state.current);
-            renderProblem();
-        }
-    }
-
+    // ----- Count switching -----
     function switchCount(newCount) {
         const n = Number(newCount);
         if (!ALLOWED_COUNTS.includes(n)) return;
@@ -404,9 +372,6 @@
         handleChoice(Number(btn.dataset.idx));
     });
 
-    levelBtns.forEach((btn) => {
-        btn.addEventListener("click", () => switchLevel(btn.dataset.level));
-    });
     countBtns.forEach((btn) => {
         btn.addEventListener("click", () => switchCount(btn.dataset.count));
     });
