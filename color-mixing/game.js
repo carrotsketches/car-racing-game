@@ -28,6 +28,7 @@
         { id: "yellow", name: "Yellow", color: "#f5c451" },
         { id: "blue", name: "Blue", color: "#4a90e2" },
         { id: "white", name: "White", color: "#f5f5f5" },
+        { id: "black", name: "Black", color: "#222831" },
     ];
 
     // Each recipe uses two pot ids (unordered). Result is what you get.
@@ -36,8 +37,12 @@
         { pair: ["yellow", "blue"], id: "green", name: "Green", color: "#7bc47f" },
         { pair: ["red", "blue"], id: "purple", name: "Purple", color: "#9b59b6" },
         { pair: ["red", "white"], id: "pink", name: "Pink", color: "#ff9ec7" },
-        { pair: ["blue", "white"], id: "lightblue", name: "Light Blue", color: "#a5d8ff" },
-        { pair: ["yellow", "white"], id: "cream", name: "Cream", color: "#fff3b0" },
+        { pair: ["blue", "white"], id: "skyblue", name: "Sky Blue", color: "#a5d8ff" },
+        { pair: ["yellow", "white"], id: "lemon", name: "Lemon", color: "#fff3b0" },
+        { pair: ["red", "black"], id: "maroon", name: "Maroon", color: "#7a2028" },
+        { pair: ["blue", "black"], id: "navy", name: "Navy", color: "#1e2b52" },
+        { pair: ["yellow", "black"], id: "olive", name: "Olive", color: "#707c2f" },
+        { pair: ["white", "black"], id: "gray", name: "Gray", color: "#8892a5" },
     ];
 
     function recipeFor(aId, bId) {
