@@ -129,9 +129,16 @@
     function spawnItem() {
         const r = Math.random();
         let type;
-        if (r < 0.5) type = "coin";
-        else if (r < 0.75) type = "star";
-        else type = "cone";
+        if (state.lastItemType === "cone") {
+            // Never two cones in a row — player can't jump both
+            type = r < 0.66 ? "coin" : "star";
+        } else if (r < 0.55) {
+            type = "coin";
+        } else if (r < 0.82) {
+            type = "star";
+        } else {
+            type = "cone";
+        }
 
         let y;
         if (type === "cone") y = GROUND_Y - 20;
@@ -139,6 +146,8 @@
         else y = GROUND_Y - 30 - Math.random() * 40;
 
         state.items.push({ x: W + 40, y, type, taken: false });
+        state.lastItemType = type;
+        return type;
     }
 
     // ----- Game flow -----
@@ -149,6 +158,7 @@
         state.hearts = MAX_HEARTS;
         state.invincibleUntil = 0;
         state.items = [];
+        state.lastItemType = null;
         state.nextItemIn = 500;
         state.roadDashOffset = 0;
         state.flashUntil = 0;
@@ -273,32 +283,32 @@
         // Spawn items
         state.nextItemIn -= state.speed * dt;
         if (state.nextItemIn <= 0) {
-            spawnItem();
-            // Closer spawns at higher speed
-            const minGap = 90, maxGap = 260;
+            const spawned = spawnItem();
+            const minGap = 110, maxGap = 260;
             state.nextItemIn = minGap + Math.random() * (maxGap - minGap);
+            // After a cone, enforce a larger gap so the player can land + re-jump
+            if (spawned === "cone") state.nextItemIn = Math.max(state.nextItemIn, 280);
         }
 
         // Move and collide items
         for (const it of state.items) {
             it.x -= state.speed * dt;
             if (it.taken) continue;
-            // Simple AABB check against the car body
-            const cx = CAR_X, cy = state.car.y;
-            const cw = CAR_W, ch = CAR_H;
-            const ir = 18;
-            if (it.x > cx - ir && it.x < cx + cw + ir && it.y > cy - ir && it.y < cy + ch + ir) {
-                if (it.type === "coin") {
-                    it.taken = true;
-                    state.score += 5;
-                    scoreEl.textContent = state.score;
-                    playCoin();
-                } else if (it.type === "star") {
-                    it.taken = true;
-                    state.score += 20;
-                    scoreEl.textContent = state.score;
-                    playStar();
-                } else if (it.type === "cone" && performance.now() > state.invincibleUntil) {
+
+            if (it.type === "cone") {
+                // Tight hitbox: only hit if the car horizontally overlaps the cone's
+                // narrow base AND the car's lower body is below the cone's tip.
+                if (performance.now() <= state.invincibleUntil) continue;
+                const coneHalfW = 9;
+                const coneTipY = it.y - 16;
+                const carLeft = CAR_X + 8;
+                const carRight = CAR_X + CAR_W - 8;
+                const carBottom = state.car.y + CAR_H;
+                if (
+                    carRight > it.x - coneHalfW &&
+                    carLeft < it.x + coneHalfW &&
+                    carBottom > coneTipY
+                ) {
                     it.taken = true;
                     state.hearts -= 1;
                     updateHearts();
@@ -310,6 +320,24 @@
                         return;
                     }
                 }
+                continue;
+            }
+
+            // Coins / stars: generous pickup radius so they feel snappy
+            const ir = 18;
+            if (
+                it.x > CAR_X - ir && it.x < CAR_X + CAR_W + ir &&
+                it.y > state.car.y - ir && it.y < state.car.y + CAR_H + ir
+            ) {
+                it.taken = true;
+                if (it.type === "coin") {
+                    state.score += 5;
+                    playCoin();
+                } else {
+                    state.score += 20;
+                    playStar();
+                }
+                scoreEl.textContent = state.score;
             }
         }
 
