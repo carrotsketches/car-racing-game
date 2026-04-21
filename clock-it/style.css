@@ -147,9 +147,9 @@ h1 {
 }
 
 .clock {
-    width: 220px;
-    height: 220px;
-    max-width: 80vw;
+    width: 300px;
+    height: 300px;
+    max-width: 88vw;
     max-height: 60vh;
     filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.18));
 }
@@ -182,8 +182,8 @@ h1 {
 
 .clock .num {
     font-family: "Georgia", "Times New Roman", serif;
-    font-weight: 700;
-    font-size: 18px;
+    font-weight: 800;
+    font-size: 22px;
     fill: #2a1f10;
     text-anchor: middle;
     dominant-baseline: central;
@@ -191,21 +191,21 @@ h1 {
 
 .clock .hand {
     stroke-linecap: round;
-    transition: transform 0.4s cubic-bezier(.3, 1.4, .5, 1);
+    transition: transform 0.45s cubic-bezier(.3, 1.4, .5, 1);
 }
 
 .clock .hand.hour {
-    stroke: #2a1f10;
-    stroke-width: 7;
+    stroke: #2e6bd6;
+    stroke-width: 9;
 }
 
 .clock .hand.minute {
     stroke: #d15b2a;
-    stroke-width: 4.5;
+    stroke-width: 5.5;
 }
 
 .clock .pivot {
-    fill: #d15b2a;
+    fill: #2a1f10;
     stroke: #2a1f10;
     stroke-width: 1.5;
 }
@@ -214,56 +214,85 @@ h1 {
     display: flex;
     align-items: flex-end;
     justify-content: center;
-    gap: 10px;
-    margin: 6px 0 4px;
+    gap: 12px;
+    margin: 10px 0 4px;
 }
 
 .time-slot {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 4px;
+    gap: 6px;
 }
 
 .time-label {
-    font-size: 0.7rem;
+    font-size: 0.8rem;
     font-weight: 800;
-    letter-spacing: 1.5px;
+    letter-spacing: 1px;
     text-transform: uppercase;
-    color: #7a5a2c;
+    color: #4a3818;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
 }
 
+.swatch {
+    display: inline-block;
+    width: 24px;
+    height: 5px;
+    border-radius: 3px;
+}
+
+.swatch-hour { background: #2e6bd6; }
+.swatch-minute { background: #d15b2a; }
+
 .colon {
-    font-size: 2.6rem;
+    font-size: 3rem;
     font-weight: 900;
     color: #2a1f10;
-    padding-bottom: 12px;
+    padding-bottom: 14px;
     line-height: 1;
 }
 
 .slot {
-    font-size: 2.4rem;
-    font-weight: 800;
-    color: #d68a29;
-    width: 92px;
-    height: 70px;
+    font-size: 2.8rem;
+    font-weight: 900;
+    color: #2a1f10;
+    width: 108px;
+    height: 82px;
     display: flex;
     align-items: center;
     justify-content: center;
     border: 3px dashed #e0b97a;
-    border-radius: 12px;
-    background: rgba(255, 255, 255, 0.7);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.75);
     font-family: "Courier New", Courier, monospace;
     letter-spacing: 4px;
     position: relative;
 }
 
+.hour-group .slot {
+    border-color: #a9c3ef;
+}
+
+.minute-group .slot {
+    border-color: #f0b993;
+}
+
 .slot.active {
     border-style: solid;
-    border-color: #d68a29;
     background: #fff;
-    box-shadow: 0 0 0 4px rgba(214, 138, 41, 0.2);
     animation: slotPulse 1.2s ease-in-out infinite;
+}
+
+.hour-group .slot.active {
+    border-color: #2e6bd6;
+    box-shadow: 0 0 0 4px rgba(46, 107, 214, 0.22);
+}
+
+.minute-group .slot.active {
+    border-color: #d15b2a;
+    box-shadow: 0 0 0 4px rgba(209, 91, 42, 0.22);
 }
 
 .slot.filled {
@@ -292,8 +321,8 @@ h1 {
 }
 
 @keyframes slotPulse {
-    0%, 100% { box-shadow: 0 0 0 4px rgba(214, 138, 41, 0.2); }
-    50% { box-shadow: 0 0 0 8px rgba(214, 138, 41, 0.32); }
+    0%, 100% { filter: brightness(1); }
+    50% { filter: brightness(1.05); }
 }
 
 @keyframes slotBounce {
@@ -327,11 +356,11 @@ h1 {
 }
 
 .key {
-    padding: 14px 0;
-    font-size: 1.5rem;
-    font-weight: 800;
+    padding: 18px 0;
+    font-size: 1.8rem;
+    font-weight: 900;
     border: none;
-    border-radius: 12px;
+    border-radius: 14px;
     background: #fff;
     color: #2a1f10;
     cursor: pointer;
@@ -500,8 +529,8 @@ footer {
 @media (max-width: 420px) {
     h1 { font-size: 1.3rem; letter-spacing: 1px; }
     .hud { font-size: 0.78rem; padding: 6px 8px; gap: 4px; }
-    .clock { width: 200px; height: 200px; }
-    .slot { width: 80px; height: 64px; font-size: 2rem; }
-    .colon { font-size: 2.2rem; padding-bottom: 10px; }
-    .key { padding: 12px 0; font-size: 1.3rem; }
+    .clock { width: 260px; height: 260px; }
+    .slot { width: 92px; height: 72px; font-size: 2.4rem; }
+    .colon { font-size: 2.6rem; padding-bottom: 12px; }
+    .key { padding: 16px 0; font-size: 1.6rem; }
 }

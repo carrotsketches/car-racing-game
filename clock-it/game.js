@@ -38,7 +38,7 @@
     ];
 
     const ALLOWED_COUNTS = [5, 8, 10];
-    const DEFAULT_COUNT = 10;
+    const DEFAULT_COUNT = 5;
     const POINTS_FIRST_TRY = 10;
     const POINTS_RETRY = 5;
     const NAME_KEY = "highway-dash-last-name";
@@ -196,15 +196,19 @@
 
     // ----- Problem generation -----
     function genProblem() {
-        const hour = 1 + Math.floor(Math.random() * 12); // 1..12
+        let hour = 1 + Math.floor(Math.random() * 12); // 1..12
         let minute;
         if (state.level === "easy") {
-            minute = Math.random() < 0.5 ? 0 : 30;
+            minute = 0;
         } else if (state.level === "medium") {
+            minute = Math.random() < 0.5 ? 0 : 30;
+        } else {
             const opts = [0, 15, 30, 45];
             minute = opts[Math.floor(Math.random() * opts.length)];
-        } else {
-            minute = Math.floor(Math.random() * 12) * 5; // 0,5,...,55
+        }
+        // Avoid repeating the exact same time twice in a row
+        if (state.current && state.current.hour === hour && state.current.minute === minute) {
+            hour = (hour % 12) + 1;
         }
         return { hour, minute };
     }
@@ -241,10 +245,10 @@
     function updateHint() {
         if (state.active === "hour") {
             hintEl.className = "hint";
-            hintEl.textContent = "Hour first — short hand";
+            hintEl.textContent = "Short hand → hour";
         } else if (state.active === "minute") {
             hintEl.className = "hint";
-            hintEl.textContent = "Now the minutes — long hand";
+            hintEl.textContent = "Long hand → minute";
         }
     }
 

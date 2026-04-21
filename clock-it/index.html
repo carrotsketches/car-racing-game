@@ -26,15 +26,15 @@
             <div class="pad" id="pad">
                 <div class="toggle-row">
                     <div class="mode-toggle" role="group" aria-label="Switch difficulty">
-                        <button type="button" class="toggle-btn selected" data-level="easy">Easy · :00 / :30</button>
-                        <button type="button" class="toggle-btn" data-level="medium">Medium · 15s</button>
-                        <button type="button" class="toggle-btn" data-level="hard">Hard · 5s</button>
+                        <button type="button" class="toggle-btn selected" data-level="easy">O'clock</button>
+                        <button type="button" class="toggle-btn" data-level="medium">Half past</button>
+                        <button type="button" class="toggle-btn" data-level="hard">Quarters</button>
                     </div>
                     <div class="mode-toggle" role="group" aria-label="Pick number of questions">
                         <span class="toggle-label">Q:</span>
-                        <button type="button" class="toggle-btn" data-count="5">5</button>
+                        <button type="button" class="toggle-btn selected" data-count="5">5</button>
                         <button type="button" class="toggle-btn" data-count="8">8</button>
-                        <button type="button" class="toggle-btn selected" data-count="10">10</button>
+                        <button type="button" class="toggle-btn" data-count="10">10</button>
                     </div>
                 </div>
 
@@ -46,27 +46,27 @@
                         <g id="numbers"></g>
                         <line id="hour-hand" class="hand hour" x1="100" y1="100" x2="100" y2="55" />
                         <line id="minute-hand" class="hand minute" x1="100" y1="100" x2="100" y2="30" />
-                        <circle class="pivot" cx="100" cy="100" r="5" />
+                        <circle class="pivot" cx="100" cy="100" r="6" />
                     </svg>
                 </div>
 
                 <div class="answer-row" id="answer-row">
-                    <div class="time-slot">
-                        <span class="time-label">Hour</span>
+                    <div class="time-slot hour-group">
+                        <span class="time-label">Hour <span class="swatch swatch-hour"></span></span>
                         <span class="slot" id="hour-slot">
                             <span class="slot-digit" id="hour-digit"></span>
                         </span>
                     </div>
                     <span class="colon">:</span>
-                    <div class="time-slot">
-                        <span class="time-label">Minute</span>
+                    <div class="time-slot minute-group">
+                        <span class="time-label">Minute <span class="swatch swatch-minute"></span></span>
                         <span class="slot" id="minute-slot">
                             <span class="slot-digit" id="minute-digit"></span>
                         </span>
                     </div>
                 </div>
 
-                <div class="hint" id="hint">Read the clock and type the time</div>
+                <div class="hint" id="hint">What time does the clock show?</div>
 
                 <div class="keypad" id="keypad" aria-label="Number keypad">
                     <button class="key" data-k="1">1</button>
@@ -87,7 +87,7 @@
             <div id="overlay" class="overlay">
                 <div class="panel">
                     <h2 id="overlay-title">Ready?</h2>
-                    <p id="overlay-msg">Look at the clock, then type the hour and minute. Start with Easy (only :00 and :30) and work your way up!</p>
+                    <p id="overlay-msg">Look at the clock, then type the hour and the minute. Start with O'clock and work up to Quarters!</p>
                     <label class="name-row" for="name-input">
                         <span>Name</span>
                         <input id="name-input" type="text" maxlength="12" autocomplete="off"
@@ -100,7 +100,7 @@
         </div>
 
         <footer>
-            <p>Hour hand is short, minute hand is long. Type the digits and press ✓.</p>
+            <p>Short hand = hour. Long hand = minute. Tap the numbers!</p>
         </footer>
     </div>
 
