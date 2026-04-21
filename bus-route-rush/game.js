@@ -33,8 +33,12 @@
     ];
 
     const ROUND_MS = 90000;
-    const COMBO_WINDOW_MS = 5000;
-    const MOVE_MS = 120;
+    const COMBO_WINDOW_MS = 6000;
+    const MOVE_MS = 110;
+    const SPAWN_INTERVAL_MS = 2200;
+    const INITIAL_PASSENGERS = 2;
+    const MAX_ON_MAP = 3;
+    const BUS_CAPACITY = 4;
     const NAME_KEY = "highway-dash-last-name";
     const LB_KEY = "bus-route-rush-leaderboard";
     const LB_MAX = 20;
@@ -68,12 +72,15 @@
         bus: {
             row: 2, col: 2,
             fromRow: 2, fromCol: 2,
-            facing: 0, // radians, 0 = right
+            facing: 0,
             animT: 0, animDur: 0,
+            bounce: 0,
         },
-        passenger: null,
-        carrying: null,
+        passengers: [],   // [{ row, col, idx, bornAt }]
+        carried: [],      // [idx, idx, ...]
         popups: [],
+        particles: [],
+        spawnTimer: 0,
         leaderboard: loadLeaderboard(),
         playerName: "",
         timeLow: false,
@@ -126,15 +133,19 @@
         osc.stop(ac.currentTime + duration);
     }
     function playPickup() {
-        tone({ freq: 520, endFreq: 780, type: "triangle", duration: 0.12, volume: 0.2 });
+        tone({ freq: 520, endFreq: 820, type: "triangle", duration: 0.12, volume: 0.2 });
     }
-    function playDropoff(combo) {
-        const base = 640 + Math.min(combo, 6) * 60;
+    function playDropoff(bonus) {
+        const base = 620 + Math.min(bonus, 8) * 60;
         tone({ freq: base, endFreq: base * 1.5, type: "triangle", duration: 0.15, volume: 0.22 });
-        setTimeout(() => tone({ freq: base * 1.3, endFreq: base * 2, type: "triangle", duration: 0.12, volume: 0.18 }), 70);
+        setTimeout(() => tone({ freq: base * 1.3, endFreq: base * 2, type: "triangle", duration: 0.14, volume: 0.18 }), 70);
+        setTimeout(() => tone({ freq: base * 1.7, endFreq: base * 2.2, type: "triangle", duration: 0.18, volume: 0.16 }), 150);
+    }
+    function playHorn() {
+        tone({ freq: 260, type: "square", duration: 0.12, volume: 0.18 });
     }
     function playMove() {
-        tone({ freq: 180, type: "sine", duration: 0.05, volume: 0.08 });
+        tone({ freq: 180, type: "sine", duration: 0.04, volume: 0.07 });
     }
     function playTick() {
         tone({ freq: 540, type: "triangle", duration: 0.05, volume: 0.12 });
@@ -147,33 +158,38 @@
 
     // ----- Helpers -----
     function cellKey(r, c) { return r * GRID + c; }
-    function isStopCell(r, c) {
-        return STOPS.some(s => s.row === r && s.col === c);
-    }
     function stopAt(r, c) {
         return STOPS.find(s => s.row === r && s.col === c) || null;
     }
 
-    function spawnPassenger() {
-        const bus = state.bus;
+    function trySpawnPassenger() {
+        if (state.passengers.length >= MAX_ON_MAP) return false;
         const taken = new Set();
         STOPS.forEach(s => taken.add(cellKey(s.row, s.col)));
-        taken.add(cellKey(bus.row, bus.col));
+        taken.add(cellKey(state.bus.row, state.bus.col));
+        state.passengers.forEach(p => taken.add(cellKey(p.row, p.col)));
         const options = [];
         for (let r = 0; r < GRID; r++) {
             for (let c = 0; c < GRID; c++) {
                 if (!taken.has(cellKey(r, c))) options.push({ r, c });
             }
         }
+        if (options.length === 0) return false;
         const pick = options[Math.floor(Math.random() * options.length)];
         const idx = Math.floor(Math.random() * PALETTE.length);
-        state.passenger = { row: pick.r, col: pick.c, idx, bob: 0 };
+        state.passengers.push({
+            row: pick.r,
+            col: pick.c,
+            idx,
+            bornAt: performance.now(),
+        });
+        return true;
     }
 
     function tryMove(dRow, dCol) {
         if (!state.running) return;
         const bus = state.bus;
-        if (bus.animT < bus.animDur) return; // still animating
+        if (bus.animT < bus.animDur) return;
         const newRow = bus.row + dRow;
         const newCol = bus.col + dCol;
         if (newRow < 0 || newRow >= GRID || newCol < 0 || newCol >= GRID) return;
@@ -192,18 +208,26 @@
 
     function onBusArrived() {
         const bus = state.bus;
-        // Pickup
-        if (state.carrying == null && state.passenger &&
-            bus.row === state.passenger.row && bus.col === state.passenger.col) {
-            state.carrying = state.passenger.idx;
-            state.passenger = null;
-            spawnPopup(bus.row, bus.col, "Board!", PALETTE[state.carrying].color);
+        bus.bounce = 6;
+
+        // Pickup — while there's a passenger here and we have space
+        while (state.carried.length < BUS_CAPACITY) {
+            const i = state.passengers.findIndex(p => p.row === bus.row && p.col === bus.col);
+            if (i < 0) break;
+            const p = state.passengers[i];
+            state.carried.push(p.idx);
+            state.passengers.splice(i, 1);
+            spawnPopup(bus.row, bus.col, "Hi!", PALETTE[p.idx].color);
+            spawnConfetti(bus.row, bus.col, PALETTE[p.idx].color, 8, { small: true });
             playPickup();
         }
-        // Dropoff
-        if (state.carrying != null) {
-            const stop = stopAt(bus.row, bus.col);
-            if (stop && stop.idx === state.carrying) {
+
+        // Dropoff — if on a colored stop and carrying any matching passengers
+        const stop = stopAt(bus.row, bus.col);
+        if (stop) {
+            const delivered = state.carried.filter(i => i === stop.idx).length;
+            if (delivered > 0) {
+                state.carried = state.carried.filter(i => i !== stop.idx);
                 const now = performance.now();
                 if (now - state.lastDeliveryAt < COMBO_WINDOW_MS) {
                     state.combo = Math.min(state.combo + 1, 9);
@@ -211,17 +235,20 @@
                     state.combo = 1;
                 }
                 state.lastDeliveryAt = now;
-                const gained = state.combo;
+                const multiBonus = delivered > 1 ? delivered : 0;
+                const gained = delivered * state.combo + multiBonus;
                 state.score += gained;
                 scoreEl.textContent = state.score;
                 comboEl.textContent = state.combo;
-                spawnPopup(bus.row, bus.col,
-                    "+" + gained + (state.combo > 1 ? " ×" + state.combo : ""),
-                    PALETTE[state.carrying].color);
-                state.carrying = null;
-                state.shake = 6;
-                playDropoff(state.combo);
-                spawnPassenger();
+                let text = "+" + gained;
+                if (delivered > 1) text += " 🎉";
+                if (state.combo > 1) text += " ×" + state.combo;
+                spawnPopup(bus.row, bus.col, text, PALETTE[stop.idx].color);
+                spawnConfetti(bus.row, bus.col, PALETTE[stop.idx].color, 18 + delivered * 8);
+                state.shake = delivered > 1 ? 10 : 6;
+                playDropoff(state.combo + delivered);
+                // Refill map quickly after a delivery
+                for (let k = 0; k < delivered; k++) trySpawnPassenger();
             }
         }
     }
@@ -236,9 +263,31 @@
         });
     }
 
+    function spawnConfetti(row, col, color, count, opts = {}) {
+        const x = col * CELL + CELL / 2;
+        const y = row * CELL + CELL / 2;
+        const palette = opts.small
+            ? [color, "#ffffff"]
+            : [color, "#ffffff", "#ffd166", "#6cc4ff", "#ff6b6b", "#8dd9a3"];
+        for (let i = 0; i < count; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = (opts.small ? 50 : 90) + Math.random() * (opts.small ? 80 : 200);
+            state.particles.push({
+                x, y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed - (opts.small ? 60 : 140),
+                color: palette[Math.floor(Math.random() * palette.length)],
+                t: 0,
+                life: 600 + Math.random() * 500,
+                size: 3 + Math.random() * (opts.small ? 3 : 5),
+                rot: Math.random() * Math.PI * 2,
+                spin: (Math.random() - 0.5) * 10,
+            });
+        }
+    }
+
     // ----- Rendering -----
     function drawGrid() {
-        // Grass background
         ctx.fillStyle = "#1d2a1a";
         ctx.fillRect(0, 0, W, H);
 
@@ -247,14 +296,12 @@
             for (let c = 0; c < GRID; c++) {
                 const x = c * CELL;
                 const y = r * CELL;
-                // Slight checker variation for depth
                 const tint = (r + c) % 2 === 0 ? "#2a2a2e" : "#26262a";
                 ctx.fillStyle = tint;
                 ctx.fillRect(x + 2, y + 2, CELL - 4, CELL - 4);
             }
         }
 
-        // Lane dashes between cells
         ctx.strokeStyle = "rgba(255, 230, 140, 0.28)";
         ctx.lineWidth = 2;
         ctx.setLineDash([6, 8]);
@@ -271,12 +318,22 @@
         ctx.setLineDash([]);
     }
 
-    function drawStop(stop) {
+    function drawStop(stop, tms) {
         const p = PALETTE[stop.idx];
         const x = stop.col * CELL;
         const y = stop.row * CELL;
         const cx = x + CELL / 2;
         const cy = y + CELL / 2;
+
+        // Highlight ring if a matching carried passenger can be delivered here
+        const canDeliver = state.carried.includes(stop.idx);
+        if (canDeliver) {
+            const pulse = (Math.sin(tms / 220) + 1) / 2;
+            ctx.globalAlpha = 0.35 + pulse * 0.3;
+            ctx.fillStyle = p.color;
+            ctx.fillRect(x + 2, y + 2, CELL - 4, CELL - 4);
+            ctx.globalAlpha = 1;
+        }
 
         // Pad under stop
         ctx.fillStyle = p.dark;
@@ -304,11 +361,10 @@
     }
 
     function drawPassenger(p, tms) {
-        if (!p) return;
         const col = PALETTE[p.idx];
         const x = p.col * CELL + CELL / 2;
         const yBase = p.row * CELL + CELL / 2;
-        const bob = Math.sin(tms / 250) * 3;
+        const bob = Math.sin((tms + p.bornAt) / 220) * 3;
         const y = yBase + bob;
 
         // Shadow
@@ -317,7 +373,7 @@
         ctx.ellipse(x, yBase + CELL * 0.28, CELL * 0.22, CELL * 0.06, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Body (colored shirt)
+        // Body
         ctx.fillStyle = col.color;
         roundRect(ctx, x - CELL * 0.18, y - CELL * 0.05, CELL * 0.36, CELL * 0.3, 6);
         ctx.fill();
@@ -325,24 +381,38 @@
         // Head
         ctx.fillStyle = "#f3d7b5";
         ctx.beginPath();
-        ctx.arc(x, y - CELL * 0.14, CELL * 0.12, 0, Math.PI * 2);
+        ctx.arc(x, y - CELL * 0.14, CELL * 0.13, 0, Math.PI * 2);
         ctx.fill();
 
-        // Hair / cap (dark on top)
+        // Hair / cap
         ctx.fillStyle = col.dark;
         ctx.beginPath();
-        ctx.arc(x, y - CELL * 0.17, CELL * 0.12, Math.PI, 0);
+        ctx.arc(x, y - CELL * 0.17, CELL * 0.13, Math.PI, 0);
         ctx.fill();
 
-        // Waving arrow above passenger
-        const arrowY = y - CELL * 0.38;
+        // Eyes
+        ctx.fillStyle = "#1b2735";
+        ctx.beginPath();
+        ctx.arc(x - CELL * 0.05, y - CELL * 0.14, 1.6, 0, Math.PI * 2);
+        ctx.arc(x + CELL * 0.05, y - CELL * 0.14, 1.6, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Smile
+        ctx.strokeStyle = "#1b2735";
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.arc(x, y - CELL * 0.11, CELL * 0.04, 0, Math.PI);
+        ctx.stroke();
+
+        // Waving arrow above passenger (their destination color)
+        const arrowY = y - CELL * 0.4;
         ctx.fillStyle = col.color;
-        ctx.strokeStyle = "rgba(0,0,0,0.35)";
+        ctx.strokeStyle = "rgba(0,0,0,0.4)";
         ctx.lineWidth = 1.5;
         ctx.beginPath();
-        ctx.moveTo(x, arrowY);
-        ctx.lineTo(x - 6, arrowY + 8);
-        ctx.lineTo(x + 6, arrowY + 8);
+        ctx.moveTo(x, arrowY + 2);
+        ctx.lineTo(x - 7, arrowY - 6);
+        ctx.lineTo(x + 7, arrowY - 6);
         ctx.closePath();
         ctx.fill();
         ctx.stroke();
@@ -351,29 +421,27 @@
     function drawBus(tms) {
         const bus = state.bus;
         let t = bus.animDur > 0 ? Math.min(1, bus.animT / bus.animDur) : 1;
-        // ease-out
         t = 1 - Math.pow(1 - t, 2);
         const row = bus.fromRow + (bus.row - bus.fromRow) * t;
         const col = bus.fromCol + (bus.col - bus.fromCol) * t;
         const cx = col * CELL + CELL / 2;
-        const cy = row * CELL + CELL / 2;
+        const cy = row * CELL + CELL / 2 - bus.bounce;
 
-        const bw = CELL * 0.72;
-        const bh = CELL * 0.42;
+        const bw = CELL * 0.74;
+        const bh = CELL * 0.44;
 
         ctx.save();
         ctx.translate(cx, cy);
         ctx.rotate(bus.facing);
 
-        // Halo glow when carrying a passenger (drawn behind the bus)
-        if (state.carrying != null) {
-            const glowCol = PALETTE[state.carrying];
+        // Halo glow when carrying any passenger
+        if (state.carried.length > 0) {
             const pulse = (Math.sin(tms / 180) + 1) / 2;
             ctx.save();
-            ctx.globalAlpha = 0.18 + pulse * 0.22;
-            ctx.fillStyle = glowCol.glow;
+            ctx.globalAlpha = 0.16 + pulse * 0.18;
+            ctx.fillStyle = "#ffd166";
             ctx.beginPath();
-            ctx.arc(0, 0, bw * 0.62, 0, Math.PI * 2);
+            ctx.arc(0, 0, bw * 0.66, 0, Math.PI * 2);
             ctx.fill();
             ctx.restore();
         }
@@ -386,7 +454,7 @@
 
         // Body
         ctx.fillStyle = "#ffd166";
-        roundRect(ctx, -bw / 2, -bh / 2, bw, bh, 6);
+        roundRect(ctx, -bw / 2, -bh / 2, bw, bh, 7);
         ctx.fill();
         ctx.strokeStyle = "#5f4418";
         ctx.lineWidth = 2;
@@ -396,24 +464,64 @@
         ctx.fillStyle = "#e6a93a";
         ctx.fillRect(-bw / 2 + 2, -2, bw - 4, 4);
 
-        // Windows
-        ctx.fillStyle = "#b9e6ff";
-        const winH = bh * 0.38;
+        // Windows with carried passenger heads peeking through
+        const winCount = 3;
         const winY = -bh / 2 + 5;
-        const winW = bw * 0.18;
-        for (let i = 0; i < 3; i++) {
-            ctx.fillRect(-bw / 2 + 8 + i * (winW + 3), winY, winW, winH);
+        const winH = bh * 0.38;
+        const winW = (bw * 0.55) / winCount;
+        const winStart = -bw * 0.4;
+        for (let i = 0; i < winCount; i++) {
+            const wx = winStart + i * (winW + 3);
+            ctx.fillStyle = "#b9e6ff";
+            ctx.fillRect(wx, winY, winW, winH);
+            const carriedIdx = state.carried[i];
+            if (carriedIdx != null) {
+                const p = PALETTE[carriedIdx];
+                // Head
+                ctx.fillStyle = "#f3d7b5";
+                ctx.beginPath();
+                ctx.arc(wx + winW / 2, winY + winH * 0.55, Math.min(winW, winH) * 0.32, 0, Math.PI * 2);
+                ctx.fill();
+                // Colored hat
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(wx + winW / 2, winY + winH * 0.42, Math.min(winW, winH) * 0.32, Math.PI, 0);
+                ctx.fill();
+            }
         }
 
-        // Windshield (front) — larger window in front direction
-        ctx.fillStyle = "#c9efff";
-        ctx.fillRect(bw / 2 - 10, -bh / 2 + 4, 6, bh - 8);
+        // "+N" indicator if we have more than what fits in the windows
+        if (state.carried.length > winCount) {
+            ctx.fillStyle = "#1b2735";
+            ctx.font = "bold 10px Segoe UI, Roboto, sans-serif";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText("+" + (state.carried.length - winCount),
+                bw / 2 - 8, winY + winH / 2);
+        }
 
-        // Front headlight
+        // Front windshield (slightly bigger at bus front)
+        ctx.fillStyle = "#c9efff";
+        ctx.fillRect(bw / 2 - 11, -bh / 2 + 4, 6, bh - 8);
+
+        // Happy bus face on the front
+        ctx.fillStyle = "#1b2735";
+        ctx.beginPath();
+        ctx.arc(bw / 2 - 4, -bh * 0.18, 1.6, 0, Math.PI * 2); // eye
+        ctx.arc(bw / 2 - 4,  bh * 0.18, 1.6, 0, Math.PI * 2); // eye
+        ctx.fill();
+        // smile
+        ctx.strokeStyle = "#1b2735";
+        ctx.lineWidth = 1.3;
+        ctx.beginPath();
+        ctx.arc(bw / 2 - 4, 0, 3, -Math.PI / 2, Math.PI / 2);
+        ctx.stroke();
+
+        // Headlights
         ctx.fillStyle = "#fff6c2";
         ctx.beginPath();
-        ctx.arc(bw / 2 - 2, -bh / 2 + 6, 2.5, 0, Math.PI * 2);
-        ctx.arc(bw / 2 - 2, bh / 2 - 6, 2.5, 0, Math.PI * 2);
+        ctx.arc(bw / 2 - 2, -bh / 2 + 5, 2.2, 0, Math.PI * 2);
+        ctx.arc(bw / 2 - 2, bh / 2 - 5, 2.2, 0, Math.PI * 2);
         ctx.fill();
 
         // Wheels
@@ -423,18 +531,20 @@
         ctx.arc(bw * 0.28, bh / 2, 4, 0, Math.PI * 2);
         ctx.fill();
 
-        // Destination sign above bus if carrying passenger
-        if (state.carrying != null) {
-            const col = PALETTE[state.carrying];
-            ctx.fillStyle = col.color;
-            ctx.strokeStyle = "rgba(0,0,0,0.4)";
-            ctx.lineWidth = 1.5;
-            roundRect(ctx, -bw * 0.18, -bh / 2 - 10, bw * 0.36, 9, 3);
-            ctx.fill();
-            ctx.stroke();
-        }
-
         ctx.restore();
+
+        // Carried "count" tag above bus (unrotated) — a friendly hint for kids
+        if (state.carried.length > 0) {
+            const tagY = cy - CELL * 0.42;
+            ctx.fillStyle = "rgba(0,0,0,0.55)";
+            roundRect(ctx, cx - 18, tagY - 8, 36, 16, 8);
+            ctx.fill();
+            ctx.fillStyle = "#fff";
+            ctx.font = "bold 11px Segoe UI, Roboto, sans-serif";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText("👥 " + state.carried.length, cx, tagY);
+        }
     }
 
     function drawPopups(dt) {
@@ -446,7 +556,7 @@
                 continue;
             }
             const prog = p.t / p.life;
-            const y = p.y - 30 * prog;
+            const y = p.y - 34 * prog;
             ctx.globalAlpha = 1 - prog;
             ctx.fillStyle = p.color;
             ctx.font = "bold 18px Segoe UI, Roboto, sans-serif";
@@ -458,6 +568,28 @@
             ctx.fillText(p.text, p.x, y);
             ctx.globalAlpha = 1;
         }
+    }
+
+    function drawParticles(dt) {
+        const dts = dt / 1000;
+        for (let i = state.particles.length - 1; i >= 0; i--) {
+            const p = state.particles[i];
+            p.t += dt;
+            if (p.t >= p.life) { state.particles.splice(i, 1); continue; }
+            p.x += p.vx * dts;
+            p.y += p.vy * dts;
+            p.vy += 420 * dts;
+            p.rot += p.spin * dts;
+            const prog = p.t / p.life;
+            ctx.save();
+            ctx.globalAlpha = 1 - prog;
+            ctx.translate(p.x, p.y);
+            ctx.rotate(p.rot);
+            ctx.fillStyle = p.color;
+            ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 0.6);
+            ctx.restore();
+        }
+        ctx.globalAlpha = 1;
     }
 
     function roundRect(ctx, x, y, w, h, r) {
@@ -475,10 +607,8 @@
         if (state.combo <= 1) return;
         const elapsed = tms - state.lastDeliveryAt;
         const remaining = Math.max(0, 1 - elapsed / COMBO_WINDOW_MS);
-        // Draw a thin bar across the top of canvas
-        const barW = W * remaining;
         ctx.fillStyle = "rgba(255, 209, 102, 0.85)";
-        ctx.fillRect(0, 0, barW, 4);
+        ctx.fillRect(0, 0, W * remaining, 4);
     }
 
     // ----- Main loop -----
@@ -506,6 +636,13 @@
                 }
             }
 
+            // Passenger spawner
+            state.spawnTimer -= dt;
+            if (state.spawnTimer <= 0) {
+                trySpawnPassenger();
+                state.spawnTimer = SPAWN_INTERVAL_MS;
+            }
+
             // Bus animation
             const bus = state.bus;
             if (bus.animT < bus.animDur) {
@@ -515,8 +652,8 @@
                     onBusArrived();
                 }
             }
+            if (bus.bounce > 0) bus.bounce = Math.max(0, bus.bounce - dt * 0.04);
 
-            // Combo expiry
             if (state.combo > 1 && now - state.lastDeliveryAt > COMBO_WINDOW_MS) {
                 state.combo = 1;
                 comboEl.textContent = state.combo;
@@ -531,9 +668,10 @@
             ctx.translate((Math.random() - 0.5) * state.shake, (Math.random() - 0.5) * state.shake);
         }
         drawGrid();
-        STOPS.forEach(drawStop);
-        drawPassenger(state.passenger, now);
+        STOPS.forEach(s => drawStop(s, now));
+        state.passengers.forEach(p => drawPassenger(p, now));
         drawBus(now);
+        drawParticles(dt);
         drawPopups(dt);
         drawComboTimer(now);
         ctx.restore();
@@ -550,8 +688,10 @@
         state.timeLow = false;
         state.shake = 0;
         state.popups = [];
-        state.carrying = null;
-        state.passenger = null;
+        state.particles = [];
+        state.carried = [];
+        state.passengers = [];
+        state.spawnTimer = SPAWN_INTERVAL_MS;
         state.bus.row = 2;
         state.bus.col = 2;
         state.bus.fromRow = 2;
@@ -559,11 +699,12 @@
         state.bus.animT = 0;
         state.bus.animDur = 0;
         state.bus.facing = 0;
+        state.bus.bounce = 0;
         timeStatEl.classList.remove("low");
         scoreEl.textContent = 0;
         comboEl.textContent = 1;
         timeEl.textContent = Math.ceil(ROUND_MS / 1000);
-        spawnPassenger();
+        for (let i = 0; i < INITIAL_PASSENGERS; i++) trySpawnPassenger();
     }
 
     function startGame() {
@@ -575,6 +716,7 @@
         reset();
         overlay.classList.add("hidden");
         state.running = true;
+        playHorn();
     }
 
     function endGame() {
@@ -591,7 +733,7 @@
         updateBestDisplay();
 
         const rank = state.leaderboard.indexOf(entry);
-        let msg = `${state.playerName} delivered ${state.score} ${state.score === 1 ? "point" : "points"} worth of passengers!`;
+        let msg = `${state.playerName} scored ${state.score}!`;
         if (rank === 0 && state.score > 0) msg += " 🏆 New top score!";
         else if (rank >= 0 && rank < 10) msg += ` You're rank #${rank + 1}.`;
         overlayTitle.textContent = "Route complete!";
