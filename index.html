@@ -14,113 +14,55 @@
         <p class="subtitle">Pick a game to start</p>
 
         <div class="game-grid">
-            <a class="game-card highway-dash" href="highway-dash/" data-lb="highway-dash-leaderboard">
+            <a class="game-card highway-dash" href="highway-dash/">
                 <div class="emoji" aria-hidden="true">🚗</div>
                 <div class="title">Highway Dash</div>
                 <div class="desc">Dodge traffic and grab coins!</div>
                 <div class="badge">Play</div>
-                <div class="card-leaderboard"></div>
             </a>
 
-            <a class="game-card whack-a-mole" href="whack-a-mole/" data-lb="whack-a-mole-leaderboard">
+            <a class="game-card whack-a-mole" href="whack-a-mole/">
                 <div class="emoji" aria-hidden="true">🐹</div>
                 <div class="title">Whack-a-Mole</div>
                 <div class="desc">Tap the moles, skip the bees!</div>
                 <div class="badge">Play</div>
-                <div class="card-leaderboard"></div>
             </a>
 
-            <a class="game-card add-it-up" href="add-it-up/" data-lb="add-it-up-leaderboard">
+            <a class="game-card add-it-up" href="add-it-up/">
                 <div class="emoji" aria-hidden="true">➕</div>
                 <div class="title">Add It Up!</div>
                 <div class="desc">Practice + and − — easy 1–10 or medium 1–20!</div>
                 <div class="badge">Play</div>
-                <div class="card-leaderboard"></div>
             </a>
 
-            <a class="game-card piano" href="piano/" data-lb="piano-memory-leaderboard">
+            <a class="game-card piano" href="piano/">
                 <div class="emoji" aria-hidden="true">🎹</div>
                 <div class="title">Piano Memory</div>
                 <div class="desc">Hear the tune, then tap it back!</div>
                 <div class="badge">Play</div>
-                <div class="card-leaderboard"></div>
             </a>
 
-            <a class="game-card bus-route-rush" href="bus-route-rush/" data-lb="bus-route-rush-leaderboard">
+            <a class="game-card bus-route-rush" href="bus-route-rush/">
                 <div class="emoji" aria-hidden="true">🚌</div>
                 <div class="title">Bus Route Rush</div>
                 <div class="desc">Pick up passengers and drop them at matching stops!</div>
-                <div class="badge">New</div>
-                <div class="card-leaderboard"></div>
+                <div class="badge">Play</div>
             </a>
 
-            <a class="game-card clock-it" href="clock-it/" data-lb="clock-it-leaderboard">
+            <a class="game-card clock-it" href="clock-it/">
                 <div class="emoji" aria-hidden="true">⏰</div>
                 <div class="title">Clock It!</div>
                 <div class="desc">Read the clock and type the time!</div>
                 <div class="badge">Play</div>
-                <div class="card-leaderboard"></div>
             </a>
 
-            <a class="game-card maze-game" href="maze-game/" data-lb="maze-game-leaderboard">
+            <a class="game-card maze-game" href="maze-game/">
                 <div class="emoji" aria-hidden="true">🐰</div>
                 <div class="title">Bunny Maze</div>
                 <div class="desc">Help 🐰 find the 🥕 — grab ⭐ for bonus!</div>
                 <div class="badge">New</div>
-                <div class="card-leaderboard"></div>
             </a>
         </div>
     </main>
-
-    <script>
-    (function () {
-        function readLB(key) {
-            try {
-                const raw = localStorage.getItem(key);
-                const arr = raw ? JSON.parse(raw) : [];
-                return Array.isArray(arr) ? arr : [];
-            } catch (_) {
-                return [];
-            }
-        }
-
-        function renderCardLB(card) {
-            const key = card.dataset.lb;
-            const container = card.querySelector(".card-leaderboard");
-            if (!container) return;
-            const entries = readLB(key).slice().sort((a, b) => b.score - a.score).slice(0, 3);
-            container.innerHTML = "";
-            const header = document.createElement("div");
-            header.className = "lb-header";
-            header.textContent = "🏆 Top scores";
-            container.appendChild(header);
-            if (entries.length === 0) {
-                const empty = document.createElement("div");
-                empty.className = "lb-empty";
-                empty.textContent = "No scores yet — be the first!";
-                container.appendChild(empty);
-                return;
-            }
-            const ol = document.createElement("ol");
-            entries.forEach((e, i) => {
-                const li = document.createElement("li");
-                const rank = document.createElement("span");
-                rank.className = "lb-rank";
-                rank.textContent = (i + 1) + ".";
-                const name = document.createElement("span");
-                name.className = "lb-name";
-                name.textContent = e.name || "Player";
-                const score = document.createElement("span");
-                score.className = "lb-score";
-                score.textContent = e.score;
-                li.append(rank, name, score);
-                ol.appendChild(li);
-            });
-            container.appendChild(ol);
-        }
-
-        document.querySelectorAll(".game-card[data-lb]").forEach(renderCardLB);
-    })();
-    </script>
 </body>
 </html>
