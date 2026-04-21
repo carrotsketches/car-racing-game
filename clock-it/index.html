@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>Clock It!</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-wrapper">
+        <a class="home-link" href="../">← Games</a>
+        <header>
+            <h1>Clock It!</h1>
+            <div class="hud">
+                <div class="stat" id="player-tag">👤 <span id="player-name">—</span></div>
+                <div class="stat">Q <span id="q-num">0</span>/<span id="q-total">10</span></div>
+                <div class="stat">Score: <span id="score">0</span></div>
+                <div class="stat">Best: <span id="best">0</span></div>
+            </div>
+        </header>
+
+        <div class="stage">
+            <div class="cheer" id="cheer" aria-live="polite"></div>
+            <div class="pad" id="pad">
+                <div class="toggle-row">
+                    <div class="mode-toggle" role="group" aria-label="Switch difficulty">
+                        <button type="button" class="toggle-btn selected" data-level="easy">Easy · :00 / :30</button>
+                        <button type="button" class="toggle-btn" data-level="medium">Medium · 15s</button>
+                        <button type="button" class="toggle-btn" data-level="hard">Hard · 5s</button>
+                    </div>
+                    <div class="mode-toggle" role="group" aria-label="Pick number of questions">
+                        <span class="toggle-label">Q:</span>
+                        <button type="button" class="toggle-btn" data-count="5">5</button>
+                        <button type="button" class="toggle-btn" data-count="8">8</button>
+                        <button type="button" class="toggle-btn selected" data-count="10">10</button>
+                    </div>
+                </div>
+
+                <div class="clock-wrap">
+                    <svg class="clock" viewBox="0 0 200 200" aria-label="Analog clock" role="img">
+                        <circle class="face" cx="100" cy="100" r="94" />
+                        <circle class="rim" cx="100" cy="100" r="94" />
+                        <g id="ticks"></g>
+                        <g id="numbers"></g>
+                        <line id="hour-hand" class="hand hour" x1="100" y1="100" x2="100" y2="55" />
+                        <line id="minute-hand" class="hand minute" x1="100" y1="100" x2="100" y2="30" />
+                        <circle class="pivot" cx="100" cy="100" r="5" />
+                    </svg>
+                </div>
+
+                <div class="answer-row" id="answer-row">
+                    <div class="time-slot">
+                        <span class="time-label">Hour</span>
+                        <span class="slot" id="hour-slot">
+                            <span class="slot-digit" id="hour-digit"></span>
+                        </span>
+                    </div>
+                    <span class="colon">:</span>
+                    <div class="time-slot">
+                        <span class="time-label">Minute</span>
+                        <span class="slot" id="minute-slot">
+                            <span class="slot-digit" id="minute-digit"></span>
+                        </span>
+                    </div>
+                </div>
+
+                <div class="hint" id="hint">Read the clock and type the time</div>
+
+                <div class="keypad" id="keypad" aria-label="Number keypad">
+                    <button class="key" data-k="1">1</button>
+                    <button class="key" data-k="2">2</button>
+                    <button class="key" data-k="3">3</button>
+                    <button class="key" data-k="4">4</button>
+                    <button class="key" data-k="5">5</button>
+                    <button class="key" data-k="6">6</button>
+                    <button class="key" data-k="7">7</button>
+                    <button class="key" data-k="8">8</button>
+                    <button class="key" data-k="9">9</button>
+                    <button class="key key-back" data-k="back">⌫</button>
+                    <button class="key" data-k="0">0</button>
+                    <button class="key key-check" data-k="check">✓</button>
+                </div>
+            </div>
+
+            <div id="overlay" class="overlay">
+                <div class="panel">
+                    <h2 id="overlay-title">Ready?</h2>
+                    <p id="overlay-msg">Look at the clock, then type the hour and minute. Start with Easy (only :00 and :30) and work your way up!</p>
+                    <label class="name-row" for="name-input">
+                        <span>Name</span>
+                        <input id="name-input" type="text" maxlength="12" autocomplete="off"
+                               spellcheck="false" placeholder="Player" />
+                    </label>
+
+                    <button id="start-btn">Start</button>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>Hour hand is short, minute hand is long. Type the digits and press ✓.</p>
+        </footer>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
