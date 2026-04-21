@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>Color Mixing</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-wrapper">
+        <a class="home-link" href="../">← Games</a>
+        <header>
+            <h1>Color Mixing</h1>
+            <div class="hud">
+                <div class="stat" id="player-tag">👤 <span id="player-name">—</span></div>
+                <div class="stat">Score: <span id="score">0</span></div>
+                <div class="stat time-stat" id="time-stat">⏱ <span id="time">60</span>s</div>
+                <div class="stat">Best: <span id="best">0</span></div>
+            </div>
+        </header>
+
+        <div class="stage">
+            <div class="board">
+                <div class="target-row">
+                    <div class="target-label">Make</div>
+                    <div class="target-swatch" id="target-swatch">
+                        <span class="target-name" id="target-name">—</span>
+                    </div>
+                </div>
+
+                <div class="cup-row">
+                    <div class="cup" id="cup">
+                        <div class="cup-half left" id="cup-left"></div>
+                        <div class="cup-half right" id="cup-right"></div>
+                        <div class="cup-blend" id="cup-blend"></div>
+                        <div class="cup-shine"></div>
+                    </div>
+                    <div class="feedback" id="feedback"></div>
+                </div>
+
+                <div class="pots" id="pots" aria-label="Color pots"></div>
+            </div>
+
+            <div id="overlay" class="overlay">
+                <div class="panel">
+                    <h2 id="overlay-title">Ready to paint?</h2>
+                    <p id="overlay-msg">Tap two color pots to mix them. Match the color at the top! 🎨</p>
+                    <label class="name-row" for="name-input">
+                        <span>Name</span>
+                        <input id="name-input" type="text" maxlength="12" autocomplete="off"
+                               spellcheck="false" placeholder="Player" />
+                    </label>
+                    <button id="start-btn">Start</button>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>Tap two pots to mix. Make as many colors as you can in 60 seconds!</p>
+        </footer>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>

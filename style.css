@@ -131,6 +131,11 @@ h1 {
     border-color: rgba(255, 179, 199, 0.4);
 }
 
+.game-card.color-mixing {
+    background: linear-gradient(135deg, rgba(255, 158, 199, 0.22), rgba(155, 89, 182, 0.18));
+    border-color: rgba(255, 158, 199, 0.4);
+}
+
 .game-card.coming-soon {
     opacity: 0.55;
     cursor: default;
