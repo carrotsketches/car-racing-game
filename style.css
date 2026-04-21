@@ -146,6 +146,71 @@ h1 {
     border-color: rgba(255, 209, 77, 0.4);
 }
 
+.hard-games-btn {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 16px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, rgba(255, 94, 87, 0.85), rgba(156, 39, 176, 0.85));
+    border: 2px solid rgba(255, 255, 255, 0.25);
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+    text-decoration: none;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    z-index: 10;
+}
+
+.hard-games-btn:hover,
+.hard-games-btn:focus {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.55);
+    outline: none;
+}
+
+.back-link {
+    position: fixed;
+    top: 16px;
+    left: 16px;
+    padding: 10px 16px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 2px solid rgba(255, 255, 255, 0.18);
+    color: #e8eef7;
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-decoration: none;
+    z-index: 10;
+}
+
+.back-link:hover,
+.back-link:focus {
+    background: rgba(255, 255, 255, 0.14);
+    outline: none;
+}
+
+.home h1.hard-title {
+    color: #ff7a75;
+    text-shadow: 0 2px 12px rgba(255, 94, 87, 0.4);
+}
+
+@media (max-width: 500px) {
+    .hard-games-btn,
+    .back-link {
+        top: 10px;
+        padding: 8px 12px;
+        font-size: 0.78rem;
+    }
+    .hard-games-btn { right: 10px; }
+    .back-link { left: 10px; }
+}
+
 .game-card.coming-soon {
     opacity: 0.55;
     cursor: default;
