@@ -17,7 +17,7 @@
 
     const W = canvas.width;   // 480
     const H = canvas.height;  // 360
-    const GROUND_Y = H - 70;  // road surface y
+    const GROUND_Y = H - 70;  // base road surface y (hills oscillate around this)
 
     const GRAVITY = 2200;
     const JUMP_VELOCITY = -780;
@@ -33,6 +33,19 @@
     const BASE_SPEED = 180;     // px/s
     const MAX_SPEED = 360;
     const SPEED_RAMP = 6;       // px/s added per second
+
+    const BOOST_MS = 2000;
+    const BOOST_MULT = 1.8;
+
+    // Rolling-hill terrain: ground y at a given world x (world x = screen x + state.distance).
+    function terrainY(worldX) {
+        return GROUND_Y
+            - Math.sin(worldX * 0.017) * 16
+            - Math.sin(worldX * 0.006 + 1.3) * 10;
+    }
+    function groundAtScreen(screenX) {
+        return terrainY(screenX + state.distance);
+    }
 
     function loadLeaderboard() {
         try {
@@ -63,11 +76,13 @@
         leaderboard: loadLeaderboard(),
         hearts: MAX_HEARTS,
         invincibleUntil: 0,
-        car: { y: GROUND_Y - CAR_H, vy: 0, grounded: true, bounce: 0 },
-        items: [],         // { x, y, type: "coin"|"star"|"cone", taken: false }
+        boostUntil: 0,
+        car: { y: GROUND_Y - CAR_H, vy: 0, grounded: true, bounce: 0, tilt: 0 },
+        items: [],         // { x, yOffset, type: "coin"|"star"|"cone"|"booster", taken: false }
         clouds: [],
         trees: [],         // background trees (parallax)
         bushes: [],        // foreground bushes
+        streaks: [],       // speed streaks during boost
         roadDashOffset: 0,
         nextItemIn: 0,
         flashUntil: 0,
@@ -75,7 +90,7 @@
 
     for (let i = 0; i < 5; i++) state.clouds.push({ x: Math.random() * W, y: 30 + Math.random() * 80, s: 0.6 + Math.random() * 0.6 });
     for (let i = 0; i < 5; i++) state.trees.push({ x: Math.random() * W, h: 60 + Math.random() * 40, kind: Math.random() < 0.5 ? "pine" : "round" });
-    for (let i = 0; i < 6; i++) state.bushes.push({ x: Math.random() * W, y: GROUND_Y + 30 + Math.random() * 25 });
+    for (let i = 0; i < 6; i++) state.bushes.push({ x: Math.random() * W, yOffset: 30 + Math.random() * 25 });
 
     const savedName = localStorage.getItem(NAME_KEY) || "";
     if (savedName) {
@@ -124,28 +139,37 @@
     function playStar()  { tone({ freq: 660, endFreq: 990, type: "sine", duration: 0.16, volume: 0.22 }); setTimeout(() => tone({ freq: 990, endFreq: 1320, type: "sine", duration: 0.16, volume: 0.22 }), 80); }
     function playHit()   { tone({ freq: 240, endFreq: 70, type: "square", duration: 0.28, volume: 0.22 }); }
     function playEnd()   { tone({ freq: 523, type: "triangle", duration: 0.15, volume: 0.22 }); setTimeout(() => tone({ freq: 392, type: "triangle", duration: 0.2, volume: 0.22 }), 140); }
+    function playBoost() {
+        tone({ freq: 300, endFreq: 1100, type: "sawtooth", duration: 0.22, volume: 0.18 });
+        setTimeout(() => tone({ freq: 700, endFreq: 1500, type: "triangle", duration: 0.28, volume: 0.16 }), 120);
+    }
 
     // ----- Spawning -----
+    // Items store `yOffset` relative to the ground at their current screen x,
+    // so they bob with the hills naturally as they scroll past.
     function spawnItem() {
         const r = Math.random();
         let type;
         if (state.lastItemType === "cone") {
             // Never two cones in a row — player can't jump both
-            type = r < 0.66 ? "coin" : "star";
-        } else if (r < 0.55) {
+            type = r < 0.6 ? "coin" : "star";
+        } else if (r < 0.45) {
             type = "coin";
-        } else if (r < 0.82) {
+        } else if (r < 0.72) {
             type = "star";
-        } else {
+        } else if (r < 0.88) {
             type = "cone";
+        } else {
+            type = "booster";
         }
 
-        let y;
-        if (type === "cone") y = GROUND_Y - 20;
-        else if (type === "star") y = GROUND_Y - 90 - Math.random() * 30;
-        else y = GROUND_Y - 30 - Math.random() * 40;
+        let yOffset;
+        if (type === "cone")         yOffset = -20;
+        else if (type === "booster") yOffset = -6;
+        else if (type === "star")    yOffset = -90 - Math.random() * 30;
+        else                         yOffset = -30 - Math.random() * 40;
 
-        state.items.push({ x: W + 40, y, type, taken: false });
+        state.items.push({ x: W + 40, yOffset, type, taken: false });
         state.lastItemType = type;
         return type;
     }
@@ -157,15 +181,18 @@
         state.speed = BASE_SPEED;
         state.hearts = MAX_HEARTS;
         state.invincibleUntil = 0;
+        state.boostUntil = 0;
         state.items = [];
+        state.streaks = [];
         state.lastItemType = null;
         state.nextItemIn = 500;
         state.roadDashOffset = 0;
         state.flashUntil = 0;
-        state.car.y = GROUND_Y - CAR_H;
+        state.car.y = groundAtScreen(CAR_X + CAR_W / 2) - CAR_H;
         state.car.vy = 0;
         state.car.grounded = true;
         state.car.bounce = 0;
+        state.car.tilt = 0;
         scoreEl.textContent = 0;
         updateHearts();
     }
@@ -243,64 +270,98 @@
 
         if (!state.running) return;
 
-        // Ramp speed
+        // Ramp base speed; boost applies a multiplier on top
         state.speed = Math.min(MAX_SPEED, state.speed + SPEED_RAMP * dt);
+        const now = performance.now();
+        const boosting = now < state.boostUntil;
+        const effectiveSpeed = boosting ? state.speed * BOOST_MULT : state.speed;
 
         // Distance-based score tick (1 point per ~30px)
         const prevDist = state.distance;
-        state.distance += state.speed * dt;
+        state.distance += effectiveSpeed * dt;
         const distPts = Math.floor(state.distance / 30) - Math.floor(prevDist / 30);
         if (distPts > 0) {
-            state.score += distPts;
+            state.score += boosting ? distPts * 2 : distPts;
             scoreEl.textContent = state.score;
         }
 
-        // Car physics
+        // Car physics against rolling terrain
+        const carGroundY = groundAtScreen(CAR_X + CAR_W / 2) - CAR_H;
         state.car.vy += GRAVITY * dt;
         if (state.car.vy > MAX_FALL_SPEED) state.car.vy = MAX_FALL_SPEED;
         state.car.y += state.car.vy * dt;
-        if (state.car.y >= GROUND_Y - CAR_H) {
+        if (state.car.y >= carGroundY) {
             if (!state.car.grounded && state.car.vy > 300) state.car.bounce = 6;
-            state.car.y = GROUND_Y - CAR_H;
+            state.car.y = carGroundY;
             state.car.vy = 0;
             state.car.grounded = true;
+        } else {
+            // Falling off a hill crest
+            state.car.grounded = false;
         }
         if (state.car.bounce > 0) state.car.bounce = Math.max(0, state.car.bounce - 30 * dt);
 
+        // Tilt car to match local ground slope for a coaster feel
+        const slope = (groundAtScreen(CAR_X + 18) - groundAtScreen(CAR_X - 18)) / 36;
+        const targetTilt = state.car.grounded ? Math.atan(slope) : state.car.tilt * 0.9;
+        state.car.tilt += (targetTilt - state.car.tilt) * Math.min(1, dt * 10);
+
         // Background parallax
         for (const t of state.trees) {
-            t.x -= state.speed * 0.5 * dt;
+            t.x -= effectiveSpeed * 0.5 * dt;
             if (t.x < -40) { t.x = W + 40 + Math.random() * 60; t.h = 60 + Math.random() * 40; t.kind = Math.random() < 0.5 ? "pine" : "round"; }
         }
         for (const b of state.bushes) {
-            b.x -= state.speed * dt;
-            if (b.x < -40) { b.x = W + 40 + Math.random() * 60; b.y = GROUND_Y + 30 + Math.random() * 25; }
+            b.x -= effectiveSpeed * dt;
+            if (b.x < -40) { b.x = W + 40 + Math.random() * 60; b.yOffset = 30 + Math.random() * 25; }
         }
 
         // Road dash scroll
-        state.roadDashOffset = (state.roadDashOffset + state.speed * dt) % 40;
+        state.roadDashOffset = (state.roadDashOffset + effectiveSpeed * dt) % 40;
 
         // Spawn items
-        state.nextItemIn -= state.speed * dt;
+        state.nextItemIn -= effectiveSpeed * dt;
         if (state.nextItemIn <= 0) {
             const spawned = spawnItem();
             const minGap = 110, maxGap = 260;
             state.nextItemIn = minGap + Math.random() * (maxGap - minGap);
             // After a cone, enforce a larger gap so the player can land + re-jump
             if (spawned === "cone") state.nextItemIn = Math.max(state.nextItemIn, 280);
+            // Boosters deserve a bit of breathing room too
+            if (spawned === "booster") state.nextItemIn = Math.max(state.nextItemIn, 200);
         }
+
+        // Speed streaks while boosting
+        if (boosting) {
+            if (Math.random() < 0.55) {
+                state.streaks.push({
+                    x: CAR_X + CAR_W + 4,
+                    y: state.car.y + 10 + Math.random() * (CAR_H - 10),
+                    life: 0.35,
+                    max: 0.35,
+                    len: 20 + Math.random() * 30,
+                });
+            }
+        }
+        for (const s of state.streaks) {
+            s.x -= (effectiveSpeed * 1.6) * dt;
+            s.life -= dt;
+        }
+        state.streaks = state.streaks.filter((s) => s.life > 0 && s.x > -60);
 
         // Move and collide items
         for (const it of state.items) {
-            it.x -= state.speed * dt;
+            it.x -= effectiveSpeed * dt;
             if (it.taken) continue;
 
+            // Resolve item screen y from current ground at its x
+            const itemY = groundAtScreen(it.x) + it.yOffset;
+
             if (it.type === "cone") {
-                // Tight hitbox: only hit if the car horizontally overlaps the cone's
-                // narrow base AND the car's lower body is below the cone's tip.
-                if (performance.now() <= state.invincibleUntil) continue;
+                // Boost plows through cones harmlessly
+                if (boosting || now <= state.invincibleUntil) continue;
                 const coneHalfW = 9;
-                const coneTipY = it.y - 16;
+                const coneTipY = itemY - 16;
                 const carLeft = CAR_X + 8;
                 const carRight = CAR_X + CAR_W - 8;
                 const carBottom = state.car.y + CAR_H;
@@ -312,8 +373,8 @@
                     it.taken = true;
                     state.hearts -= 1;
                     updateHearts();
-                    state.invincibleUntil = performance.now() + INVINCIBLE_MS;
-                    state.flashUntil = performance.now() + 120;
+                    state.invincibleUntil = now + INVINCIBLE_MS;
+                    state.flashUntil = now + 120;
                     playHit();
                     if (state.hearts <= 0) {
                         endGame();
@@ -323,11 +384,33 @@
                 continue;
             }
 
+            if (it.type === "booster") {
+                // Pad sits on the road; auto-collect when car overlaps horizontally
+                // and is near the ground (driving over, not sailing high above).
+                const padHalfW = 16;
+                const carLeft = CAR_X + 6;
+                const carRight = CAR_X + CAR_W - 6;
+                const carBottom = state.car.y + CAR_H;
+                const padY = itemY;
+                if (
+                    carRight > it.x - padHalfW &&
+                    carLeft < it.x + padHalfW &&
+                    carBottom > padY - 24
+                ) {
+                    it.taken = true;
+                    state.boostUntil = now + BOOST_MS;
+                    state.score += 15;
+                    scoreEl.textContent = state.score;
+                    playBoost();
+                }
+                continue;
+            }
+
             // Coins / stars: generous pickup radius so they feel snappy
             const ir = 18;
             if (
                 it.x > CAR_X - ir && it.x < CAR_X + CAR_W + ir &&
-                it.y > state.car.y - ir && it.y < state.car.y + CAR_H + ir
+                itemY > state.car.y - ir && itemY < state.car.y + CAR_H + ir
             ) {
                 it.taken = true;
                 if (it.type === "coin") {
@@ -370,7 +453,7 @@
     }
 
     function drawTree(t) {
-        const baseY = GROUND_Y - 2;
+        const baseY = groundAtScreen(t.x) - 2;
         if (t.kind === "pine") {
             // Trunk
             ctx.fillStyle = "#6b3f1d";
@@ -405,41 +488,71 @@
     }
 
     function drawBush(b) {
+        const by = groundAtScreen(b.x + 10) + b.yOffset;
         ctx.fillStyle = "#4a9d57";
         ctx.strokeStyle = "#2f7a3c";
         ctx.lineWidth = 1.5;
         ctx.beginPath();
-        ctx.arc(b.x,      b.y, 10, 0, Math.PI * 2);
-        ctx.arc(b.x + 10, b.y, 9,  0, Math.PI * 2);
-        ctx.arc(b.x + 20, b.y, 10, 0, Math.PI * 2);
+        ctx.arc(b.x,      by, 10, 0, Math.PI * 2);
+        ctx.arc(b.x + 10, by, 9,  0, Math.PI * 2);
+        ctx.arc(b.x + 20, by, 10, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
     }
 
     function drawRoad() {
-        // Grass already in CSS gradient; draw road strip
+        const step = 6;
+        // Road surface: contoured polygon from terrain curve down 60px
         ctx.fillStyle = "#6c6c76";
-        ctx.fillRect(0, GROUND_Y, W, 60);
-        // Top edge
-        ctx.fillStyle = "#4f4f58";
-        ctx.fillRect(0, GROUND_Y, W, 3);
-        // Dashed center line
+        ctx.beginPath();
+        ctx.moveTo(0, groundAtScreen(0));
+        for (let x = step; x <= W; x += step) ctx.lineTo(x, groundAtScreen(x));
+        ctx.lineTo(W, groundAtScreen(W) + 60);
+        for (let x = W - step; x >= 0; x -= step) ctx.lineTo(x, groundAtScreen(x) + 60);
+        ctx.closePath();
+        ctx.fill();
+
+        // Top edge highlight
+        ctx.strokeStyle = "#4f4f58";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(0, groundAtScreen(0));
+        for (let x = step; x <= W; x += step) ctx.lineTo(x, groundAtScreen(x));
+        ctx.stroke();
+
+        // Dashed center line, rotated along local slope
         ctx.fillStyle = "#fff";
         for (let x = -state.roadDashOffset; x < W; x += 40) {
-            ctx.fillRect(x, GROUND_Y + 28, 22, 4);
+            const gy = groundAtScreen(x);
+            const localSlope = (groundAtScreen(x + 6) - groundAtScreen(x - 6)) / 12;
+            ctx.save();
+            ctx.translate(x, gy + 28);
+            ctx.rotate(Math.atan(localSlope));
+            ctx.fillRect(0, -2, 22, 4);
+            ctx.restore();
         }
     }
 
     function drawCar() {
         const carY = state.car.y - state.car.bounce;
-        const invis = performance.now() < state.invincibleUntil;
-        if (invis && Math.floor(performance.now() / 80) % 2 === 0) return;
+        const now = performance.now();
+        const invis = now < state.invincibleUntil;
+        if (invis && Math.floor(now / 80) % 2 === 0) return;
 
-        // Shadow
+        // Shadow sits on the ground directly beneath the car
+        const shadowY = groundAtScreen(CAR_X + CAR_W / 2) + 4;
         ctx.fillStyle = "rgba(0, 0, 0, 0.25)";
         ctx.beginPath();
-        ctx.ellipse(CAR_X + CAR_W / 2, GROUND_Y + 4, CAR_W / 2 - 4, 4, 0, 0, Math.PI * 2);
+        ctx.ellipse(CAR_X + CAR_W / 2, shadowY, CAR_W / 2 - 4, 4, 0, 0, Math.PI * 2);
         ctx.fill();
+
+        // Pivot at the car's midpoint so tilt looks like the chassis is on the hill
+        const pivotX = CAR_X + CAR_W / 2;
+        const pivotY = carY + CAR_H;
+        ctx.save();
+        ctx.translate(pivotX, pivotY);
+        ctx.rotate(state.car.tilt);
+        ctx.translate(-pivotX, -pivotY);
 
         // Body lower
         ctx.fillStyle = "#ffd14d";
@@ -511,7 +624,14 @@
         ctx.arc(dx + 3, dy, 1.2, 0, Math.PI * 2);
         ctx.fill();
 
-        // Headlight
+        // Headlight — extra glow during boost
+        const boosting = now < state.boostUntil;
+        if (boosting) {
+            ctx.fillStyle = "rgba(255, 220, 120, 0.55)";
+            ctx.beginPath();
+            ctx.arc(CAR_X + CAR_W - 6, carY + 28, 10, 0, Math.PI * 2);
+            ctx.fill();
+        }
         ctx.fillStyle = "#fff4bc";
         ctx.strokeStyle = "#2b2416";
         ctx.beginPath();
@@ -523,6 +643,8 @@
         const wheelY = carY + CAR_H - 2;
         drawWheel(CAR_X + 16, wheelY);
         drawWheel(CAR_X + CAR_W - 16, wheelY);
+
+        ctx.restore();
     }
 
     function drawWheel(x, y) {
@@ -551,9 +673,10 @@
 
     function drawItem(it) {
         if (it.taken) return;
+        const iy = groundAtScreen(it.x) + it.yOffset;
         if (it.type === "coin") {
             ctx.save();
-            ctx.translate(it.x, it.y);
+            ctx.translate(it.x, iy);
             const wobble = 1 + Math.sin(performance.now() / 150 + it.x) * 0.1;
             ctx.scale(wobble, 1);
             ctx.fillStyle = "#f5c451";
@@ -571,7 +694,7 @@
             ctx.restore();
         } else if (it.type === "star") {
             ctx.save();
-            ctx.translate(it.x, it.y);
+            ctx.translate(it.x, iy);
             ctx.rotate(Math.sin(performance.now() / 300 + it.x) * 0.2);
             ctx.fillStyle = "#ffe066";
             ctx.strokeStyle = "#c79a1f";
@@ -581,24 +704,59 @@
             ctx.stroke();
             ctx.restore();
         } else if (it.type === "cone") {
-            // Traffic cone sitting on road
+            // Traffic cone sitting on road, tilted with the slope
+            const slope = (groundAtScreen(it.x + 6) - groundAtScreen(it.x - 6)) / 12;
+            ctx.save();
+            ctx.translate(it.x, iy + 10);
+            ctx.rotate(Math.atan(slope));
             ctx.fillStyle = "#ff8232";
             ctx.strokeStyle = "#2b2416";
             ctx.lineWidth = 1.5;
             ctx.beginPath();
-            ctx.moveTo(it.x, it.y - 18);
-            ctx.lineTo(it.x - 10, it.y + 10);
-            ctx.lineTo(it.x + 10, it.y + 10);
+            ctx.moveTo(0, -28);
+            ctx.lineTo(-10, 0);
+            ctx.lineTo(10, 0);
             ctx.closePath();
             ctx.fill();
             ctx.stroke();
-            // Stripes
             ctx.fillStyle = "#fff";
-            ctx.fillRect(it.x - 8, it.y - 2, 16, 3);
-            ctx.fillRect(it.x - 6, it.y - 10, 12, 3);
-            // Base
+            ctx.fillRect(-8, -12, 16, 3);
+            ctx.fillRect(-6, -20, 12, 3);
             ctx.fillStyle = "#2b2416";
-            ctx.fillRect(it.x - 12, it.y + 10, 24, 3);
+            ctx.fillRect(-12, 0, 24, 3);
+            ctx.restore();
+        } else if (it.type === "booster") {
+            // Glowing chevron pad lying flat on the road, tilted with the slope
+            const slope = (groundAtScreen(it.x + 6) - groundAtScreen(it.x - 6)) / 12;
+            const pulse = 0.5 + 0.5 * Math.sin(performance.now() / 120);
+            ctx.save();
+            ctx.translate(it.x, iy + 4);
+            ctx.rotate(Math.atan(slope));
+            // Pad base
+            ctx.fillStyle = "#1a1620";
+            ctx.strokeStyle = "#ffb347";
+            ctx.lineWidth = 2;
+            roundRect(-18, -7, 36, 14, 4);
+            ctx.fill();
+            ctx.stroke();
+            // Chevron arrows pointing forward (right)
+            ctx.fillStyle = `rgba(255, 180, 60, ${0.55 + pulse * 0.45})`;
+            for (let i = -1; i <= 1; i++) {
+                const ax = i * 9 - 2;
+                ctx.beginPath();
+                ctx.moveTo(ax - 4, -4);
+                ctx.lineTo(ax + 4, 0);
+                ctx.lineTo(ax - 4, 4);
+                ctx.lineTo(ax - 1, 0);
+                ctx.closePath();
+                ctx.fill();
+            }
+            // Glow halo
+            ctx.fillStyle = `rgba(255, 220, 120, ${0.15 + pulse * 0.18})`;
+            ctx.beginPath();
+            ctx.ellipse(0, -2, 24, 10, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
         }
     }
 
@@ -628,8 +786,22 @@
 
         // Foreground elements
         for (const it of state.items) drawItem(it);
+
+        // Speed streaks behind/around the car while boosting
+        for (const s of state.streaks) {
+            const a = Math.max(0, s.life / s.max);
+            ctx.fillStyle = `rgba(255, 210, 120, ${0.55 * a})`;
+            ctx.fillRect(s.x, s.y, s.len, 2.5);
+        }
+
         drawCar();
         for (const b of state.bushes) drawBush(b);
+
+        // Boost tint overlay
+        if (performance.now() < state.boostUntil) {
+            ctx.fillStyle = "rgba(255, 180, 60, 0.08)";
+            ctx.fillRect(0, 0, W, H);
+        }
 
         // Hit flash
         if (performance.now() < state.flashUntil) {
