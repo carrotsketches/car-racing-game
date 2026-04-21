@@ -188,6 +188,11 @@ h1 {
     border-color: rgba(255, 208, 122, 0.4);
 }
 
+.game-card.maze-game {
+    background: linear-gradient(135deg, rgba(255, 179, 199, 0.22), rgba(168, 131, 204, 0.18));
+    border-color: rgba(255, 179, 199, 0.4);
+}
+
 .game-card.coming-soon {
     opacity: 0.55;
     cursor: default;

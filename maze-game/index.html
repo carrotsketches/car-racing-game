@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>Bunny Maze</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-wrapper">
+        <a class="home-link" href="../">← Games</a>
+        <header>
+            <h1>Bunny Maze</h1>
+            <div class="hud">
+                <div class="stat" id="player-tag">👤 <span id="player-name">—</span></div>
+                <div class="stat">Level: <span id="level">1</span></div>
+                <div class="stat">Score: <span id="score">0</span></div>
+                <div class="stat">Best: <span id="best">0</span></div>
+            </div>
+        </header>
+
+        <div class="stage">
+            <canvas id="maze" aria-label="Maze"></canvas>
+
+            <div id="overlay" class="overlay">
+                <div class="panel">
+                    <h2 id="overlay-title">Ready to hop?</h2>
+                    <p id="overlay-msg">Help 🐰 find the 🥕! Grab the ⭐ for bonus points.</p>
+                    <label class="name-row" for="name-input">
+                        <span>Name</span>
+                        <input id="name-input" type="text" maxlength="12" autocomplete="off"
+                               spellcheck="false" placeholder="Player" />
+                    </label>
+                    <button id="start-btn">Start</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="dpad" aria-label="Move bunny">
+            <button type="button" class="dbtn up" data-dir="up" aria-label="Up">▲</button>
+            <button type="button" class="dbtn left" data-dir="left" aria-label="Left">◀</button>
+            <button type="button" class="dbtn right" data-dir="right" aria-label="Right">▶</button>
+            <button type="button" class="dbtn down" data-dir="down" aria-label="Down">▼</button>
+        </div>
+
+        <footer>
+            <p>Use the arrows (or swipe) to move 🐰 to 🥕.</p>
+        </footer>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
