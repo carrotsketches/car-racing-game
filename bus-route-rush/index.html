@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>Bus Route Rush</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-wrapper">
+        <a class="home-link" href="../">← Games</a>
+        <header>
+            <h1>Bus Route Rush</h1>
+            <div class="hud">
+                <div class="stat" id="player-tag">👤 <span id="player-name">—</span></div>
+                <div class="stat">Score: <span id="score">0</span></div>
+                <div class="stat">Combo: ×<span id="combo">1</span></div>
+                <div class="stat time-stat" id="time-stat">⏱ <span id="time">90</span>s</div>
+                <div class="stat">Best: <span id="best">0</span></div>
+            </div>
+        </header>
+
+        <div class="stage">
+            <canvas id="game" width="360" height="360" aria-label="Bus route map"></canvas>
+
+            <div id="overlay" class="overlay">
+                <div class="panel">
+                    <h2 id="overlay-title">Ready to Roll?</h2>
+                    <p id="overlay-msg">
+                        Pick up passengers 🧑‍🦱 and drop each one at the matching colored stop.
+                        Chain deliveries without a break to build your combo multiplier!
+                    </p>
+                    <label class="name-row" for="name-input">
+                        <span>Name</span>
+                        <input id="name-input" type="text" maxlength="12" autocomplete="off"
+                               spellcheck="false" placeholder="Player" />
+                    </label>
+                    <button id="start-btn">Start</button>
+                    <p class="hint">Arrow keys / WASD or swipe to drive.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="touch-controls" id="touch-controls" aria-label="Touch controls">
+            <button class="touch-btn up" data-dir="up" aria-label="Drive up">▲</button>
+            <button class="touch-btn left" data-dir="left" aria-label="Drive left">◀</button>
+            <button class="touch-btn right" data-dir="right" aria-label="Drive right">▶</button>
+            <button class="touch-btn down" data-dir="down" aria-label="Drive down">▼</button>
+        </div>
+
+        <footer>
+            <p>Deliver as many passengers as you can in 90 seconds!</p>
+        </footer>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
