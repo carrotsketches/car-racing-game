@@ -210,152 +210,26 @@ h1 {
     stroke-width: 1.5;
 }
 
-.answer-row {
-    display: flex;
-    align-items: flex-end;
-    justify-content: center;
-    gap: 12px;
-    margin: 10px 0 4px;
-}
-
-.time-slot {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-}
-
-.time-label {
-    font-size: 0.8rem;
-    font-weight: 800;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    color: #4a3818;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.swatch {
-    display: inline-block;
-    width: 24px;
-    height: 5px;
-    border-radius: 3px;
-}
-
-.swatch-hour { background: #2e6bd6; }
-.swatch-minute { background: #d15b2a; }
-
-.colon {
-    font-size: 3rem;
-    font-weight: 900;
-    color: #2a1f10;
-    padding-bottom: 14px;
-    line-height: 1;
-}
-
-.slot {
-    font-size: 2.8rem;
-    font-weight: 900;
-    color: #2a1f10;
-    width: 108px;
-    height: 82px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 3px dashed #e0b97a;
-    border-radius: 14px;
-    background: rgba(255, 255, 255, 0.75);
-    font-family: "Courier New", Courier, monospace;
-    letter-spacing: 4px;
-    position: relative;
-}
-
-.hour-group .slot {
-    border-color: #a9c3ef;
-}
-
-.minute-group .slot {
-    border-color: #f0b993;
-}
-
-.slot.active {
-    border-style: solid;
-    background: #fff;
-    animation: slotPulse 1.2s ease-in-out infinite;
-}
-
-.hour-group .slot.active {
-    border-color: #2e6bd6;
-    box-shadow: 0 0 0 4px rgba(46, 107, 214, 0.22);
-}
-
-.minute-group .slot.active {
-    border-color: #d15b2a;
-    box-shadow: 0 0 0 4px rgba(209, 91, 42, 0.22);
-}
-
-.slot.filled {
-    border-style: solid;
-    background: #fff;
-    color: #2a1f10;
-}
-
-.slot.correct {
-    border-color: #4caf50;
-    background: #dff5dc;
-    color: #1b5e20;
-    animation: slotBounce 360ms ease-out;
-}
-
-.slot.wrong {
-    border-color: #e53935;
-    background: #fde0dd;
-    color: #b71c1c;
-    animation: slotShake 360ms ease-in-out;
-}
-
-.slot-digit {
-    position: relative;
-    z-index: 1;
-}
-
-@keyframes slotPulse {
-    0%, 100% { filter: brightness(1); }
-    50% { filter: brightness(1.05); }
-}
-
-@keyframes slotBounce {
-    0%, 100% { transform: scale(1); }
-    40% { transform: scale(1.18); }
-}
-
-@keyframes slotShake {
-    0%, 100% { transform: translateX(0); }
-    25% { transform: translateX(-8px); }
-    75% { transform: translateX(8px); }
-}
-
 .hint {
     text-align: center;
-    font-size: 0.95rem;
+    font-size: 1rem;
     color: #7a5a2c;
     min-height: 1.3em;
-    margin: 6px 0 10px;
-    font-weight: 600;
+    margin: 8px 0 10px;
+    font-weight: 700;
 }
 
 .hint.good { color: #2e7d32; }
 .hint.bad { color: #c62828; }
 
-.keypad {
+.choices {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
     margin-top: 4px;
 }
 
-.key {
+.choice {
     padding: 18px 0;
     font-size: 1.8rem;
     font-weight: 900;
@@ -365,28 +239,45 @@ h1 {
     color: #2a1f10;
     cursor: pointer;
     box-shadow: 0 3px 0 #c9b48a, 0 5px 10px rgba(0, 0, 0, 0.1);
-    transition: transform 0.08s ease, box-shadow 0.08s ease;
+    transition: transform 0.08s ease, box-shadow 0.08s ease, background 0.15s ease, color 0.15s ease;
     touch-action: manipulation;
+    font-family: "Courier New", Courier, monospace;
+    letter-spacing: 2px;
 }
 
-.key:active {
+.choice:active {
     transform: translateY(2px);
     box-shadow: 0 1px 0 #c9b48a, 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.key:disabled {
-    opacity: 0.5;
+.choice:disabled {
+    opacity: 0.55;
     cursor: not-allowed;
 }
 
-.key-back {
-    background: #ffe0d6;
-    color: #d14d2a;
+.choice.correct {
+    background: #dff5dc;
+    color: #1b5e20;
+    box-shadow: 0 3px 0 #7ac07f, 0 5px 10px rgba(76, 175, 80, 0.35);
+    animation: choiceBounce 360ms ease-out;
 }
 
-.key-check {
-    background: #b9ecc0;
-    color: #1b5e20;
+.choice.wrong {
+    background: #fde0dd;
+    color: #b71c1c;
+    box-shadow: 0 3px 0 #e09d99, 0 5px 10px rgba(229, 57, 53, 0.3);
+    animation: choiceShake 360ms ease-in-out;
+}
+
+@keyframes choiceBounce {
+    0%, 100% { transform: scale(1); }
+    40% { transform: scale(1.08); }
+}
+
+@keyframes choiceShake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-6px); }
+    75% { transform: translateX(6px); }
 }
 
 .cheer {
@@ -530,7 +421,5 @@ footer {
     h1 { font-size: 1.3rem; letter-spacing: 1px; }
     .hud { font-size: 0.78rem; padding: 6px 8px; gap: 4px; }
     .clock { width: 260px; height: 260px; }
-    .slot { width: 92px; height: 72px; font-size: 2.4rem; }
-    .colon { font-size: 2.6rem; padding-bottom: 12px; }
-    .key { padding: 16px 0; font-size: 1.6rem; }
+    .choice { padding: 16px 0; font-size: 1.6rem; }
 }

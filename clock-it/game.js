@@ -3,11 +3,8 @@
     const minuteHand = document.getElementById("minute-hand");
     const ticksGroup = document.getElementById("ticks");
     const numbersGroup = document.getElementById("numbers");
-    const hourSlot = document.getElementById("hour-slot");
-    const minuteSlot = document.getElementById("minute-slot");
-    const hourDigit = document.getElementById("hour-digit");
-    const minuteDigit = document.getElementById("minute-digit");
-    const keypad = document.getElementById("keypad");
+    const choicesEl = document.getElementById("choices");
+    const choiceBtns = Array.from(choicesEl.querySelectorAll(".choice"));
     const hintEl = document.getElementById("hint");
     const scoreEl = document.getElementById("score");
     const bestEl = document.getElementById("best");
@@ -70,7 +67,7 @@
     }
 
     const savedLevelRaw = localStorage.getItem(LEVEL_KEY);
-    const savedLevel = ["easy", "medium", "hard"].includes(savedLevelRaw) ? savedLevelRaw : "easy";
+    const savedLevel = ["easy", "hard"].includes(savedLevelRaw) ? savedLevelRaw : "easy";
     const savedCountRaw = Number(localStorage.getItem(COUNT_KEY));
     const savedCount = ALLOWED_COUNTS.includes(savedCountRaw) ? savedCountRaw : DEFAULT_COUNT;
 
@@ -79,12 +76,11 @@
         score: 0,
         qIndex: 0,
         current: null,
+        options: [],
         level: savedLevel,
         qTotal: savedCount,
-        active: "hour",  // "hour" | "minute" | "done"
-        hourInput: "",
-        minuteInput: "",
         mistakes: 0,
+        tried: new Set(),
         leaderboard: loadLeaderboard(),
         playerName: "",
         locked: false,
@@ -195,24 +191,48 @@
     }
 
     // ----- Problem generation -----
+    function minutesForLevel() {
+        return state.level === "easy" ? [0, 30] : [0, 15, 30, 45];
+    }
+
     function genProblem() {
-        let hour = 1 + Math.floor(Math.random() * 12); // 1..12
-        let minute;
-        if (state.level === "easy") {
-            minute = 0;
-        } else if (state.level === "medium") {
-            minute = Math.random() < 0.5 ? 0 : 30;
-        } else {
-            const opts = [0, 15, 30, 45];
-            minute = opts[Math.floor(Math.random() * opts.length)];
-        }
-        // Avoid repeating the exact same time twice in a row
+        let hour = 1 + Math.floor(Math.random() * 12);
+        const mins = minutesForLevel();
+        let minute = mins[Math.floor(Math.random() * mins.length)];
         if (state.current && state.current.hour === hour && state.current.minute === minute) {
             hour = (hour % 12) + 1;
         }
         return { hour, minute };
     }
 
+    function sameTime(a, b) { return a.hour === b.hour && a.minute === b.minute; }
+
+    function buildOptions(target) {
+        const mins = minutesForLevel();
+        const pool = [];
+        for (let h = 1; h <= 12; h++) {
+            for (const m of mins) {
+                if (!(h === target.hour && m === target.minute)) pool.push({ hour: h, minute: m });
+            }
+        }
+        // Fisher–Yates shuffle
+        for (let i = pool.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [pool[i], pool[j]] = [pool[j], pool[i]];
+        }
+        const opts = [target, pool[0], pool[1], pool[2]];
+        for (let i = opts.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [opts[i], opts[j]] = [opts[j], opts[i]];
+        }
+        return opts;
+    }
+
+    function formatTime(t) {
+        return `${t.hour}:${String(t.minute).padStart(2, "0")}`;
+    }
+
+    // ----- Rendering -----
     function updateLevelUI() {
         levelBtns.forEach((b) => {
             b.classList.toggle("selected", b.dataset.level === state.level);
@@ -225,192 +245,50 @@
         });
     }
 
-    function pad2(n) { return String(n).padStart(2, "0"); }
-
-    // ----- Slot rendering -----
-    function resetSlot(slot, digit) {
-        slot.classList.remove("active", "filled", "correct", "wrong");
-        digit.textContent = "";
-    }
-
-    function setActive(which) {
-        state.active = which;
-        hourSlot.classList.remove("active");
-        minuteSlot.classList.remove("active");
-        if (which === "hour") hourSlot.classList.add("active");
-        else if (which === "minute") minuteSlot.classList.add("active");
-        updateHint();
-    }
-
-    function updateHint() {
-        if (state.active === "hour") {
-            hintEl.className = "hint";
-            hintEl.textContent = "Short hand → hour";
-        } else if (state.active === "minute") {
-            hintEl.className = "hint";
-            hintEl.textContent = "Long hand → minute";
-        }
-    }
-
-    function refreshHourDisplay() {
-        hourDigit.textContent = state.hourInput;
-        hourSlot.classList.toggle("filled", state.hourInput.length > 0);
-    }
-
-    function refreshMinuteDisplay() {
-        minuteDigit.textContent = state.minuteInput;
-        minuteSlot.classList.toggle("filled", state.minuteInput.length > 0);
+    function renderChoices() {
+        choiceBtns.forEach((btn, i) => {
+            const opt = state.options[i];
+            btn.textContent = opt ? formatTime(opt) : "—";
+            btn.className = "choice";
+            btn.disabled = !state.running;
+        });
     }
 
     function renderProblem() {
         if (!state.current) return;
         setClock(state.current.hour, state.current.minute);
-        state.hourInput = "";
-        state.minuteInput = "";
-        hourSlot.classList.remove("correct", "wrong", "filled");
-        minuteSlot.classList.remove("correct", "wrong", "filled");
-        hourDigit.textContent = "";
-        minuteDigit.textContent = "";
-        setActive("hour");
+        state.tried = new Set();
+        renderChoices();
         qNumEl.textContent = state.qIndex + 1;
+        hintEl.className = "hint";
+        hintEl.textContent = "What time does the clock show?";
     }
 
-    // ----- Input handling -----
-    function handleKey(k) {
+    // ----- Input -----
+    function handleChoice(idx) {
         if (!state.running || state.locked) return;
-        if (k === "back") {
-            handleBack();
-            return;
-        }
-        if (k === "check") {
-            attemptSubmit();
-            return;
-        }
-        const digit = Number(k);
-        if (Number.isNaN(digit)) return;
-        if (state.active === "hour") {
-            typeHour(String(digit));
-        } else if (state.active === "minute") {
-            typeMinute(String(digit));
-        }
-    }
-
-    function typeHour(d) {
-        if (state.hourInput.length >= 2) return;
-        const next = state.hourInput + d;
-        // Don't allow leading zero or values > 12
-        if (state.hourInput.length === 0 && d === "0") return;
-        if (Number(next) > 12) return;
-        state.hourInput = next;
-        playTap();
-        refreshHourDisplay();
-        // Auto-advance: if we have 2 digits, or the only valid 2nd digit options are gone
-        if (state.hourInput.length === 2 || Number(state.hourInput) >= 2) {
-            // After "1" we still need possible "10","11","12"; otherwise jump
-            setTimeout(() => {
-                if (state.active === "hour") setActive("minute");
-            }, 180);
-        }
-    }
-
-    function typeMinute(d) {
-        if (state.minuteInput.length >= 2) return;
-        // First digit of minute can be 0..5 only
-        if (state.minuteInput.length === 0 && Number(d) > 5) return;
-        state.minuteInput += d;
-        playTap();
-        refreshMinuteDisplay();
-        if (state.minuteInput.length === 2) {
-            setTimeout(() => attemptSubmit(), 200);
-        }
-    }
-
-    function handleBack() {
-        if (state.active === "minute") {
-            if (state.minuteInput.length > 0) {
-                state.minuteInput = state.minuteInput.slice(0, -1);
-                refreshMinuteDisplay();
-            } else {
-                // Jump back to hour and remove its last digit
-                setActive("hour");
-                if (state.hourInput.length > 0) {
-                    state.hourInput = state.hourInput.slice(0, -1);
-                    refreshHourDisplay();
-                }
-            }
-        } else if (state.active === "hour") {
-            if (state.hourInput.length > 0) {
-                state.hourInput = state.hourInput.slice(0, -1);
-                refreshHourDisplay();
-            }
-        }
-        playTap();
-    }
-
-    function attemptSubmit() {
-        if (state.hourInput.length === 0 || state.minuteInput.length === 0) {
-            // If hour is filled but minute isn't, just move focus to minute
-            if (state.hourInput.length > 0 && state.minuteInput.length === 0) {
-                setActive("minute");
-                return;
-            }
-            hintEl.className = "hint bad";
-            hintEl.textContent = "Type the hour and the minute";
-            return;
-        }
-        // Pad single digit minute to two digits (e.g., "5" -> "05")
-        if (state.minuteInput.length === 1) {
-            state.minuteInput = "0" + state.minuteInput;
-            refreshMinuteDisplay();
-        }
-        const guessHour = Number(state.hourInput);
-        const guessMin = Number(state.minuteInput);
-        const p = state.current;
-        const hourOk = guessHour === p.hour;
-        const minOk = guessMin === p.minute;
-        if (hourOk && minOk) {
-            hourSlot.classList.remove("active");
-            minuteSlot.classList.remove("active");
-            hourSlot.classList.add("correct");
-            minuteSlot.classList.add("correct");
+        if (state.tried.has(idx)) return;
+        const opt = state.options[idx];
+        if (!opt) return;
+        const btn = choiceBtns[idx];
+        if (sameTime(opt, state.current)) {
+            btn.classList.add("correct");
             playGood();
             finishProblem(true);
         } else {
-            if (!hourOk) {
-                hourSlot.classList.add("wrong");
-            }
-            if (!minOk) {
-                minuteSlot.classList.add("wrong");
-            }
+            btn.classList.add("wrong");
+            btn.disabled = true;
+            state.tried.add(idx);
             state.mistakes += 1;
             playBad();
             hintEl.className = "hint bad";
-            hintEl.textContent = !hourOk && !minOk
-                ? "Both off — look again"
-                : !hourOk
-                    ? "Hour isn't right — short hand"
-                    : "Minute isn't right — long hand";
-            state.locked = true;
-            setTimeout(() => {
-                state.locked = false;
-                hourSlot.classList.remove("wrong");
-                minuteSlot.classList.remove("wrong");
-                if (!hourOk) {
-                    state.hourInput = "";
-                    refreshHourDisplay();
-                }
-                if (!minOk) {
-                    state.minuteInput = "";
-                    refreshMinuteDisplay();
-                }
-                setActive(!hourOk ? "hour" : "minute");
-            }, 900);
+            hintEl.textContent = "Not quite — look again!";
         }
     }
 
     // ----- Level / count switching -----
     function switchLevel(newLevel) {
-        if (!["easy", "medium", "hard"].includes(newLevel)) return;
+        if (!["easy", "hard"].includes(newLevel)) return;
         if (newLevel === state.level) return;
         state.level = newLevel;
         localStorage.setItem(LEVEL_KEY, newLevel);
@@ -419,6 +297,7 @@
             state.mistakes = 0;
             state.locked = false;
             state.current = genProblem();
+            state.options = buildOptions(state.current);
             renderProblem();
         }
     }
@@ -457,6 +336,7 @@
             return;
         }
         state.current = genProblem();
+        state.options = buildOptions(state.current);
         state.mistakes = 0;
         state.locked = false;
         renderProblem();
@@ -464,21 +344,20 @@
 
     function finishProblem(correct) {
         state.locked = true;
-        state.active = "done";
         if (correct) {
             const gained = state.mistakes === 0 ? POINTS_FIRST_TRY : POINTS_RETRY;
             state.score += gained;
             scoreEl.textContent = state.score;
             hintEl.className = "hint good";
-            const p = state.current;
-            hintEl.textContent = `✓ ${p.hour}:${pad2(p.minute)}  (+${gained})`;
+            hintEl.textContent = `✓ ${formatTime(state.current)}  (+${gained})`;
             showCheer();
             flashPad();
         }
+        choiceBtns.forEach(b => b.disabled = true);
         setTimeout(() => {
             state.qIndex += 1;
             nextProblem();
-        }, 1300);
+        }, 1200);
     }
 
     function showCheer() {
@@ -517,22 +396,12 @@
     }
 
     // ----- Event wiring -----
-    keypad.addEventListener("pointerdown", (e) => {
-        const btn = e.target.closest("button.key");
-        if (!btn) return;
+    choicesEl.addEventListener("pointerdown", (e) => {
+        const btn = e.target.closest("button.choice");
+        if (!btn || btn.disabled) return;
         e.preventDefault();
-        handleKey(btn.dataset.k);
-    });
-
-    hourSlot.addEventListener("pointerdown", (e) => {
-        if (!state.running || state.locked) return;
-        e.preventDefault();
-        setActive("hour");
-    });
-    minuteSlot.addEventListener("pointerdown", (e) => {
-        if (!state.running || state.locked) return;
-        e.preventDefault();
-        setActive("minute");
+        playTap();
+        handleChoice(Number(btn.dataset.idx));
     });
 
     levelBtns.forEach((btn) => {
@@ -542,22 +411,8 @@
         btn.addEventListener("click", () => switchCount(btn.dataset.count));
     });
 
-    window.addEventListener("keydown", (e) => {
-        if (!state.running) return;
-        if (e.key >= "0" && e.key <= "9") {
-            handleKey(e.key);
-        } else if (e.key === "Backspace") {
-            handleKey("back");
-        } else if (e.key === "Enter") {
-            handleKey("check");
-        } else if (e.key === "Tab") {
-            e.preventDefault();
-            setActive(state.active === "hour" ? "minute" : "hour");
-        }
-    });
-
     startBtn.addEventListener("click", startGame);
 
-    // Set hands to a friendly default (10:10) before the game starts
+    // Friendly default while idle
     setClock(10, 10);
 })();
