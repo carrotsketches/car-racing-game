@@ -30,26 +30,33 @@
                 </div>
 
                 <div class="digital">
-                    <div class="unit unit-hour">
-                        <span class="unit-label">Hour</span>
-                        <div class="spinner">
-                            <button type="button" class="adjust" data-unit="hour" data-dir="-1" aria-label="Hour down">−</button>
-                            <input type="number" id="hour-input" inputmode="numeric" min="1" max="12" value="3" aria-label="Hour">
-                            <button type="button" class="adjust" data-unit="hour" data-dir="1" aria-label="Hour up">+</button>
-                        </div>
-                    </div>
-                    <div class="colon">:</div>
-                    <div class="unit unit-minute">
-                        <span class="unit-label">Minute</span>
-                        <div class="spinner">
-                            <button type="button" class="adjust" data-unit="minute" data-dir="-1" aria-label="Minute down">−</button>
-                            <input type="number" id="minute-input" inputmode="numeric" min="0" max="59" value="0" aria-label="Minute">
-                            <button type="button" class="adjust" data-unit="minute" data-dir="1" aria-label="Minute up">+</button>
-                        </div>
-                    </div>
+                    <button type="button" class="slot active" id="slot-hour" data-slot="hour" aria-label="Hour">
+                        <span class="slot-label">Hour</span>
+                        <span class="slot-value" id="hour-display">_</span>
+                    </button>
+                    <span class="colon">:</span>
+                    <button type="button" class="slot" id="slot-minute" data-slot="minute" aria-label="Minute">
+                        <span class="slot-label">Minute</span>
+                        <span class="slot-value" id="minute-display">_ _</span>
+                    </button>
                 </div>
 
-                <div class="hint" id="hint">Type a time — watch the hands move!</div>
+                <div class="hint" id="hint">Tap the numbers to set the time!</div>
+
+                <div class="keypad" id="keypad" aria-label="Number keypad">
+                    <button class="key" data-k="1">1</button>
+                    <button class="key" data-k="2">2</button>
+                    <button class="key" data-k="3">3</button>
+                    <button class="key" data-k="4">4</button>
+                    <button class="key" data-k="5">5</button>
+                    <button class="key" data-k="6">6</button>
+                    <button class="key" data-k="7">7</button>
+                    <button class="key" data-k="8">8</button>
+                    <button class="key" data-k="9">9</button>
+                    <button class="key key-back" data-k="back">⌫</button>
+                    <button class="key" data-k="0">0</button>
+                    <button class="key key-clear" data-k="clear">C</button>
+                </div>
             </div>
         </div>
 

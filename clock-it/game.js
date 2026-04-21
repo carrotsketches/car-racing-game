@@ -3,13 +3,22 @@
     const minuteHand = document.getElementById("minute-hand");
     const ticksGroup = document.getElementById("ticks");
     const numbersGroup = document.getElementById("numbers");
-    const hourInput = document.getElementById("hour-input");
-    const minuteInput = document.getElementById("minute-input");
-    const adjustBtns = document.querySelectorAll(".adjust");
+    const hourDisplay = document.getElementById("hour-display");
+    const minuteDisplay = document.getElementById("minute-display");
+    const slotHour = document.getElementById("slot-hour");
+    const slotMinute = document.getElementById("slot-minute");
+    const keypad = document.getElementById("keypad");
+    const hintEl = document.getElementById("hint");
+
+    const state = {
+        hourStr: "",
+        minuteStr: "",
+        active: "hour",
+    };
 
     buildClockFace();
+    render();
 
-    // Audio (lazy) — a soft tick when the time changes
     let audio = null;
     function ensureAudio() {
         if (!audio) {
@@ -19,19 +28,23 @@
         if (audio && audio.state === "suspended") audio.resume();
         return audio;
     }
-    function playTick() {
+    function tone({ freq, endFreq = null, type = "triangle", duration = 0.08, volume = 0.14 }) {
         const ac = ensureAudio();
         if (!ac) return;
         const osc = ac.createOscillator();
         const gain = ac.createGain();
-        osc.type = "triangle";
-        osc.frequency.setValueAtTime(620, ac.currentTime);
-        gain.gain.setValueAtTime(0.12, ac.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.08);
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, ac.currentTime);
+        if (endFreq != null) osc.frequency.linearRampToValueAtTime(endFreq, ac.currentTime + duration);
+        gain.gain.setValueAtTime(volume, ac.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + duration);
         osc.connect(gain).connect(ac.destination);
         osc.start();
-        osc.stop(ac.currentTime + 0.08);
+        osc.stop(ac.currentTime + duration);
     }
+    const playTap = () => tone({ freq: 620 });
+    const playBack = () => tone({ freq: 320, type: "square", duration: 0.07 });
+    const playSwitch = () => tone({ freq: 440, endFreq: 660, duration: 0.1 });
 
     function buildClockFace() {
         const SVG = "http://www.w3.org/2000/svg";
@@ -74,57 +87,117 @@
         minuteHand.setAttribute("transform", `rotate(${minuteAngle} 100 100)`);
     }
 
-    function wrap(value, min, max) {
-        const span = max - min + 1;
-        let v = ((value - min) % span + span) % span + min;
-        return v;
+    function currentHour() {
+        const h = parseInt(state.hourStr, 10);
+        return Number.isFinite(h) && h >= 1 ? h : 12;
+    }
+    function currentMinute() {
+        const m = parseInt(state.minuteStr, 10);
+        return Number.isFinite(m) ? m : 0;
     }
 
-    function readTime() {
-        const hRaw = parseInt(hourInput.value, 10);
-        const mRaw = parseInt(minuteInput.value, 10);
-        const hour = Number.isFinite(hRaw) ? hRaw : 12;
-        const minute = Number.isFinite(mRaw) ? mRaw : 0;
-        return { hour, minute };
+    function render() {
+        hourDisplay.textContent = state.hourStr === "" ? "_" : state.hourStr;
+        let mText;
+        if (state.minuteStr === "") mText = "_ _";
+        else if (state.minuteStr.length === 1) mText = state.minuteStr + " _";
+        else mText = state.minuteStr[0] + " " + state.minuteStr[1];
+        minuteDisplay.textContent = mText;
+
+        slotHour.classList.toggle("active", state.active === "hour");
+        slotMinute.classList.toggle("active", state.active === "minute");
+
+        setClock(currentHour(), currentMinute());
     }
 
-    function applyTime({ silent = false } = {}) {
-        const { hour, minute } = readTime();
-        setClock(hour, minute);
-        if (!silent) playTick();
+    function setActive(slot) {
+        if (state.active === slot) return;
+        state.active = slot;
+        playSwitch();
+        render();
     }
 
-    function clampOnBlur(input, min, max) {
-        const raw = parseInt(input.value, 10);
-        if (!Number.isFinite(raw)) {
-            input.value = String(min);
-        } else {
-            input.value = String(Math.min(max, Math.max(min, raw)));
-        }
-        applyTime({ silent: true });
-    }
-
-    hourInput.addEventListener("input", () => applyTime());
-    minuteInput.addEventListener("input", () => applyTime());
-    hourInput.addEventListener("blur", () => clampOnBlur(hourInput, 1, 12));
-    minuteInput.addEventListener("blur", () => clampOnBlur(minuteInput, 0, 59));
-
-    adjustBtns.forEach((btn) => {
-        btn.addEventListener("click", () => {
-            const dir = Number(btn.dataset.dir);
-            if (btn.dataset.unit === "hour") {
-                const cur = parseInt(hourInput.value, 10);
-                const base = Number.isFinite(cur) ? cur : 12;
-                hourInput.value = String(wrap(base + dir, 1, 12));
+    function tapDigit(d) {
+        ensureAudio();
+        if (state.active === "hour") {
+            if (state.hourStr === "") {
+                if (d === "0") return; // no leading zero for hour
+                state.hourStr = d;
+                playTap();
+                // 2-9 can't grow into a valid 2-digit hour; switch focus silently
+                if (d !== "1") state.active = "minute";
+            } else if (state.hourStr === "1") {
+                if (d === "0" || d === "1" || d === "2") {
+                    state.hourStr = "1" + d; // 10, 11, 12
+                    state.active = "minute";
+                    playTap();
+                } else {
+                    // "1" + (3-9): keep hour as 1, overflow digit becomes minute
+                    state.active = "minute";
+                    render();
+                    tapDigit(d);
+                    return;
+                }
             } else {
-                const cur = parseInt(minuteInput.value, 10);
-                const base = Number.isFinite(cur) ? cur : 0;
-                minuteInput.value = String(wrap(base + dir, 0, 59));
+                // hour already 2 digits or single non-"1" digit — push to minute
+                state.active = "minute";
+                render();
+                tapDigit(d);
+                return;
             }
-            applyTime();
-        });
+        } else {
+            // minute slot
+            if (state.minuteStr.length === 0) {
+                if (parseInt(d, 10) > 5) return; // tens digit must be 0-5
+                state.minuteStr = d;
+                playTap();
+            } else if (state.minuteStr.length === 1) {
+                state.minuteStr = state.minuteStr + d;
+                playTap();
+            } else {
+                return; // minute full
+            }
+        }
+        render();
+    }
+
+    function tapBack() {
+        ensureAudio();
+        if (state.active === "minute") {
+            if (state.minuteStr.length > 0) {
+                state.minuteStr = state.minuteStr.slice(0, -1);
+                playBack();
+            } else {
+                state.active = "hour";
+                playSwitch();
+            }
+        } else {
+            if (state.hourStr.length > 0) {
+                state.hourStr = state.hourStr.slice(0, -1);
+                playBack();
+            }
+        }
+        render();
+    }
+
+    function tapClear() {
+        ensureAudio();
+        state.hourStr = "";
+        state.minuteStr = "";
+        state.active = "hour";
+        playBack();
+        render();
+    }
+
+    keypad.addEventListener("click", (e) => {
+        const btn = e.target.closest("button.key");
+        if (!btn) return;
+        const k = btn.dataset.k;
+        if (k === "back") tapBack();
+        else if (k === "clear") tapClear();
+        else if (/^[0-9]$/.test(k)) tapDigit(k);
     });
 
-    // Initial render
-    applyTime({ silent: true });
+    slotHour.addEventListener("click", () => setActive("hour"));
+    slotMinute.addEventListener("click", () => setActive("minute"));
 })();
