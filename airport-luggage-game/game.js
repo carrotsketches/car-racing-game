@@ -344,10 +344,63 @@
         }
     }
 
+    function drawBagIcon(cx, cy, size, color, filled) {
+        const w = size, h = size * 0.8;
+        const bx = cx - w / 2, by = cy - h / 2 + 1;
+
+        // Bag body.
+        roundRect(bx, by, w, h, 1.5);
+        if (filled) {
+            ctx.fillStyle = color;
+            ctx.fill();
+            ctx.strokeStyle = "rgba(0,0,0,0.55)";
+            ctx.lineWidth = 1.2;
+            ctx.stroke();
+        } else {
+            ctx.fillStyle = "rgba(0,0,0,0.18)";
+            ctx.fill();
+            ctx.setLineDash([2, 2]);
+            ctx.strokeStyle = "rgba(255,255,255,0.5)";
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+
+        // Handle.
+        ctx.beginPath();
+        ctx.arc(cx, by, w * 0.28, Math.PI, 2 * Math.PI);
+        ctx.lineWidth = 1.2;
+        ctx.strokeStyle = filled ? "rgba(0,0,0,0.6)" : "rgba(255,255,255,0.4)";
+        ctx.stroke();
+
+        // Clasp highlight.
+        if (filled) {
+            ctx.fillStyle = "rgba(255,255,255,0.85)";
+            ctx.fillRect(cx - 0.8, by + 1.5, 1.6, 1.6);
+        }
+    }
+
     function drawCityCard(city) {
         const cw = CARD.w, ch = CARD.h, r = CARD.r;
         const x = city.x - cw / 2;
         const y = city.y - ch / 2;
+
+        const wants = state.wants.filter((w) => w.cityId === city.id);
+        const hasMatch = state.plane.state === "idle" && state.cargo.length > 0 &&
+            wants.some((w) => state.cargo.some((b) => b.color === w.color));
+
+        // Match-hint pulsing halo when current cargo can deliver here.
+        if (hasMatch) {
+            const pulse = 0.55 + 0.35 * Math.sin(state.elapsed / 150);
+            ctx.save();
+            ctx.shadowColor = `rgba(255, 245, 160, ${pulse})`;
+            ctx.shadowBlur = 18;
+            ctx.strokeStyle = `rgba(255, 250, 190, ${pulse})`;
+            ctx.lineWidth = 3;
+            roundRect(x - 1, y - 1, cw + 2, ch + 2, r + 1);
+            ctx.stroke();
+            ctx.restore();
+        }
 
         // Drop shadow.
         ctx.fillStyle = "rgba(0,0,0,0.18)";
@@ -378,40 +431,22 @@
         ctx.fillStyle = "#fff";
         ctx.fillText(city.name.toUpperCase(), city.x, city.y + 14);
 
-        // Wanted-color slots (up to 3). New wants pulse briefly after spawn.
-        const wants = state.wants.filter((w) => w.cityId === city.id);
+        // Wanted-luggage slots (up to 3). New wants pulse briefly after spawn.
         for (let i = 0; i < 3; i++) {
-            const sx = city.x - 14 + i * 14;
+            const sx = city.x - 16 + i * 16;
             const sy = city.y + 30;
             const w = wants[i];
             if (w) {
-                // Pulse radius for the first ~0.8s after spawn.
                 const age = (state.elapsed - w.newAt) / 1000;
                 const pulse = age < 0.8 ? 1 + Math.sin(age * 12) * 0.35 * (1 - age / 0.8) : 1;
-                // Soft halo.
+                // Soft halo behind the bag icon.
                 ctx.beginPath();
-                ctx.arc(sx, sy, 7 * pulse + 2, 0, Math.PI * 2);
+                ctx.arc(sx, sy, 9 * pulse, 0, Math.PI * 2);
                 ctx.fillStyle = w.color + "55";
                 ctx.fill();
-                // Solid center.
-                ctx.beginPath();
-                ctx.arc(sx, sy, 5.5 * pulse, 0, Math.PI * 2);
-                ctx.fillStyle = w.color;
-                ctx.fill();
-                ctx.strokeStyle = "rgba(0,0,0,0.5)";
-                ctx.lineWidth = 1.2;
-                ctx.stroke();
+                drawBagIcon(sx, sy, 11 * pulse, w.color, true);
             } else {
-                // Empty slot — dashed ring.
-                ctx.beginPath();
-                ctx.arc(sx, sy, 5, 0, Math.PI * 2);
-                ctx.fillStyle = "rgba(0,0,0,0.15)";
-                ctx.fill();
-                ctx.setLineDash([2, 2]);
-                ctx.strokeStyle = "rgba(255,255,255,0.45)";
-                ctx.lineWidth = 1;
-                ctx.stroke();
-                ctx.setLineDash([]);
+                drawBagIcon(sx, sy, 11, null, false);
             }
         }
     }
