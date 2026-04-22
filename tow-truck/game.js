@@ -235,8 +235,12 @@
     const LANE_DOWN_CODES = new Set(["ArrowDown", "ArrowRight", "KeyS"]);
     const WINCH_CODES = new Set(["Space", "Enter", "KeyF"]);
     window.addEventListener("keydown", e => {
-        // Don't hijack typing in the name input.
-        if (e.target && e.target.tagName === "INPUT") return;
+        // Don't hijack typing in the name input, or keyboard activation of
+        // focused links/buttons (e.g. pressing Enter on the "← Games" link).
+        if (e.target) {
+            const tag = e.target.tagName;
+            if (tag === "INPUT" || tag === "A" || tag === "BUTTON") return;
+        }
         if (LANE_UP_CODES.has(e.code)) {
             e.preventDefault();
             if (!e.repeat) changeLane(-1);
