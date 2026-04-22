@@ -561,8 +561,118 @@
         }
         state.confetti = state.confetti.filter((c) => c.life > 0);
 
+        // Flying bags arc to their target plane; on arrival they become cargo.
+        for (const fb of state.flyingBags) fb.progress += dt / fb.duration;
+        for (const fb of state.flyingBags.filter((f) => f.progress >= 1)) {
+            const plane = state.planes.find((p) => p.id === fb.planeId);
+            if (plane && plane.state === "idle" && plane.cargo.length < CARGO_CAP) {
+                plane.cargo.push({ color: fb.color });
+                tone(520, 0.05, "triangle", 0.05);
+            }
+        }
+        state.flyingBags = state.flyingBags.filter((f) => f.progress < 1);
+
         if (state.timeLeft <= 0) endGame();
     }
+
+    // ---------- Input ----------
+    function canvasPos(e) {
+        const rect = canvas.getBoundingClientRect();
+        const sx = CANVAS_W / rect.width;
+        const sy = CANVAS_H / rect.height;
+        return { x: (e.clientX - rect.left) * sx, y: (e.clientY - rect.top) * sy };
+    }
+
+    function tryLoadBag(plane) {
+        const sb = state.selectedBag;
+        if (!sb) return false;
+        if (plane.state !== "idle") {
+            plane.rejectUntil = state.elapsed + 350;
+            tone(180, 0.1, "sawtooth", 0.05);
+            return false;
+        }
+        if (plane.color !== sb.color) {
+            plane.rejectUntil = state.elapsed + 400;
+            tone(200, 0.12, "sawtooth", 0.05);
+            state.floaters.push({
+                text: "wrong plane!",
+                x: plane.x, y: plane.y - 28,
+                life: 1.0, max: 1.0, color: "#ffd23f"
+            });
+            return false;
+        }
+        if (plane.cargo.length + countFlyingToPlane(plane.id) >= CARGO_CAP) {
+            plane.rejectUntil = state.elapsed + 250;
+            tone(180, 0.1, "sawtooth", 0.05);
+            return false;
+        }
+        // Valid load — arc bag onto plane.
+        state.flyingBags.push({
+            fromX: sb.x, fromY: sb.y,
+            toX: plane.x, toY: plane.y,
+            color: sb.color,
+            planeId: plane.id,
+            progress: 0,
+            duration: 0.45
+        });
+        state.selectedBag = null;
+        tone(620, 0.07, "square", 0.05);
+        tone(880, 0.06, "square", 0.04);
+        return true;
+    }
+
+    function countFlyingToPlane(id) {
+        return state.flyingBags.filter((f) => f.planeId === id).length;
+    }
+
+    function handleTap(x, y) {
+        if (!state.running) return;
+
+        // Priority 1: if a bag is selected, tapping a plane tries to load it.
+        if (state.selectedBag) {
+            for (const p of state.planes) {
+                if (Math.hypot(p.x - x, p.y - y) <= 28) {
+                    tryLoadBag(p);
+                    return;
+                }
+            }
+        }
+
+        // Priority 2: tap a bag on the belt to select it.
+        for (let i = state.bags.length - 1; i >= 0; i--) {
+            const b = state.bags[i];
+            if (Math.hypot(b.x - x, b.y - y) <= b.r + 4) {
+                state.selectedBag = { color: b.color, x: b.x, y: b.y };
+                state.bags.splice(i, 1);
+                tone(520, 0.07, "square", 0.05);
+                return;
+            }
+        }
+
+        // Priority 3: tapping somewhere else with a bag selected cancels & returns it.
+        if (state.selectedBag) {
+            const sb = state.selectedBag;
+            // Drop the bag back onto the belt so it rolls off naturally.
+            state.bags.push({
+                x: Math.max(BELT.x + 10, Math.min(BELT.x + BELT.w - 20, sb.x)),
+                y: BELT.y + BELT.h / 2,
+                r: BELT.bagR,
+                color: sb.color
+            });
+            state.selectedBag = null;
+            tone(240, 0.08, "sine", 0.05);
+        }
+    }
+
+    canvas.addEventListener("pointerdown", (e) => {
+        ensureAudio();
+        const { x, y } = canvasPos(e);
+        handleTap(x, y);
+        e.preventDefault();
+    });
+    canvas.addEventListener("touchstart", (e) => e.preventDefault(), { passive: false });
+    canvas.addEventListener("touchmove",  (e) => e.preventDefault(), { passive: false });
+    canvas.addEventListener("touchend",   (e) => e.preventDefault(), { passive: false });
 
     function loop(ts) {
         if (!state.lastTs) state.lastTs = ts;
