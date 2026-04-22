@@ -130,7 +130,7 @@
         leaderboard: loadLeaderboard(),
         bags: [],        // on belt
         cargo: [],       // loaded on plane
-        passengers: [],  // { cityId, color, spawnedAt }
+        wants: [],       // { cityId, color, newAt } — what each city wants right now
         confetti: [],
         floaters: [],    // floating city-name text
         plane: { state: "idle", x: HOME.x, y: HOME.y, tx: HOME.x, ty: HOME.y, fromX: HOME.x, fromY: HOME.y, progress: 0, targetCity: null },
@@ -173,10 +173,10 @@
         return 50 + 60 * t;
     }
 
-    function currentPassengerInterval() {
-        // Ramp from 2000ms → 1000ms.
+    function currentWantInterval() {
+        // Ramp from 1800ms → 900ms.
         const t = Math.min(1, state.elapsed / (ROUND_SECONDS * 1000));
-        return 2000 - 1000 * t;
+        return 1800 - 900 * t;
     }
 
     function spawnBag() {
@@ -188,19 +188,17 @@
         });
     }
 
-    function spawnPassenger() {
-        // Pick a city with fewer than 3 waiting passengers.
+    function spawnWant() {
+        // Pick a city with fewer than 3 active wants.
         const candidates = CITIES.filter((c) => {
-            const waiting = state.passengers.filter((p) => p.cityId === c.id).length;
-            return waiting < 3;
+            return state.wants.filter((w) => w.cityId === c.id).length < 3;
         });
         if (candidates.length === 0) return;
         const city = candidates[Math.floor(Math.random() * candidates.length)];
-        state.passengers.push({
-            cityId: city.id,
-            color: city.color,
-            bob: Math.random() * Math.PI * 2
-        });
+        // Any of the 6 bag colors — not necessarily the city's own color.
+        const color = CITIES[Math.floor(Math.random() * CITIES.length)].color;
+        state.wants.push({ cityId: city.id, color, newAt: state.elapsed });
+        tone(900, 0.08, "triangle", 0.05); // bell-ding
     }
 
     // ---------- Plane state machine ----------
@@ -271,11 +269,11 @@
 
     function deliverCargo(city) {
         let delivered = 0;
-        // Match cargo bags to waiting passengers at this city by color.
-        const waiting = state.passengers.filter((p) => p.cityId === city.id);
+        // Match cargo bags to wanted colors at this city.
+        const wants = state.wants.filter((w) => w.cityId === city.id);
         const remainingCargo = [];
         for (const bag of state.cargo) {
-            const hit = waiting.find((pax) => pax.color === bag.color && !pax.claimed);
+            const hit = wants.find((w) => w.color === bag.color && !w.claimed);
             if (hit) {
                 hit.claimed = true;
                 delivered += 1;
@@ -284,7 +282,7 @@
             }
         }
         state.cargo = remainingCargo;
-        state.passengers = state.passengers.filter((p) => !p.claimed);
+        state.wants = state.wants.filter((w) => !w.claimed);
 
         if (delivered > 0) {
             const points = 10 * delivered + 5 * Math.max(0, delivered - 1);
@@ -380,24 +378,41 @@
         ctx.fillStyle = "#fff";
         ctx.fillText(city.name.toUpperCase(), city.x, city.y + 14);
 
-        // Waiting passenger seats (up to 3, inside the card bottom).
-        const waiting = state.passengers.filter((p) => p.cityId === city.id);
+        // Wanted-color slots (up to 3). New wants pulse briefly after spawn.
+        const wants = state.wants.filter((w) => w.cityId === city.id);
         for (let i = 0; i < 3; i++) {
             const sx = city.x - 14 + i * 14;
             const sy = city.y + 30;
-            ctx.beginPath();
-            ctx.arc(sx, sy, 5, 0, Math.PI * 2);
-            if (waiting[i]) {
-                ctx.fillStyle = waiting[i].color;
+            const w = wants[i];
+            if (w) {
+                // Pulse radius for the first ~0.8s after spawn.
+                const age = (state.elapsed - w.newAt) / 1000;
+                const pulse = age < 0.8 ? 1 + Math.sin(age * 12) * 0.35 * (1 - age / 0.8) : 1;
+                // Soft halo.
+                ctx.beginPath();
+                ctx.arc(sx, sy, 7 * pulse + 2, 0, Math.PI * 2);
+                ctx.fillStyle = w.color + "55";
                 ctx.fill();
-                ctx.strokeStyle = "rgba(0,0,0,0.45)";
+                // Solid center.
+                ctx.beginPath();
+                ctx.arc(sx, sy, 5.5 * pulse, 0, Math.PI * 2);
+                ctx.fillStyle = w.color;
+                ctx.fill();
+                ctx.strokeStyle = "rgba(0,0,0,0.5)";
+                ctx.lineWidth = 1.2;
+                ctx.stroke();
             } else {
-                ctx.fillStyle = "rgba(255,255,255,0.2)";
+                // Empty slot — dashed ring.
+                ctx.beginPath();
+                ctx.arc(sx, sy, 5, 0, Math.PI * 2);
+                ctx.fillStyle = "rgba(0,0,0,0.15)";
                 ctx.fill();
-                ctx.strokeStyle = "rgba(255,255,255,0.4)";
+                ctx.setLineDash([2, 2]);
+                ctx.strokeStyle = "rgba(255,255,255,0.45)";
+                ctx.lineWidth = 1;
+                ctx.stroke();
+                ctx.setLineDash([]);
             }
-            ctx.lineWidth = 1;
-            ctx.stroke();
         }
     }
 
@@ -725,11 +740,11 @@
         // Drop bags that fall off the right edge.
         state.bags = state.bags.filter((b) => b.x < BELT.x + BELT.w + 30);
 
-        // Passenger spawn
-        state.passSpawnNext = (state.passSpawnNext || 1500) - dt * 1000;
-        if (state.passSpawnNext <= 0) {
-            spawnPassenger();
-            state.passSpawnNext = currentPassengerInterval();
+        // Wanted-color spawn
+        state.wantSpawnNext = (state.wantSpawnNext || 1500) - dt * 1000;
+        if (state.wantSpawnNext <= 0) {
+            spawnWant();
+            state.wantSpawnNext = currentWantInterval();
         }
 
         // Plane
@@ -813,7 +828,7 @@
         let bestScore = -1;
         let bestDist = Infinity;
         for (const c of CITIES) {
-            const waiting = state.passengers.filter((p) => p.cityId === c.id);
+            const waiting = state.wants.filter((p) => p.cityId === c.id);
             let matches = 0;
             const seen = Object.assign({}, cargoByColor);
             for (const p of waiting) {
@@ -858,12 +873,12 @@
         state.timeLeft = ROUND_SECONDS;
         state.bags = [];
         state.cargo = [];
-        state.passengers = [];
+        state.wants = [];
         state.confetti = [];
         state.floaters = [];
         state.plane = { state: "idle", x: HOME.x, y: HOME.y, tx: HOME.x, ty: HOME.y, fromX: HOME.x, fromY: HOME.y, progress: 0, targetCity: null };
         state.bagSpawn = { next: 600, interval: 1500 };
-        state.passSpawnNext = 900;
+        state.wantSpawnNext = 900;
         state.lastTs = 0;
 
         scoreEl.textContent = "0";
@@ -871,9 +886,10 @@
         timeStatEl.classList.remove("low");
         overlay.classList.add("hidden");
 
-        // Seed a couple of passengers so kids have targets immediately.
-        spawnPassenger();
-        spawnPassenger();
+        // Seed a few wanted colors so kids have targets immediately.
+        spawnWant();
+        spawnWant();
+        spawnWant();
 
         requestAnimationFrame(loop);
     }
