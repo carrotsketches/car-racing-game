@@ -214,24 +214,43 @@
             const k = btn.dataset.key;
             changeLane(k === "left" ? -1 : 1);
         });
+        // Focus ring isn't useful here, and on desktop a lingering focus can
+        // cause Space/Enter to re-click the button via the browser's default
+        // button activation — which would double-fire the winch. Blur after press.
+        btn.addEventListener("click", e => { e.preventDefault(); btn.blur(); });
     });
     winchBtn.addEventListener("pointerdown", e => {
         e.preventDefault();
         setWinchDown(true);
         onWinchPress();
     });
+    winchBtn.addEventListener("click", e => { e.preventDefault(); winchBtn.blur(); });
     window.addEventListener("pointerup", () => setWinchDown(false));
     winchBtn.addEventListener("pointercancel", () => setWinchDown(false));
+    // Releasing the mouse outside the window (e.g. dragging off-screen on a
+    // MacBook trackpad) won't fire pointerup reliably; also catch blur.
+    window.addEventListener("blur", () => setWinchDown(false));
 
+    const LANE_UP_CODES = new Set(["ArrowUp", "ArrowLeft", "KeyW"]);
+    const LANE_DOWN_CODES = new Set(["ArrowDown", "ArrowRight", "KeyS"]);
+    const WINCH_CODES = new Set(["Space", "Enter", "KeyF"]);
     window.addEventListener("keydown", e => {
-        if (e.code === "ArrowLeft") { e.preventDefault(); changeLane(-1); }
-        else if (e.code === "ArrowRight") { e.preventDefault(); changeLane(1); }
-        else if (e.code === "Space") {
+        // Don't hijack typing in the name input.
+        if (e.target && e.target.tagName === "INPUT") return;
+        if (LANE_UP_CODES.has(e.code)) {
+            e.preventDefault();
+            if (!e.repeat) changeLane(-1);
+        } else if (LANE_DOWN_CODES.has(e.code)) {
+            e.preventDefault();
+            if (!e.repeat) changeLane(1);
+        } else if (WINCH_CODES.has(e.code)) {
             e.preventDefault();
             if (!state.winchDown) { setWinchDown(true); onWinchPress(); }
         }
     });
-    window.addEventListener("keyup", e => { if (e.code === "Space") setWinchDown(false); });
+    window.addEventListener("keyup", e => {
+        if (WINCH_CODES.has(e.code)) setWinchDown(false);
+    });
 
     function reset() {
         state.score = 0;
@@ -264,6 +283,12 @@
         reset();
         overlay.classList.add("hidden");
         state.running = true;
+        // Drop focus from the name input / start button so keyboard controls
+        // (arrows, W/S, Space) go to the window listeners instead of the input
+        // or re-triggering the Start button on Space/Enter.
+        if (document.activeElement && typeof document.activeElement.blur === "function") {
+            document.activeElement.blur();
+        }
     }
 
     function endGame() {

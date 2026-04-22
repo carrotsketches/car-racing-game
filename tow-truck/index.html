@@ -43,15 +43,15 @@
         </div>
 
         <div class="touch-controls" id="touch-controls" aria-label="Touch controls">
-            <button class="touch-btn lane" data-key="left" aria-label="Move left">▲</button>
-            <button class="touch-btn winch" id="winch-btn" aria-label="Winch / Drop">
+            <button type="button" class="touch-btn lane" data-key="left" aria-label="Move up a lane">▲</button>
+            <button type="button" class="touch-btn winch" id="winch-btn" aria-label="Winch / Drop">
                 <span class="winch-label">⛓</span>
                 <span class="winch-meter"><span class="winch-fill" id="winch-fill"></span></span>
             </button>
-            <button class="touch-btn lane" data-key="right" aria-label="Move right">▼</button>
+            <button type="button" class="touch-btn lane" data-key="right" aria-label="Move down a lane">▼</button>
         </div>
 
-        <footer><p>Tap ▲ ▼ to switch lanes. Hold ⛓ to winch. Line up with the matching garage to deliver!</p></footer>
+        <footer><p>Tap ▲ ▼ or use ↑/↓ (W/S) to switch lanes. Hold ⛓ or Space to winch. Line up with the matching garage to deliver!</p></footer>
     </div>
 
     <script src="game.js"></script>

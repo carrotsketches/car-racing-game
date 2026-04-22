@@ -460,3 +460,17 @@ footer {
         font-size: 1.6rem;
     }
 }
+
+/* Tablets & short viewports (e.g. iPad portrait/landscape): the wrapper is
+   taller than the viewport because .stage is locked to a 2/3 aspect ratio.
+   Align to the top so the touch buttons + footer stay reachable, and cap the
+   stage so the whole layout fits without scrolling when possible. */
+@media (min-width: 421px) and (max-height: 1024px) {
+    body {
+        align-items: flex-start;
+    }
+
+    .game-wrapper {
+        max-width: min(400px, calc((100dvh - 240px) * 2 / 3));
+    }
+}
