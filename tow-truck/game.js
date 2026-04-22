@@ -472,12 +472,18 @@
                 const low = curr <= 10;
                 if (low !== timeLow) { timeLow = low; }
 
+                // Slow the truck to a crawl while actively winching a nearby car,
+                // otherwise the adjacency window is shorter than the winch
+                // duration and the car would scroll past before being picked up.
+                const winching = !state.carried && state.winchDown && adjacentCar() != null;
+                const effectiveSpeed = winching ? state.speed * 0.15 : state.speed;
+
                 // world advance
-                state.cameraX += state.speed * dt;
-                state.parallax.stripes += state.speed * dt;
-                state.parallax.hills += state.speed * 0.25 * dt;
-                state.parallax.trees += state.speed * 0.5 * dt;
-                state.wheelAngle += state.speed * 0.02 * dt * 60;
+                state.cameraX += effectiveSpeed * dt;
+                state.parallax.stripes += effectiveSpeed * dt;
+                state.parallax.hills += effectiveSpeed * 0.25 * dt;
+                state.parallax.trees += effectiveSpeed * 0.5 * dt;
+                state.wheelAngle += effectiveSpeed * 0.02 * dt * 60;
                 state.speed = Math.min(260, state.speed + dt * 1.5);
 
                 // spawn if stage nearly empty ahead

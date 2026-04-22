@@ -512,7 +512,11 @@
         softChime();
         const oldColorName = state.butterfly.color.name;
         state.butterfly.color = pickColor(oldColorName);
-        respawnFlower(flower, state.butterfly.color.name === "same" ? null : undefined);
+        // Avoid spawning a replacement that matches the butterfly's new wing color,
+        // otherwise a random replacement can land under the butterfly and get
+        // sipped again instantly (which freezes the player in place and
+        // cascades through color changes without any input).
+        respawnFlower(flower, state.butterfly.color.name);
         // After spawning the new flower the butterfly has a new wing color; refresh highlights.
         refreshFlowerHighlights();
     }
