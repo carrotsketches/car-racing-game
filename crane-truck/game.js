@@ -35,10 +35,13 @@
 
     // "Build a house" feature
     const HOUSE_GOAL = 6;            // bricks needed to finish a house
-    const HOUSE_BRICK_W = 38;
-    const HOUSE_BRICK_H = 18;
+    const HOUSE_BRICK_W = 20;
+    const HOUSE_BRICK_H = 14;
     const HOUSE_COLS = 3;            // bricks per row in the house silhouette
-    const HOUSE_CENTER_X = W / 2;    // in-progress house is centred on the ground
+    // Centred between the two inner block spawn slots (see spawnBlocks),
+    // in the clear ground gap that doesn't overlap blocks, trucks, or the
+    // crane tower treads.
+    const HOUSE_CENTER_X = W / 2;
     const HOUSE_BASE_Y = GROUND_Y - 4;
 
     function loadLeaderboard() {
@@ -144,12 +147,12 @@
 
     function spawnBlocks() {
         state.blocks = [];
-        const slots = 5;
-        const margin = 30;
-        const step = (W - margin * 2) / (slots - 1);
-        for (let i = 0; i < slots; i++) {
+        // 4 slots, leaving the centre of the canvas clear so the house
+        // silhouette has empty ground to sit on.
+        const xs = [30, W / 2 - 57, W / 2 + 57, W - 30];
+        for (const x of xs) {
             state.blocks.push({
-                x: margin + i * step,
+                x,
                 y: GROUND_Y - BLOCK_SIZE / 2,
                 color: COLORS[Math.floor(Math.random() * COLORS.length)],
                 taken: false,
@@ -381,12 +384,14 @@
         ctx.lineTo(hookX - 5, hookY + 12);
         ctx.closePath();
         ctx.fill();
-        // carried block
+        // carried block -- top edge sits flush with the hook's bottom tip
+        // (the hook body extends 12 px below hookY), so the block visually
+        // hangs snugly from the hook with no gap.
         if (state.carrying) {
             ctx.fillStyle = state.carrying.color;
-            ctx.fillRect(hookX - BLOCK_SIZE / 2, hookY + 10, BLOCK_SIZE, BLOCK_SIZE);
+            ctx.fillRect(hookX - BLOCK_SIZE / 2, hookY + 12, BLOCK_SIZE, BLOCK_SIZE);
             ctx.strokeStyle = "rgba(0,0,0,0.35)";
-            ctx.strokeRect(hookX - BLOCK_SIZE / 2, hookY + 10, BLOCK_SIZE, BLOCK_SIZE);
+            ctx.strokeRect(hookX - BLOCK_SIZE / 2, hookY + 12, BLOCK_SIZE, BLOCK_SIZE);
         }
     }
     function drawBlocks() {

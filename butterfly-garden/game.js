@@ -183,6 +183,17 @@
             const flower = createFlower(chosen, randomFlowerPos());
             state.flowers.push(flower);
         }
+        // Guarantee at least one flower matches the butterfly's starting color
+        // so the player always has a reachable target from the first frame.
+        const wingName = state.butterfly.color.name;
+        const hasMatch = state.flowers.some((f) => f.color.name === wingName);
+        if (!hasMatch && state.flowers.length > 0) {
+            const idx = randInt(state.flowers.length);
+            const old = state.flowers[idx];
+            const pos = { x: old.x, y: old.y };
+            if (old.el && old.el.parentNode) old.el.parentNode.removeChild(old.el);
+            state.flowers[idx] = createFlower(state.butterfly.color, pos);
+        }
         refreshFlowerHighlights();
     }
 
