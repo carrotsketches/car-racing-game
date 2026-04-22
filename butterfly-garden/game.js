@@ -14,6 +14,7 @@
     const timeEl = document.getElementById("time");
     const timeStatEl = document.getElementById("time-stat");
     const bestEl = document.getElementById("best");
+    const matchSwatchEl = document.getElementById("match-swatch");
 
     const W = canvas.width;   // 400
     const H = canvas.height;  // 600
@@ -137,6 +138,7 @@
         playerNameEl.textContent = savedName;
     }
     bestEl.textContent = personalBest(savedName);
+    updateMatchSwatch();
 
     nameInput.addEventListener("input", () => {
         const n = nameInput.value.trim().slice(0, 12);
@@ -207,6 +209,14 @@
                 f.el.classList.remove("matching");
             }
         }
+        updateMatchSwatch();
+    }
+
+    function updateMatchSwatch() {
+        if (!matchSwatchEl) return;
+        const hex = state.butterfly.color.hex;
+        matchSwatchEl.style.background = hex;
+        matchSwatchEl.style.boxShadow = `0 0 0 2px #fff, 0 0 10px ${hex}`;
     }
 
     function respawnFlower(flower, avoidName) {
