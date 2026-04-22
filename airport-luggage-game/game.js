@@ -193,16 +193,343 @@
         renderLeaderboard(n);
     });
 
-    // ---------- Stubs (expanded in follow-up commits) ----------
-    function render() {
-        ctx.fillStyle = "#6ec6ff";
+    // ---------- Spawn ----------
+    function spawnBag() {
+        const color = CITIES[Math.floor(Math.random() * CITIES.length)].color;
+        state.bags.push({
+            x: BELT.x - 20,
+            y: BELT.y + BELT.h / 2,
+            r: BELT.bagR,
+            color
+        });
+    }
+
+    // ---------- Render ----------
+    function drawSky() {
+        const g = ctx.createLinearGradient(0, 0, 0, CANVAS_H);
+        g.addColorStop(0, "#6ec6ff");
+        g.addColorStop(0.5, "#a6dcff");
+        g.addColorStop(1, "#d4ecff");
+        ctx.fillStyle = g;
         ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
-        ctx.fillStyle = "#fff";
-        ctx.font = "bold 18px 'Courier New', monospace";
+    }
+
+    function drawClouds() {
+        const t = state.elapsed / 1000;
+        const clouds = [
+            { seed: 30,  y:  30, r: 14, speed: 8 },
+            { seed: 220, y:  45, r: 11, speed: 6 },
+            { seed: 140, y: 175, r: 12, speed: 7 },
+            { seed: 260, y: 220, r: 10, speed: 9 }
+        ];
+        for (const c of clouds) {
+            const x = ((c.seed + t * c.speed) % (CANVAS_W + 80)) - 40;
+            ctx.fillStyle = "rgba(255,255,255,0.75)";
+            ctx.beginPath();
+            ctx.arc(x, c.y, c.r, 0, Math.PI * 2);
+            ctx.arc(x + c.r * 0.8, c.y, c.r * 0.8, 0, Math.PI * 2);
+            ctx.arc(x - c.r * 0.7, c.y, c.r * 0.7, 0, Math.PI * 2);
+            ctx.arc(x + c.r * 0.3, c.y - c.r * 0.6, c.r * 0.7, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    function drawDestinations() {
+        for (const city of CITIES) {
+            // Landmark emoji
+            ctx.font = "34px system-ui, 'Apple Color Emoji', sans-serif";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(city.emoji, city.x, city.y);
+
+            // Colored "sign" below with city name
+            const bw = 78, bh = 22;
+            const bx = city.x - bw / 2, by = city.y + 26;
+            ctx.fillStyle = "rgba(0,0,0,0.2)";
+            roundRect(bx + 1, by + 2, bw, bh, 6);
+            ctx.fill();
+            const g = ctx.createLinearGradient(bx, by, bx, by + bh);
+            g.addColorStop(0, city.color);
+            g.addColorStop(1, shade(city.color, -0.25));
+            ctx.fillStyle = g;
+            roundRect(bx, by, bw, bh, 6);
+            ctx.fill();
+            ctx.strokeStyle = "rgba(0,0,0,0.4)";
+            ctx.lineWidth = 1.2;
+            ctx.stroke();
+
+            ctx.font = "bold 11px system-ui, sans-serif";
+            ctx.fillStyle = "#fff";
+            ctx.fillText(city.name.toUpperCase(), city.x, by + bh / 2 + 1);
+        }
+    }
+
+    function drawAirport() {
+        // Shadow under terminal.
+        ctx.fillStyle = "rgba(0,0,0,0.18)";
+        roundRect(AIRPORT.x + 3, AIRPORT.y + 5, AIRPORT.w, AIRPORT.h, AIRPORT.r);
+        ctx.fill();
+
+        // Terminal body.
+        const g = ctx.createLinearGradient(0, AIRPORT.y, 0, AIRPORT.y + AIRPORT.h);
+        g.addColorStop(0, "#ecdfc6");
+        g.addColorStop(1, "#b8a685");
+        ctx.fillStyle = g;
+        roundRect(AIRPORT.x, AIRPORT.y, AIRPORT.w, AIRPORT.h, AIRPORT.r);
+        ctx.fill();
+        ctx.strokeStyle = "#8a7655";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Dashed tarmac markings across the parking apron.
+        ctx.strokeStyle = "rgba(255,255,255,0.25)";
+        ctx.setLineDash([6, 6]);
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(AIRPORT.x + 14, PLANE_Y + 26);
+        ctx.lineTo(AIRPORT.x + AIRPORT.w - 14, PLANE_Y + 26);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // AIRPORT sign tab.
+        const lw = 106, lh = 22;
+        const lx = AIRPORT.x + (AIRPORT.w - lw) / 2;
+        const ly = AIRPORT.y - 11;
+        ctx.fillStyle = "rgba(0,0,0,0.25)";
+        roundRect(lx + 1, ly + 2, lw, lh, 7);
+        ctx.fill();
+        ctx.fillStyle = "#2a2a2a";
+        roundRect(lx, ly, lw, lh, 7);
+        ctx.fill();
+        ctx.strokeStyle = "#ffd23f";
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        ctx.font = "bold 12px 'Courier New', monospace";
+        ctx.fillStyle = "#ffd23f";
         ctx.textAlign = "center";
-        ctx.fillText("✈ Airport Luggage", CANVAS_W / 2, CANVAS_H / 2 - 8);
-        ctx.font = "12px 'Courier New', monospace";
-        ctx.fillText("tap Start Flight", CANVAS_W / 2, CANVAS_H / 2 + 14);
+        ctx.textBaseline = "middle";
+        ctx.fillText("✈  AIRPORT  ✈", lx + lw / 2, ly + lh / 2 + 1);
+    }
+
+    function drawSinglePlane(p) {
+        const bounce = (p.state === "takeoff") ? -8 * Math.sin(Math.PI * p.progress) : 0;
+        const rejectShake = state.elapsed < p.rejectUntil ? Math.sin(state.elapsed / 25) * 4 : 0;
+
+        ctx.save();
+        ctx.translate(p.x + rejectShake, p.y + bounce);
+
+        if (p.state === "flying" || p.state === "returning") {
+            const tx = p.state === "flying" ? p.tx : p.homeX;
+            const ty = p.state === "flying" ? p.ty : p.homeY;
+            const ang = Math.atan2(ty - p.fromY, tx - p.fromX);
+            ctx.rotate(ang);
+        }
+
+        // Shadow under plane.
+        ctx.fillStyle = "rgba(0,0,0,0.22)";
+        ctx.beginPath();
+        ctx.ellipse(0, 9, 15, 3, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = shade(p.color, -0.45);
+        ctx.lineWidth = 1.2;
+
+        // Fuselage in plane color with lighter belly.
+        const fg = ctx.createLinearGradient(0, -5, 0, 5);
+        fg.addColorStop(0, p.color);
+        fg.addColorStop(1, shade(p.color, -0.25));
+        ctx.fillStyle = fg;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 16, 5, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // White nose tip.
+        ctx.fillStyle = "#ffffff";
+        ctx.beginPath();
+        ctx.moveTo(14, -3);
+        ctx.quadraticCurveTo(19, 0, 14, 3);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // Upper and lower main wings.
+        ctx.fillStyle = shade(p.color, -0.15);
+        ctx.beginPath();
+        ctx.moveTo(-2, -3); ctx.lineTo(-11, -13); ctx.lineTo(-4, -13); ctx.lineTo(5, -3);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(-2, 3); ctx.lineTo(-11, 13); ctx.lineTo(-4, 13); ctx.lineTo(5, 3);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+
+        // Tail fin.
+        ctx.beginPath();
+        ctx.moveTo(-13, -1); ctx.lineTo(-18, -7); ctx.lineTo(-13, -4);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+
+        // Cockpit window.
+        ctx.fillStyle = "rgba(255,255,255,0.85)";
+        ctx.beginPath();
+        ctx.ellipse(8, -1, 3, 1.8, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+
+        // Cargo indicators on top of plane — drawn upright.
+        drawPlaneCargo(p);
+    }
+
+    function drawPlaneCargo(p) {
+        const n = CARGO_CAP;
+        const slotW = 11, gap = 2;
+        const totalW = n * slotW + (n - 1) * gap;
+        const startX = p.x - totalW / 2 + slotW / 2;
+        const y = p.y - 18;
+        for (let i = 0; i < n; i++) {
+            const sx = startX + i * (slotW + gap);
+            const bag = p.cargo[i];
+            // Bag body.
+            roundRect(sx - slotW / 2, y - 4, slotW, 9, 1.5);
+            if (bag) {
+                ctx.fillStyle = bag.color;
+                ctx.fill();
+                ctx.strokeStyle = "rgba(0,0,0,0.5)";
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            } else {
+                ctx.fillStyle = "rgba(0,0,0,0.15)";
+                ctx.fill();
+                ctx.setLineDash([1.5, 1.5]);
+                ctx.strokeStyle = "rgba(255,255,255,0.6)";
+                ctx.lineWidth = 0.8;
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+            // Handle arc.
+            ctx.beginPath();
+            ctx.arc(sx, y - 4, 2.8, Math.PI, 2 * Math.PI);
+            ctx.lineWidth = 1;
+            ctx.strokeStyle = bag ? "rgba(0,0,0,0.55)" : "rgba(255,255,255,0.5)";
+            ctx.stroke();
+        }
+    }
+
+    function drawPlanes() {
+        for (const p of state.planes) drawSinglePlane(p);
+    }
+
+    function drawBelt() {
+        ctx.fillStyle = "#2a2a2a";
+        roundRect(BELT.x, BELT.y, BELT.w, BELT.h, 8);
+        ctx.fill();
+        ctx.strokeStyle = "#555";
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        const phase = (state.elapsed / 10) % 20;
+        ctx.strokeStyle = "rgba(255,255,255,0.2)";
+        ctx.lineWidth = 2;
+        for (let x = BELT.x - 20 + phase; x < BELT.x + BELT.w; x += 20) {
+            ctx.beginPath();
+            ctx.moveTo(x, BELT.y + BELT.h - 5);
+            ctx.lineTo(x + 10, BELT.y + BELT.h - 5);
+            ctx.stroke();
+        }
+    }
+
+    function drawBags() {
+        for (const b of state.bags) {
+            ctx.beginPath();
+            ctx.arc(b.x + 1, b.y + 2, b.r, 0, Math.PI * 2);
+            ctx.fillStyle = "rgba(0,0,0,0.25)";
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+            ctx.fillStyle = b.color;
+            ctx.fill();
+            ctx.strokeStyle = "rgba(0,0,0,0.5)";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            ctx.font = "16px system-ui, 'Apple Color Emoji', sans-serif";
+            ctx.fillStyle = "#fff";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText("🧳", b.x, b.y);
+        }
+    }
+
+    function drawFlyingBags() {
+        for (const fb of state.flyingBags) {
+            const t = fb.progress;
+            const x = fb.fromX + (fb.toX - fb.fromX) * t;
+            const yLin = fb.fromY + (fb.toY - fb.fromY) * t;
+            const y = yLin - 70 * Math.sin(Math.PI * t);
+            ctx.beginPath();
+            ctx.arc(x, y, 12, 0, Math.PI * 2);
+            ctx.fillStyle = fb.color;
+            ctx.fill();
+            ctx.strokeStyle = "rgba(0,0,0,0.45)";
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+            ctx.font = "13px system-ui, 'Apple Color Emoji', sans-serif";
+            ctx.fillStyle = "#fff";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText("🧳", x, y);
+        }
+    }
+
+    function drawSelectedBag() {
+        const sb = state.selectedBag;
+        if (!sb) return;
+        const pulse = 1 + Math.sin(state.elapsed / 100) * 0.18;
+        ctx.beginPath();
+        ctx.arc(sb.x, sb.y, 22 * pulse, 0, Math.PI * 2);
+        ctx.fillStyle = sb.color + "33";
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(sb.x, sb.y, 17, 0, Math.PI * 2);
+        ctx.fillStyle = sb.color;
+        ctx.fill();
+        ctx.strokeStyle = "rgba(0,0,0,0.55)";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.font = "14px system-ui, 'Apple Color Emoji', sans-serif";
+        ctx.fillStyle = "#fff";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("🧳", sb.x, sb.y);
+    }
+
+    function drawEffects() {
+        for (const c of state.confetti) {
+            ctx.globalAlpha = Math.max(0, c.life / c.max);
+            ctx.fillStyle = c.color;
+            ctx.fillRect(c.x - 2, c.y - 2, 4, 4);
+        }
+        ctx.globalAlpha = 1;
+        for (const f of state.floaters) {
+            ctx.globalAlpha = Math.max(0, f.life / f.max);
+            ctx.font = "bold 13px system-ui, sans-serif";
+            ctx.fillStyle = f.color;
+            ctx.textAlign = "center";
+            ctx.fillText(f.text, f.x, f.y);
+        }
+        ctx.globalAlpha = 1;
+    }
+
+    function render() {
+        drawSky();
+        drawClouds();
+        drawDestinations();
+        drawAirport();
+        drawPlanes();
+        drawBelt();
+        drawBags();
+        drawFlyingBags();
+        drawSelectedBag();
+        drawEffects();
     }
 
     function update(dt) {
@@ -212,6 +539,28 @@
         timeEl.textContent = Math.ceil(state.timeLeft);
         if (state.timeLeft <= 10) timeStatEl.classList.add("low");
         else timeStatEl.classList.remove("low");
+
+        // Bag spawn (ramp: slower early, quicker late).
+        state.bagSpawn.next -= dt * 1000;
+        if (state.bagSpawn.next <= 0) {
+            spawnBag();
+            const t = Math.min(1, state.elapsed / (ROUND_SECONDS * 1000));
+            state.bagSpawn.next = 1400 - 600 * t;
+        }
+
+        // Belt motion.
+        const beltSpeed = 60 + Math.min(60, state.elapsed / 700);
+        for (const b of state.bags) b.x += beltSpeed * dt;
+        state.bags = state.bags.filter((b) => b.x < BELT.x + BELT.w + 30);
+
+        // Floaters + confetti.
+        for (const f of state.floaters) { f.y -= 30 * dt; f.life -= dt; }
+        state.floaters = state.floaters.filter((f) => f.life > 0);
+        for (const c of state.confetti) {
+            c.vy += 260 * dt; c.x += c.vx * dt; c.y += c.vy * dt; c.life -= dt;
+        }
+        state.confetti = state.confetti.filter((c) => c.life > 0);
+
         if (state.timeLeft <= 0) endGame();
     }
 
