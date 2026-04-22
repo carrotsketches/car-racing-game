@@ -311,20 +311,29 @@
     }
 
     // ---------- Render ----------
-    // Very rough continent silhouettes as filled polygons on the canvas.
+    // Continent silhouettes drawn as smooth catmull-like curves between these vertices.
     const CONTINENTS = [
-        // North America
-        [[30,95],[110,90],[135,135],[120,180],[80,200],[45,170]],
-        // South America
-        [[100,230],[145,225],[155,295],[125,345],[100,320]],
-        // Europe
-        [[175,100],[225,100],[230,150],[195,160],[180,140]],
-        // Africa
-        [[200,165],[250,170],[260,250],[225,310],[200,260]],
-        // Asia
-        [[235,95],[330,90],[345,180],[290,200],[250,170],[235,130]],
+        // North America — funnel with Central America tail
+        [[32,100],[55,88],[85,85],[110,92],[128,108],[135,130],[130,155],[120,175],[108,190],[92,205],[80,200],[72,188],[65,178],[55,172],[42,158],[32,135],[28,115]],
+        // South America — teardrop
+        [[98,228],[122,222],[148,232],[158,258],[158,288],[148,315],[128,340],[112,338],[100,318],[94,290],[92,258]],
+        // Europe — small cluster
+        [[168,105],[190,100],[215,102],[232,112],[238,128],[235,148],[222,158],[202,162],[182,158],[170,145],[165,125]],
+        // Africa — inverted teardrop
+        [[190,162],[218,158],[248,168],[260,190],[265,220],[258,250],[238,285],[218,310],[202,315],[190,295],[185,260],[182,220],[185,188]],
+        // Asia — massive mass
+        [[232,95],[265,82],[300,82],[335,92],[348,112],[350,138],[342,165],[325,185],[302,200],[278,205],[252,195],[238,175],[232,150],[230,120]],
         // Australia
-        [[285,275],[335,270],[340,310],[300,320]]
+        [[280,270],[305,263],[335,270],[345,290],[340,310],[318,322],[290,318],[275,300]]
+    ];
+
+    // Small islands for visual richness.
+    const ISLANDS = [
+        [180, 120, 4], // UK
+        [275, 142, 3], // Japan
+        [245, 230, 3], // Madagascar-ish
+        [322, 235, 3], // NZ-ish
+        [278, 215, 3]  // Indonesia
     ];
 
     function drawSky() {
@@ -346,34 +355,91 @@
         }
     }
 
+    function traceContinent(poly) {
+        // Catmull-like smoothing: draw quadratic curves through midpoints of edges.
+        const n = poly.length;
+        const last = poly[n - 1];
+        const first = poly[0];
+        ctx.beginPath();
+        ctx.moveTo((last[0] + first[0]) / 2, (last[1] + first[1]) / 2);
+        for (let i = 0; i < n; i++) {
+            const curr = poly[i];
+            const next = poly[(i + 1) % n];
+            const mx = (curr[0] + next[0]) / 2;
+            const my = (curr[1] + next[1]) / 2;
+            ctx.quadraticCurveTo(curr[0], curr[1], mx, my);
+        }
+        ctx.closePath();
+    }
+
     function drawWorldMap() {
-        // Ocean band behind continents.
-        ctx.fillStyle = "rgba(30, 80, 140, 0.35)";
+        // Ocean gradient.
+        const og = ctx.createLinearGradient(0, 80, 0, 340);
+        og.addColorStop(0, "#1d5a92");
+        og.addColorStop(0.5, "#0f4170");
+        og.addColorStop(1, "#0a2a52");
+        ctx.save();
+        // Clip future drawing to the rounded ocean rect so waves don't bleed.
         roundRect(10, 80, CANVAS_W - 20, 260, 18);
+        ctx.fillStyle = og;
+        ctx.fill();
+        ctx.clip();
+
+        // Soft wave shimmer.
+        ctx.strokeStyle = "rgba(180, 220, 255, 0.09)";
+        ctx.lineWidth = 0.8;
+        for (let y = 100; y < 340; y += 22) {
+            ctx.beginPath();
+            for (let x = 14; x <= CANVAS_W - 14; x += 6) {
+                const wy = y + Math.sin((x + state.elapsed / 14) / 20) * 1.3;
+                if (x === 14) ctx.moveTo(x, wy);
+                else ctx.lineTo(x, wy);
+            }
+            ctx.stroke();
+        }
+
+        // Polar ice cap at top of map.
+        ctx.fillStyle = "rgba(255,255,255,0.35)";
+        ctx.beginPath();
+        ctx.ellipse(180, 82, 165, 5, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Latitude grid.
-        ctx.strokeStyle = "rgba(255,255,255,0.08)";
-        ctx.lineWidth = 1;
-        for (let y = 110; y < 340; y += 30) {
-            ctx.beginPath();
-            ctx.moveTo(14, y);
-            ctx.lineTo(CANVAS_W - 14, y);
+        // Continents — shadow pass, then land.
+        for (const poly of CONTINENTS) {
+            ctx.save();
+            ctx.translate(1.5, 2);
+            traceContinent(poly);
+            ctx.fillStyle = "rgba(0, 20, 10, 0.45)";
+            ctx.fill();
+            ctx.restore();
+
+            traceContinent(poly);
+            const lg = ctx.createLinearGradient(0, 90, 0, 320);
+            lg.addColorStop(0, "#4bc074");
+            lg.addColorStop(1, "#2d8b52");
+            ctx.fillStyle = lg;
+            ctx.fill();
+            ctx.lineWidth = 1.1;
+            ctx.strokeStyle = "rgba(10, 50, 25, 0.7)";
             ctx.stroke();
         }
 
-        // Continents.
-        ctx.fillStyle = "#2fa36b";
-        ctx.strokeStyle = "rgba(0,0,0,0.25)";
-        ctx.lineWidth = 1;
-        for (const poly of CONTINENTS) {
+        // Small islands for visual richness.
+        for (const [x, y, r] of ISLANDS) {
             ctx.beginPath();
-            ctx.moveTo(poly[0][0], poly[0][1]);
-            for (let i = 1; i < poly.length; i++) ctx.lineTo(poly[i][0], poly[i][1]);
-            ctx.closePath();
+            ctx.arc(x + 1, y + 1.5, r, 0, Math.PI * 2);
+            ctx.fillStyle = "rgba(0, 20, 10, 0.45)";
             ctx.fill();
+            ctx.beginPath();
+            ctx.arc(x, y, r, 0, Math.PI * 2);
+            ctx.fillStyle = "#3fae5f";
+            ctx.fill();
+            ctx.strokeStyle = "rgba(10, 50, 25, 0.7)";
+            ctx.lineWidth = 1;
             ctx.stroke();
         }
+
+        ctx.restore();
     }
 
     function drawCityPins() {
