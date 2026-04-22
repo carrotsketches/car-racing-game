@@ -584,11 +584,168 @@
         drawEffects();
     }
 
-    render();
+    // ---------- Update loop ----------
+    function update(dt) {
+        if (!state.running) return;
 
-    startBtn.addEventListener("click", () => {
-        // Temporary handler until startGame is implemented.
-        ensureAudio();
-        overlayMsg.textContent = "Game logic is being loaded in follow-up commits — check back soon!";
+        state.elapsed += dt * 1000;
+        state.timeLeft = Math.max(0, ROUND_SECONDS - state.elapsed / 1000);
+        timeEl.textContent = Math.ceil(state.timeLeft);
+        if (state.timeLeft <= 10) timeStatEl.classList.add("low");
+        else timeStatEl.classList.remove("low");
+
+        // Bag spawn
+        state.bagSpawn.next -= dt * 1000;
+        if (state.bagSpawn.next <= 0) {
+            spawnBag();
+            state.bagSpawn.next = currentBagInterval();
+        }
+
+        // Belt motion (only when plane is idle at home — easier for kids)
+        const beltSpeed = currentBeltSpeed();
+        for (const b of state.bags) b.x += beltSpeed * dt;
+        // Drop bags that fall off the right edge.
+        state.bags = state.bags.filter((b) => b.x < BELT.x + BELT.w + 30);
+
+        // Passenger spawn
+        state.passSpawnNext = (state.passSpawnNext || 1500) - dt * 1000;
+        if (state.passSpawnNext <= 0) {
+            spawnPassenger();
+            state.passSpawnNext = currentPassengerInterval();
+        }
+
+        // Plane
+        updatePlane(dt);
+
+        // Confetti physics
+        for (const c of state.confetti) {
+            c.vy += 260 * dt;
+            c.x += c.vx * dt;
+            c.y += c.vy * dt;
+            c.life -= dt;
+        }
+        state.confetti = state.confetti.filter((c) => c.life > 0);
+
+        // Floaters
+        for (const f of state.floaters) {
+            f.y -= 30 * dt;
+            f.life -= dt;
+        }
+        state.floaters = state.floaters.filter((f) => f.life > 0);
+
+        // End of round
+        if (state.timeLeft <= 0) endGame();
+    }
+
+    function loop(ts) {
+        if (!state.lastTs) state.lastTs = ts;
+        const dt = Math.min(0.05, (ts - state.lastTs) / 1000);
+        state.lastTs = ts;
+        update(dt);
+        render();
+        if (state.running) requestAnimationFrame(loop);
+    }
+
+    // ---------- Input ----------
+    function canvasPos(e) {
+        const rect = canvas.getBoundingClientRect();
+        const sx = CANVAS_W / rect.width;
+        const sy = CANVAS_H / rect.height;
+        return { x: (e.clientX - rect.left) * sx, y: (e.clientY - rect.top) * sy };
+    }
+
+    function handleTap(x, y) {
+        if (!state.running) return;
+
+        // Priority 1: bag on belt
+        for (let i = state.bags.length - 1; i >= 0; i--) {
+            const b = state.bags[i];
+            if (Math.hypot(b.x - x, b.y - y) <= b.r + 4) {
+                if (state.cargo.length >= CARGO_MAX) {
+                    tone(160, 0.1, "sawtooth", 0.05);
+                    return;
+                }
+                state.cargo.push({ color: b.color });
+                state.bags.splice(i, 1);
+                tone(420, 0.08, "square", 0.06);
+                return;
+            }
+        }
+
+        // Priority 2: city pin (only when plane is idle and has cargo)
+        if (state.plane.state === "idle" && state.cargo.length > 0) {
+            for (const c of CITIES) {
+                if (Math.hypot(c.x - x, c.y - y) <= 16) {
+                    planeFlyTo(c);
+                    return;
+                }
+            }
+        }
+    }
+
+    canvas.addEventListener("pointerdown", (e) => {
+        const { x, y } = canvasPos(e);
+        handleTap(x, y);
+        e.preventDefault();
     });
+
+    // Prevent stray touch scrolling on the stage.
+    canvas.addEventListener("touchstart", (e) => e.preventDefault(), { passive: false });
+    canvas.addEventListener("touchmove", (e) => e.preventDefault(), { passive: false });
+    canvas.addEventListener("touchend", (e) => e.preventDefault(), { passive: false });
+
+    // ---------- Start / end ----------
+    function startGame() {
+        ensureAudio();
+        state.playerName = sanitizeName(nameInput.value);
+        localStorage.setItem(NAME_KEY, state.playerName);
+        playerNameEl.textContent = state.playerName;
+
+        state.running = true;
+        state.score = 0;
+        state.elapsed = 0;
+        state.timeLeft = ROUND_SECONDS;
+        state.bags = [];
+        state.cargo = [];
+        state.passengers = [];
+        state.confetti = [];
+        state.floaters = [];
+        state.plane = { state: "idle", x: HOME.x, y: HOME.y, tx: HOME.x, ty: HOME.y, fromX: HOME.x, fromY: HOME.y, progress: 0, targetCity: null };
+        state.bagSpawn = { next: 600, interval: 1500 };
+        state.passSpawnNext = 900;
+        state.lastTs = 0;
+
+        scoreEl.textContent = "0";
+        timeEl.textContent = ROUND_SECONDS;
+        timeStatEl.classList.remove("low");
+        overlay.classList.add("hidden");
+
+        // Seed a couple of passengers so kids have targets immediately.
+        spawnPassenger();
+        spawnPassenger();
+
+        requestAnimationFrame(loop);
+    }
+
+    function endGame() {
+        state.running = false;
+        timeStatEl.classList.remove("low");
+        const entry = { name: state.playerName, score: state.score, at: Date.now() };
+        state.leaderboard.push(entry);
+        state.leaderboard.sort((a, b) => b.score - a.score);
+        state.leaderboard = state.leaderboard.slice(0, LB_MAX);
+        saveLeaderboard();
+        bestEl.textContent = personalBest(state.playerName);
+        renderLeaderboard(state.playerName);
+
+        overlayTitle.textContent = `✈ Flight complete!`;
+        overlayMsg.textContent = `You scored ${state.score} delivering bags around the world. Fly again?`;
+        startBtn.textContent = "Fly Again";
+        overlay.classList.remove("hidden");
+    }
+
+    startBtn.addEventListener("click", startGame);
+
+    // Initial draw so the canvas isn't blank before the first Start.
+    render();
 })();
