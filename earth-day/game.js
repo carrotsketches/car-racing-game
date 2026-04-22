@@ -39,7 +39,6 @@
         { emoji: "🥫", category: "recycle" },
         { emoji: "🍌", category: "trash" },
         { emoji: "🍎", category: "trash" },
-        { emoji: "🧻", category: "trash" },
         { emoji: "🦴", category: "trash" },
         { emoji: "🍕", category: "trash" },
         { emoji: "👟", category: "trash" },
