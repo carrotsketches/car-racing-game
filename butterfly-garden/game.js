@@ -470,10 +470,12 @@
         updatePointerFromEvent(e);
     }
     function onTouchMove(e) {
+        if (overlay.contains(e.target)) return;
         updatePointerFromEvent(e);
         e.preventDefault();
     }
     function onTouchStartOrEnd(e) {
+        if (overlay.contains(e.target)) return;
         updatePointerFromEvent(e);
         e.preventDefault();
     }
@@ -482,7 +484,10 @@
     stage.addEventListener("pointerdown", onPointerMove);
     stage.addEventListener("touchstart", onTouchStartOrEnd, { passive: false });
     stage.addEventListener("touchmove", onTouchMove, { passive: false });
-    stage.addEventListener("touchend", (e) => e.preventDefault(), { passive: false });
+    stage.addEventListener("touchend", (e) => {
+        if (overlay.contains(e.target)) return;
+        e.preventDefault();
+    }, { passive: false });
 
     // ---------- Collision ----------
     function checkFlowerCollisions() {

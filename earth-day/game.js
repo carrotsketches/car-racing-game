@@ -540,8 +540,9 @@
     // Prevent stray touch behaviors (scroll / pinch) on the stage.
     ["touchstart", "touchmove", "touchend"].forEach((evt) => {
         stage.addEventListener(evt, (e) => {
-            // Allow typing in the name input via the overlay.
-            if (e.target && e.target.tagName === "INPUT") return;
+            // Allow all interactions inside the overlay panel (start button,
+            // name input, difficulty toggle, etc).
+            if (overlay.contains(e.target)) return;
             e.preventDefault();
         }, { passive: false });
     });

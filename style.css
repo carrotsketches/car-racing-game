@@ -171,32 +171,77 @@ h1 {
     border-color: rgba(34, 197, 94, 0.4);
 }
 
-.hard-games-btn {
+.top-menu {
     position: fixed;
     top: 16px;
     right: 16px;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 10px 16px;
-    border-radius: 999px;
-    background: linear-gradient(135deg, rgba(255, 94, 87, 0.85), rgba(156, 39, 176, 0.85));
-    border: 2px solid rgba(255, 255, 255, 0.25);
-    color: #fff;
-    font-weight: 700;
-    font-size: 0.85rem;
-    letter-spacing: 0.5px;
-    text-decoration: none;
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
     z-index: 10;
 }
 
-.hard-games-btn:hover,
-.hard-games-btn:focus {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.55);
+.top-menu > summary {
+    list-style: none;
+    cursor: pointer;
+    padding: 10px 16px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 2px solid rgba(255, 255, 255, 0.18);
+    color: #e8eef7;
+    font-weight: 700;
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+    user-select: none;
+}
+
+.top-menu > summary::-webkit-details-marker { display: none; }
+
+.top-menu > summary:hover,
+.top-menu > summary:focus {
+    transform: translateY(-1px);
+    background: rgba(255, 255, 255, 0.14);
     outline: none;
+}
+
+.top-menu[open] > summary {
+    background: rgba(255, 255, 255, 0.16);
+}
+
+.top-menu-panel {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    min-width: 180px;
+    display: flex;
+    flex-direction: column;
+    padding: 6px;
+    border-radius: 14px;
+    background: rgba(20, 24, 34, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(6px);
+}
+
+.top-menu-panel a {
+    padding: 10px 14px;
+    border-radius: 10px;
+    color: #e8eef7;
+    font-weight: 600;
+    font-size: 0.9rem;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: background 0.12s ease;
+}
+
+.top-menu-panel a:hover,
+.top-menu-panel a:focus {
+    background: rgba(255, 255, 255, 0.1);
+    outline: none;
+}
+
+.home h1.beta-title {
+    color: #5fd18a;
+    text-shadow: 0 2px 12px rgba(34, 197, 94, 0.4);
 }
 
 .back-link {
@@ -226,14 +271,14 @@ h1 {
 }
 
 @media (max-width: 500px) {
-    .hard-games-btn,
+    .top-menu,
     .back-link {
         top: 10px;
-        padding: 8px 12px;
         font-size: 0.78rem;
     }
-    .hard-games-btn { right: 10px; }
-    .back-link { left: 10px; }
+    .top-menu { right: 10px; }
+    .top-menu > summary { padding: 8px 12px; }
+    .back-link { left: 10px; padding: 8px 12px; }
 }
 
 .game-card.coming-soon {
