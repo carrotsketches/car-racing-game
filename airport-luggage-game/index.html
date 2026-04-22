@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>Airport Luggage</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-wrapper">
+        <a class="home-link" href="../">← Games</a>
+
+        <header class="boarding-pass">
+            <div class="pass-stub">
+                <div class="pass-row">
+                    <span class="pass-label">Pilot</span>
+                    <span class="pass-value" id="player-name">—</span>
+                </div>
+                <div class="pass-row">
+                    <span class="pass-label">Score</span>
+                    <span class="pass-value pass-big" id="score">0</span>
+                </div>
+                <div class="pass-row">
+                    <span class="pass-label">Best</span>
+                    <span class="pass-value" id="best">0</span>
+                </div>
+            </div>
+            <div class="pass-divider" aria-hidden="true"></div>
+            <div class="pass-tail">
+                <div class="pass-title">✈ Airport<br>Luggage</div>
+                <div class="pass-clock" id="time-stat">
+                    <span class="clock-label">Boarding in</span>
+                    <span class="clock-value"><span id="time">60</span>s</span>
+                </div>
+            </div>
+        </header>
+
+        <div class="stage">
+            <canvas id="stage" width="360" height="540" aria-label="Airport and world map"></canvas>
+
+            <div id="overlay" class="overlay">
+                <div class="panel">
+                    <div class="panel-stamp">DEPARTURES</div>
+                    <h2 id="overlay-title">Ready for takeoff?</h2>
+                    <p id="overlay-msg">
+                        Tap the colored 🧳 bags on the belt to load them onto the plane.
+                        Then tap a city to fly there — only bags that match a waiting
+                        passenger's color will be delivered. Visit cities, learn the world!
+                    </p>
+                    <label class="name-row" for="name-input">
+                        <span>Name</span>
+                        <input id="name-input" type="text" maxlength="12" autocomplete="off"
+                               spellcheck="false" placeholder="Pilot" />
+                    </label>
+                    <button id="start-btn">Start Flight</button>
+                    <ol id="leaderboard" class="leaderboard" aria-label="Top pilots"></ol>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>🧳 Load matching colors ➜ ✈ Fly the world ➜ 🎉 Deliver bags!</p>
+        </footer>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
