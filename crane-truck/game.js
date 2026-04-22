@@ -7,6 +7,7 @@
     const bestEl = document.getElementById("best");
     const timeEl = document.getElementById("time");
     const timeStatEl = document.getElementById("time-stat");
+    const houseEl = document.getElementById("house");
     const overlay = document.getElementById("overlay");
     const overlayTitle = document.getElementById("overlay-title");
     const overlayMsg = document.getElementById("overlay-msg");
@@ -31,6 +32,14 @@
     const PICKUP_RANGE = 30;
     const TRUCK_W = 130;
     const TRUCK_Y = H - 70;
+
+    // "Build a house" feature
+    const HOUSE_GOAL = 6;            // bricks needed to finish a house
+    const HOUSE_BRICK_W = 38;
+    const HOUSE_BRICK_H = 18;
+    const HOUSE_COLS = 3;            // bricks per row in the house silhouette
+    const HOUSE_CENTER_X = W / 2;    // in-progress house is centred on the ground
+    const HOUSE_BASE_Y = GROUND_Y - 4;
 
     function loadLeaderboard() {
         try {
@@ -67,6 +76,8 @@
         particles: [],
         playerName: "",
         timeLow: false,
+        // build-a-house
+        house: { bricks: [], built: 0, flashT: 0 },
     };
 
     function updateBestDisplay() {
@@ -77,6 +88,7 @@
     const savedName = localStorage.getItem(NAME_KEY) || "";
     if (savedName) { nameInput.value = savedName; playerNameEl.textContent = savedName; }
     updateBestDisplay();
+    if (houseEl) houseEl.textContent = `0/${HOUSE_GOAL}`;
     nameInput.addEventListener("input", () => {
         const n = nameInput.value.trim().slice(0, 12);
         playerNameEl.textContent = n || "—";
@@ -126,7 +138,7 @@
     function hookPos() {
         const a = currentAngle();
         const tipX = ARM_PIVOT_X + Math.sin(a) * ARM_LEN;
-        const tipY = ARM_PIVOT_Y + Math.cos(a) * 0;
+        const tipY = ARM_PIVOT_Y + Math.cos(a) * ARM_LEN;
         return { x: tipX, y: tipY + state.rope.len, armAngle: a, tipX, tipY };
     }
 
@@ -206,6 +218,7 @@
             state.streak += 1;
             scoreEl.textContent = state.score;
             playCorrect();
+            addHouseBrick(state.carrying.color);
             if (state.streak >= 3) {
                 burstConfetti(x, TRUCK_Y - 30, state.carrying.color);
                 state.streak = 0;
@@ -219,6 +232,45 @@
         state.rope.target = ROPE_MIN;
     }
 
+    function houseBrickPos(index) {
+        // Stack bricks left-to-right, bottom-to-top in a small wall silhouette.
+        const row = Math.floor(index / HOUSE_COLS);
+        const col = index % HOUSE_COLS;
+        const rowW = HOUSE_COLS * HOUSE_BRICK_W;
+        const x = HOUSE_CENTER_X - rowW / 2 + col * HOUSE_BRICK_W + HOUSE_BRICK_W / 2;
+        const y = HOUSE_BASE_Y - HOUSE_BRICK_H / 2 - row * HOUSE_BRICK_H;
+        return { x, y };
+    }
+
+    function addHouseBrick(color) {
+        const idx = state.house.bricks.length;
+        const { x, y } = houseBrickPos(idx);
+        state.house.bricks.push({ x, y, color });
+        updateHouseHud();
+        if (state.house.bricks.length >= HOUSE_GOAL) finishHouse();
+    }
+
+    function finishHouse() {
+        state.house.built += 1;
+        state.score += 5; // bonus for completing a house
+        scoreEl.textContent = state.score;
+        state.house.flashT = 1.2;
+        // celebratory confetti above the completed house
+        for (const b of state.house.bricks) burstConfetti(b.x, b.y, b.color);
+        burstConfetti(HOUSE_CENTER_X, HOUSE_BASE_Y - 80, "#f5a524");
+        playCorrect();
+        setTimeout(() => tone({ freq: 880, type: "triangle", duration: 0.2, volume: 0.24 }), 220);
+        // clear for the next house
+        state.house.bricks = [];
+        updateHouseHud();
+    }
+
+    function updateHouseHud() {
+        if (!houseEl) return;
+        houseEl.textContent = `${state.house.bricks.length}/${HOUSE_GOAL}` +
+            (state.house.built ? ` (×${state.house.built})` : "");
+    }
+
     function reset() {
         state.score = 0;
         state.streak = 0;
@@ -229,9 +281,11 @@
         state.rope = { len: ROPE_MIN, target: ROPE_MIN, dropping: false, raising: false };
         state.particles = [];
         state.timeLow = false;
+        state.house = { bricks: [], built: 0, flashT: 0 };
         timeStatEl.classList.remove("low");
         scoreEl.textContent = 0;
         timeEl.textContent = Math.ceil(ROUND_MS / 1000);
+        updateHouseHud();
         spawnBlocks();
         spawnTrucks();
     }
@@ -294,9 +348,11 @@
         ctx.lineWidth = 2;
         ctx.strokeRect(ARM_PIVOT_X - 14, ARM_PIVOT_Y, 28, 120);
         // arm (rotates about pivot)
+        // Use -a so that in the rotated frame, local +y (arm's length axis)
+        // maps to world (sin(a), cos(a)) -- matching the rope/hook math below.
         ctx.save();
         ctx.translate(ARM_PIVOT_X, ARM_PIVOT_Y);
-        ctx.rotate(a);
+        ctx.rotate(-a);
         ctx.fillStyle = "#f5a524";
         ctx.fillRect(-10, -18, 20, 18);
         ctx.fillRect(-6, 0, 12, ARM_LEN);
@@ -304,11 +360,12 @@
         ctx.strokeRect(-6, 0, 12, ARM_LEN);
         // hook end marker
         ctx.restore();
-        // rope + hook
+        // rope + hook -- anchor the rope EXACTLY at the arm tip so the cable
+        // and the hook are always connected.
         const tipX = ARM_PIVOT_X + Math.sin(a) * ARM_LEN;
         const tipY = ARM_PIVOT_Y + Math.cos(a) * ARM_LEN;
-        const hookX = ARM_PIVOT_X + Math.sin(a) * ARM_LEN;
-        const hookY = ARM_PIVOT_Y + Math.cos(a) * ARM_LEN + state.rope.len;
+        const hookX = tipX;
+        const hookY = tipY + state.rope.len;
         ctx.strokeStyle = "#222";
         ctx.lineWidth = 2;
         ctx.beginPath();
@@ -354,6 +411,64 @@
             ctx.fill();
         }
     }
+    function drawHouse(dt) {
+        // Ghost outline of the target house, rendered faintly so the kid can
+        // see what they're building toward.
+        ctx.save();
+        ctx.globalAlpha = 0.18;
+        ctx.fillStyle = "#ffffff";
+        for (let i = 0; i < HOUSE_GOAL; i++) {
+            const { x, y } = houseBrickPos(i);
+            ctx.fillRect(x - HOUSE_BRICK_W / 2, y - HOUSE_BRICK_H / 2,
+                         HOUSE_BRICK_W, HOUSE_BRICK_H);
+        }
+        ctx.restore();
+
+        // Delivered bricks
+        for (const b of state.house.bricks) {
+            ctx.fillStyle = b.color;
+            ctx.fillRect(b.x - HOUSE_BRICK_W / 2, b.y - HOUSE_BRICK_H / 2,
+                         HOUSE_BRICK_W, HOUSE_BRICK_H);
+            ctx.strokeStyle = "rgba(0,0,0,0.35)";
+            ctx.strokeRect(b.x - HOUSE_BRICK_W / 2, b.y - HOUSE_BRICK_H / 2,
+                           HOUSE_BRICK_W, HOUSE_BRICK_H);
+        }
+
+        // Roof peak once the first full row is down, and fully on completion.
+        const done = state.house.bricks.length;
+        if (done >= HOUSE_COLS) {
+            const rows = Math.ceil(done / HOUSE_COLS);
+            const rowW = HOUSE_COLS * HOUSE_BRICK_W;
+            const roofBaseY = HOUSE_BASE_Y - rows * HOUSE_BRICK_H;
+            ctx.fillStyle = "#b23a3a";
+            ctx.beginPath();
+            ctx.moveTo(HOUSE_CENTER_X - rowW / 2 - 4, roofBaseY);
+            ctx.lineTo(HOUSE_CENTER_X + rowW / 2 + 4, roofBaseY);
+            ctx.lineTo(HOUSE_CENTER_X, roofBaseY - 28);
+            ctx.closePath();
+            ctx.fill();
+            ctx.strokeStyle = "rgba(0,0,0,0.4)";
+            ctx.stroke();
+        }
+
+        // "House Built!" flash after completion
+        if (state.house.flashT > 0) {
+            state.house.flashT = Math.max(0, state.house.flashT - dt);
+            const a = Math.min(1, state.house.flashT / 1.2);
+            ctx.save();
+            ctx.globalAlpha = a;
+            ctx.fillStyle = "#f5a524";
+            ctx.font = "bold 26px 'Segoe UI', sans-serif";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText("House Built!", W / 2, H / 2 - 40);
+            ctx.font = "16px 'Segoe UI', sans-serif";
+            ctx.fillStyle = "#fff";
+            ctx.fillText("+5 bonus", W / 2, H / 2 - 12);
+            ctx.restore();
+        }
+    }
+
     function drawParticles(dt) {
         for (let i = state.particles.length - 1; i >= 0; i--) {
             const p = state.particles[i];
@@ -422,6 +537,7 @@
             }
         }
 
+        drawHouse(dt);
         drawTrucks();
         drawBlocks();
         drawCrane();
