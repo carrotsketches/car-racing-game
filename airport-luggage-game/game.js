@@ -236,11 +236,20 @@
 
     function drawDestinations() {
         for (const city of CITIES) {
-            // Landmark emoji
+            // Landmark emoji (bounces briefly after a delivery).
+            let scale = 1;
+            if (city.bounceUntil && state.elapsed < city.bounceUntil) {
+                const t = 1 - (city.bounceUntil - state.elapsed) / 500;
+                scale = 1 + 0.55 * Math.sin(t * Math.PI);
+            }
+            ctx.save();
+            ctx.translate(city.x, city.y);
+            ctx.scale(scale, scale);
             ctx.font = "34px system-ui, 'Apple Color Emoji', sans-serif";
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
-            ctx.fillText(city.emoji, city.x, city.y);
+            ctx.fillText(city.emoji, 0, 0);
+            ctx.restore();
 
             // Colored "sign" below with city name
             const bw = 78, bh = 22;
@@ -378,6 +387,36 @@
 
         // Cargo indicators on top of plane — drawn upright.
         drawPlaneCargo(p);
+
+        // Parachutes drop during delivering phase, one per delivered bag.
+        if (p.state === "delivering" && p.deliveringBags && p.deliveringBags.length > 0) {
+            const drop = p.progress;
+            const n = p.deliveringBags.length;
+            for (let i = 0; i < n; i++) {
+                const ox = (i - (n - 1) / 2) * 14;
+                const px = p.x + ox;
+                const py = p.y + 4 + drop * 22;
+                // Canopy.
+                ctx.beginPath();
+                ctx.arc(px, py - 8, 8, Math.PI, 0);
+                ctx.fillStyle = p.deliveringBags[i].color;
+                ctx.fill();
+                ctx.strokeStyle = "rgba(0,0,0,0.45)";
+                ctx.lineWidth = 1;
+                ctx.stroke();
+                // Strings.
+                ctx.beginPath();
+                ctx.moveTo(px - 7, py - 8); ctx.lineTo(px, py);
+                ctx.moveTo(px + 7, py - 8); ctx.lineTo(px, py);
+                ctx.stroke();
+                // Bag emoji.
+                ctx.font = "11px system-ui, 'Apple Color Emoji', sans-serif";
+                ctx.fillStyle = "#fff";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillText("🧳", px, py + 2);
+            }
+        }
     }
 
     function drawPlaneCargo(p) {
@@ -572,7 +611,146 @@
         }
         state.flyingBags = state.flyingBags.filter((f) => f.progress < 1);
 
+        // Plane state machine — each plane takes off when its cargo is full.
+        for (const p of state.planes) {
+            if (p.state === "idle" && p.cargo.length >= CARGO_CAP && countFlyingToPlane(p.id) === 0) {
+                startTakeoff(p);
+            }
+            advancePlane(p, dt);
+        }
+
         if (state.timeLeft <= 0) endGame();
+    }
+
+    function startTakeoff(p) {
+        p.fromX = p.homeX;
+        p.fromY = p.homeY;
+        p.tx = p.destCity.x;
+        p.ty = p.destCity.y;
+        p.progress = 0;
+        p.state = "takeoff";
+        tone(p.destCity.note, 0.14, "triangle", 0.08);
+        state.floaters.push({
+            text: "✈ off we go!",
+            x: p.x, y: p.y - 30,
+            life: 0.9, max: 0.9, color: "#ffffff"
+        });
+    }
+
+    function advancePlane(p, dt) {
+        if (p.state === "idle") return;
+        const TAKEOFF = 0.22;
+        const DELIVER = 0.45;
+        const speedPxPerSec = 420;
+
+        if (p.state === "takeoff") {
+            p.progress += dt / TAKEOFF;
+            if (p.progress >= 1) { p.progress = 0; p.state = "flying"; }
+            return;
+        }
+
+        if (p.state === "flying" || p.state === "returning") {
+            const tx = p.state === "flying" ? p.tx : p.homeX;
+            const ty = p.state === "flying" ? p.ty : p.homeY;
+            const dx = tx - p.fromX;
+            const dy = ty - p.fromY;
+            const dist = Math.hypot(dx, dy) || 1;
+            const dur = Math.max(0.3, dist / speedPxPerSec);
+            p.progress += dt / dur;
+            if (p.progress >= 1) p.progress = 1;
+            p.x = p.fromX + dx * p.progress;
+            p.y = p.fromY + dy * p.progress;
+            if (p.progress >= 1) {
+                if (p.state === "flying") {
+                    p.state = "delivering";
+                    p.progress = 0;
+                    deliverCargo(p);
+                } else {
+                    p.state = "idle";
+                    p.progress = 0;
+                    p.x = p.homeX; p.y = p.homeY;
+                    p.fromX = p.homeX; p.fromY = p.homeY;
+                    p.deliveringBags = null;
+                }
+            }
+            return;
+        }
+
+        if (p.state === "delivering") {
+            p.progress += dt / DELIVER;
+            if (p.progress >= 1) {
+                p.progress = 0;
+                p.fromX = p.x; p.fromY = p.y;
+                p.state = "returning";
+            }
+            return;
+        }
+    }
+
+    function deliverCargo(p) {
+        const bags = p.cargo.slice();
+        const n = bags.length;
+        p.deliveringBags = bags;
+        p.cargo = [];
+
+        if (n === 0) return;
+
+        const points = 10 * n + 5 * Math.max(0, n - 1);
+        state.score += points;
+        scoreEl.textContent = state.score;
+
+        // Happy chord: root + third + fifth.
+        tone(p.destCity.note, 0.22, "triangle", 0.1);
+        tone(p.destCity.note * 1.25, 0.22, "triangle", 0.08);
+        tone(p.destCity.note * 1.5, 0.22, "triangle", 0.07);
+
+        // Double confetti burst at the destination.
+        spawnConfetti(p.destCity.x, p.destCity.y, p.color);
+        spawnConfetti(p.destCity.x, p.destCity.y, "#ffffff");
+
+        // +10 pop per delivered bag.
+        for (let i = 0; i < n; i++) {
+            const ox = (i - (n - 1) / 2) * 22;
+            state.floaters.push({
+                text: "+10",
+                x: p.destCity.x + ox,
+                y: p.destCity.y - 20 - i * 4,
+                life: 1.1, max: 1.1, color: "#fff2a8"
+            });
+        }
+
+        // City-name cheer beneath the landmark.
+        state.floaters.push({
+            text: `${p.destCity.emoji} ${p.destCity.name}!`,
+            x: p.destCity.x, y: p.destCity.y + 60,
+            life: 1.4, max: 1.4, color: p.color
+        });
+
+        // Combo badge for 2+ matches (plane always takes off with n === CARGO_CAP, so this
+        // always fires at n>=2, which is the point — full-load cheer).
+        if (n >= 2) {
+            state.floaters.push({
+                text: `COMBO x${n}!`,
+                x: p.destCity.x, y: p.destCity.y - 46,
+                life: 1.5, max: 1.5, color: "#ffffff"
+            });
+        }
+
+        // Landmark bounce.
+        p.destCity.bounceUntil = state.elapsed + 500;
+    }
+
+    function spawnConfetti(x, y, color) {
+        for (let i = 0; i < 20; i++) {
+            state.confetti.push({
+                x, y,
+                vx: (Math.random() - 0.5) * 170,
+                vy: -85 - Math.random() * 85,
+                life: 0.9 + Math.random() * 0.4,
+                max: 1.3,
+                color: Math.random() < 0.5 ? color : "#fff2d1"
+            });
+        }
     }
 
     // ---------- Input ----------
