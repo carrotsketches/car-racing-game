@@ -221,10 +221,10 @@
         const p = state.plane;
         if (p.state === "idle") return;
 
-        // Durations (seconds)
-        const TAKEOFF = 0.35;
-        const DELIVER = 0.6;
-        const speedPxPerSec = 260;
+        // Durations (seconds) — tight so kids don't wait.
+        const TAKEOFF = 0.22;
+        const DELIVER = 0.4;
+        const speedPxPerSec = 400;
 
         if (p.state === "takeoff") {
             p.progress += dt / TAKEOFF;
@@ -238,7 +238,7 @@
             const dx = tx - p.fromX;
             const dy = ty - p.fromY;
             const dist = Math.hypot(dx, dy) || 1;
-            const dur = Math.max(0.6, dist / speedPxPerSec);
+            const dur = Math.max(0.35, dist / speedPxPerSec);
             p.progress += dt / dur;
             if (p.progress >= 1) p.progress = 1;
             p.x = p.fromX + dx * p.progress;
@@ -315,6 +315,18 @@
 
             // Landmark bounce animation (used by drawCityCard).
             city.bounceUntil = state.elapsed + 500;
+
+            // Full-card clear bonus: every want at this city is gone.
+            const leftover = state.wants.filter((w) => w.cityId === city.id).length;
+            if (leftover === 0) {
+                state.score += 25;
+                scoreEl.textContent = state.score;
+                spawnFireworks(city.x, city.y);
+                state.floaters.push({ text: "CLEARED! +25", x: city.x, y: city.y - 62, life: 2.0, max: 2.0, color: "#ffd23f" });
+                tone(city.note * 2, 0.3, "triangle", 0.1);
+                tone(city.note * 3, 0.3, "triangle", 0.06);
+                city.bounceUntil = state.elapsed + 900;
+            }
         } else {
             // Sad trombone: descending tones.
             tone(260, 0.12, "sawtooth", 0.06);
@@ -332,6 +344,24 @@
                 life: 0.9 + Math.random() * 0.4,
                 max: 1.3,
                 color: Math.random() < 0.5 ? color : "#fff2d1"
+            });
+        }
+    }
+
+    // A 360-degree rainbow burst for full-card clears.
+    function spawnFireworks(x, y) {
+        const palette = CITIES.map((c) => c.color);
+        const n = 44;
+        for (let i = 0; i < n; i++) {
+            const angle = (i / n) * Math.PI * 2;
+            const speed = 130 + Math.random() * 90;
+            state.confetti.push({
+                x, y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed - 40,
+                life: 1.3 + Math.random() * 0.4,
+                max: 1.7,
+                color: palette[i % palette.length]
             });
         }
     }
