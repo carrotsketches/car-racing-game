@@ -146,6 +146,11 @@ h1 {
     border-color: rgba(255, 209, 77, 0.4);
 }
 
+.game-card.airport-luggage-game {
+    background: linear-gradient(135deg, rgba(78, 192, 255, 0.22), rgba(255, 159, 64, 0.2));
+    border-color: rgba(78, 192, 255, 0.4);
+}
+
 .hard-games-btn {
     position: fixed;
     top: 16px;
