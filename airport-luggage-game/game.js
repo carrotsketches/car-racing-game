@@ -499,15 +499,6 @@
         ctx.save();
         ctx.translate(x, y + bounce);
 
-        // Idle-with-cargo glow to hint at tappability.
-        if (p.state === "idle" && state.running && state.cargo.length > 0) {
-            const pulse = 0.35 + 0.25 * Math.sin(state.elapsed / 180);
-            ctx.beginPath();
-            ctx.arc(0, 0, 20, 0, Math.PI * 2);
-            ctx.fillStyle = `rgba(255, 214, 107, ${pulse * 0.5})`;
-            ctx.fill();
-        }
-
         // Rotate toward target during flight.
         if (p.state === "flying" || p.state === "returning") {
             const tx = p.state === "flying" ? p.tx : HOME.x;
@@ -805,48 +796,22 @@
             }
         }
 
-        // Priority 2: tap the airplane to take off.
-        if (state.plane.state === "idle" && Math.hypot(state.plane.x - x, state.plane.y - y) <= 24) {
-            if (state.cargo.length === 0) {
-                tone(160, 0.1, "sawtooth", 0.05);
-                state.floaters.push({ text: "Load bags first!", x: state.plane.x, y: state.plane.y - 24, life: 1.2, max: 1.2, color: "#ffd23f" });
-                return;
-            }
-            const city = pickBestCity();
-            if (city) planeFlyTo(city);
-            return;
-        }
-    }
-
-    // Picks the city that will deliver the most bags for this trip.
-    // Ties broken by nearest city (encourages variety early on).
-    function pickBestCity() {
-        const cargoByColor = {};
-        for (const b of state.cargo) cargoByColor[b.color] = (cargoByColor[b.color] || 0) + 1;
-
-        let best = null;
-        let bestScore = -1;
-        let bestDist = Infinity;
-        for (const c of CITIES) {
-            const waiting = state.wants.filter((p) => p.cityId === c.id);
-            let matches = 0;
-            const seen = Object.assign({}, cargoByColor);
-            for (const p of waiting) {
-                if ((seen[p.color] || 0) > 0) {
-                    matches += 1;
-                    seen[p.color] -= 1;
+        // Priority 2: tap a destination card to fly there.
+        if (state.plane.state === "idle") {
+            for (const c of CITIES) {
+                const dx = Math.abs(c.x - x);
+                const dy = Math.abs(c.y - y);
+                if (dx <= CARD.w / 2 && dy <= CARD.h / 2) {
+                    if (state.cargo.length === 0) {
+                        tone(160, 0.1, "sawtooth", 0.05);
+                        state.floaters.push({ text: "Load bags first!", x: state.plane.x, y: state.plane.y - 28, life: 1.2, max: 1.2, color: "#ffd23f" });
+                        return;
+                    }
+                    planeFlyTo(c);
+                    return;
                 }
             }
-            const dist = Math.hypot(c.x - HOME.x, c.y - HOME.y);
-            if (matches > bestScore || (matches === bestScore && dist < bestDist)) {
-                best = c;
-                bestScore = matches;
-                bestDist = dist;
-            }
         }
-        // If nobody matches, still fly to the nearest city with waiting passengers
-        // so something visibly happens — otherwise any city at all.
-        return best;
     }
 
     canvas.addEventListener("pointerdown", (e) => {
