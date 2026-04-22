@@ -5,17 +5,19 @@
     const ROUND_SECONDS = 60;
     const CARGO_MAX = 6;
 
-    const HOME = { x: 180, y: 190 }; // airport hub on the world map
+    const HOME = { x: 180, y: 215 }; // runway hub between the two rows of city cards
 
-    // 6 cities, one per continent. x/y in canvas coords.
+    // Cities laid out as a 3x2 grid of destination cards above/below the runway.
     const CITIES = [
-        { id: "nyc",    name: "New York", country: "USA",       emoji: "🗽", color: "#ff4d5e", x:  78, y: 150, note: 523.25 },
-        { id: "rio",    name: "Rio",      country: "Brazil",    emoji: "🏖️", color: "#3ddc84", x: 118, y: 278, note: 587.33 },
-        { id: "paris",  name: "Paris",    country: "France",    emoji: "🗼", color: "#4ec0ff", x: 196, y: 130, note: 659.25 },
-        { id: "cairo",  name: "Cairo",    country: "Egypt",     emoji: "🐪", color: "#ffd23f", x: 218, y: 210, note: 698.46 },
-        { id: "tokyo",  name: "Tokyo",    country: "Japan",     emoji: "🏯", color: "#b36bff", x: 298, y: 174, note: 783.99 },
-        { id: "sydney", name: "Sydney",   country: "Australia", emoji: "🦘", color: "#ff9f40", x: 306, y: 278, note: 880.00 }
+        { id: "nyc",    name: "New York", country: "USA",       emoji: "🗽", color: "#ff4d5e", x:  65, y: 135, note: 523.25 },
+        { id: "paris",  name: "Paris",    country: "France",    emoji: "🗼", color: "#4ec0ff", x: 180, y: 135, note: 659.25 },
+        { id: "tokyo",  name: "Tokyo",    country: "Japan",     emoji: "🏯", color: "#b36bff", x: 295, y: 135, note: 783.99 },
+        { id: "rio",    name: "Rio",      country: "Brazil",    emoji: "🏖️", color: "#3ddc84", x:  65, y: 295, note: 587.33 },
+        { id: "cairo",  name: "Cairo",    country: "Egypt",     emoji: "🐪", color: "#ffd23f", x: 180, y: 295, note: 698.46 },
+        { id: "sydney", name: "Sydney",   country: "Australia", emoji: "🦘", color: "#ff9f40", x: 295, y: 295, note: 880.00 }
     ];
+
+    const CARD = { w: 92, h: 84, r: 14 };
 
     // Belt lives at the bottom of the canvas; bags travel left→right.
     const BELT = { x: 10, y: 440, w: 340, h: 70, bagR: 18 };
@@ -311,179 +313,146 @@
     }
 
     // ---------- Render ----------
-    // Continent silhouettes drawn as smooth catmull-like curves between these vertices.
-    const CONTINENTS = [
-        // North America — funnel with Central America tail
-        [[32,100],[55,88],[85,85],[110,92],[128,108],[135,130],[130,155],[120,175],[108,190],[92,205],[80,200],[72,188],[65,178],[55,172],[42,158],[32,135],[28,115]],
-        // South America — teardrop
-        [[98,228],[122,222],[148,232],[158,258],[158,288],[148,315],[128,340],[112,338],[100,318],[94,290],[92,258]],
-        // Europe — small cluster
-        [[168,105],[190,100],[215,102],[232,112],[238,128],[235,148],[222,158],[202,162],[182,158],[170,145],[165,125]],
-        // Africa — inverted teardrop
-        [[190,162],[218,158],[248,168],[260,190],[265,220],[258,250],[238,285],[218,310],[202,315],[190,295],[185,260],[182,220],[185,188]],
-        // Asia — massive mass
-        [[232,95],[265,82],[300,82],[335,92],[348,112],[350,138],[342,165],[325,185],[302,200],[278,205],[252,195],[238,175],[232,150],[230,120]],
-        // Australia
-        [[280,270],[305,263],[335,270],[345,290],[340,310],[318,322],[290,318],[275,300]]
-    ];
-
-    // Small islands for visual richness.
-    const ISLANDS = [
-        [180, 120, 4], // UK
-        [275, 142, 3], // Japan
-        [245, 230, 3], // Madagascar-ish
-        [322, 235, 3], // NZ-ish
-        [278, 215, 3]  // Indonesia
-    ];
-
     function drawSky() {
-        // Sunset gradient inside the canvas.
+        // Bright daytime sky: sky blue → soft peach at the horizon.
         const g = ctx.createLinearGradient(0, 0, 0, CANVAS_H);
-        g.addColorStop(0, "#ffb26b");
-        g.addColorStop(0.35, "#ff6b9a");
-        g.addColorStop(0.7, "#5b2a8c");
-        g.addColorStop(1, "#0b1c3a");
+        g.addColorStop(0, "#6ec6ff");
+        g.addColorStop(0.45, "#9fdbff");
+        g.addColorStop(0.75, "#ffd9b0");
+        g.addColorStop(1, "#ffb06b");
         ctx.fillStyle = g;
         ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
-
-        // Stars in the upper band.
-        ctx.fillStyle = "rgba(255,255,255,0.7)";
-        for (let i = 0; i < 14; i++) {
-            const sx = ((i * 37) % CANVAS_W);
-            const sy = (i * 13) % 70 + 10;
-            ctx.fillRect(sx, sy, 2, 2);
-        }
     }
 
-    function traceContinent(poly) {
-        // Catmull-like smoothing: draw quadratic curves through midpoints of edges.
-        const n = poly.length;
-        const last = poly[n - 1];
-        const first = poly[0];
-        ctx.beginPath();
-        ctx.moveTo((last[0] + first[0]) / 2, (last[1] + first[1]) / 2);
-        for (let i = 0; i < n; i++) {
-            const curr = poly[i];
-            const next = poly[(i + 1) % n];
-            const mx = (curr[0] + next[0]) / 2;
-            const my = (curr[1] + next[1]) / 2;
-            ctx.quadraticCurveTo(curr[0], curr[1], mx, my);
-        }
-        ctx.closePath();
-    }
-
-    function drawWorldMap() {
-        // Ocean gradient.
-        const og = ctx.createLinearGradient(0, 80, 0, 340);
-        og.addColorStop(0, "#1d5a92");
-        og.addColorStop(0.5, "#0f4170");
-        og.addColorStop(1, "#0a2a52");
-        ctx.save();
-        // Clip future drawing to the rounded ocean rect so waves don't bleed.
-        roundRect(10, 80, CANVAS_W - 20, 260, 18);
-        ctx.fillStyle = og;
-        ctx.fill();
-        ctx.clip();
-
-        // Soft wave shimmer.
-        ctx.strokeStyle = "rgba(180, 220, 255, 0.09)";
-        ctx.lineWidth = 0.8;
-        for (let y = 100; y < 340; y += 22) {
+    function drawClouds() {
+        const t = state.elapsed / 1000;
+        const clouds = [
+            { seed: 20,  y:  45, r: 18, speed: 8  },
+            { seed: 180, y:  58, r: 14, speed: 6  },
+            { seed: 290, y:  42, r: 16, speed: 10 },
+            { seed: 60,  y: 215, r: 13, speed: 7  },
+            { seed: 270, y: 218, r: 15, speed: 9  },
+            { seed: 150, y: 385, r: 12, speed: 5  }
+        ];
+        for (const c of clouds) {
+            const x = ((c.seed + t * c.speed) % (CANVAS_W + 80)) - 40;
+            ctx.fillStyle = "rgba(255,255,255,0.7)";
             ctx.beginPath();
-            for (let x = 14; x <= CANVAS_W - 14; x += 6) {
-                const wy = y + Math.sin((x + state.elapsed / 14) / 20) * 1.3;
-                if (x === 14) ctx.moveTo(x, wy);
-                else ctx.lineTo(x, wy);
+            ctx.arc(x,             c.y,                  c.r,          0, Math.PI * 2);
+            ctx.arc(x + c.r * 0.8, c.y,                  c.r * 0.8,    0, Math.PI * 2);
+            ctx.arc(x - c.r * 0.7, c.y,                  c.r * 0.7,    0, Math.PI * 2);
+            ctx.arc(x + c.r * 0.3, c.y - c.r * 0.6,      c.r * 0.7,    0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    function drawCityCard(city) {
+        const cw = CARD.w, ch = CARD.h, r = CARD.r;
+        const x = city.x - cw / 2;
+        const y = city.y - ch / 2;
+
+        // Drop shadow.
+        ctx.fillStyle = "rgba(0,0,0,0.18)";
+        roundRect(x + 2, y + 4, cw, ch, r);
+        ctx.fill();
+
+        // Card body gradient.
+        const g = ctx.createLinearGradient(x, y, x, y + ch);
+        g.addColorStop(0, city.color);
+        g.addColorStop(1, shade(city.color, -0.35));
+        ctx.fillStyle = g;
+        roundRect(x, y, cw, ch, r);
+        ctx.fill();
+
+        // White glossy border.
+        ctx.strokeStyle = "rgba(255,255,255,0.55)";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Landmark emoji.
+        ctx.font = "30px system-ui, 'Apple Color Emoji', sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(city.emoji, city.x, city.y - 16);
+
+        // City name.
+        ctx.font = "bold 11px system-ui, sans-serif";
+        ctx.fillStyle = "#fff";
+        ctx.fillText(city.name.toUpperCase(), city.x, city.y + 14);
+
+        // Waiting passenger seats (up to 3, inside the card bottom).
+        const waiting = state.passengers.filter((p) => p.cityId === city.id);
+        for (let i = 0; i < 3; i++) {
+            const sx = city.x - 14 + i * 14;
+            const sy = city.y + 30;
+            ctx.beginPath();
+            ctx.arc(sx, sy, 5, 0, Math.PI * 2);
+            if (waiting[i]) {
+                ctx.fillStyle = waiting[i].color;
+                ctx.fill();
+                ctx.strokeStyle = "rgba(0,0,0,0.45)";
+            } else {
+                ctx.fillStyle = "rgba(255,255,255,0.2)";
+                ctx.fill();
+                ctx.strokeStyle = "rgba(255,255,255,0.4)";
             }
-            ctx.stroke();
-        }
-
-        // Polar ice cap at top of map.
-        ctx.fillStyle = "rgba(255,255,255,0.35)";
-        ctx.beginPath();
-        ctx.ellipse(180, 82, 165, 5, 0, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Continents — shadow pass, then land.
-        for (const poly of CONTINENTS) {
-            ctx.save();
-            ctx.translate(1.5, 2);
-            traceContinent(poly);
-            ctx.fillStyle = "rgba(0, 20, 10, 0.45)";
-            ctx.fill();
-            ctx.restore();
-
-            traceContinent(poly);
-            const lg = ctx.createLinearGradient(0, 90, 0, 320);
-            lg.addColorStop(0, "#4bc074");
-            lg.addColorStop(1, "#2d8b52");
-            ctx.fillStyle = lg;
-            ctx.fill();
-            ctx.lineWidth = 1.1;
-            ctx.strokeStyle = "rgba(10, 50, 25, 0.7)";
-            ctx.stroke();
-        }
-
-        // Small islands for visual richness.
-        for (const [x, y, r] of ISLANDS) {
-            ctx.beginPath();
-            ctx.arc(x + 1, y + 1.5, r, 0, Math.PI * 2);
-            ctx.fillStyle = "rgba(0, 20, 10, 0.45)";
-            ctx.fill();
-            ctx.beginPath();
-            ctx.arc(x, y, r, 0, Math.PI * 2);
-            ctx.fillStyle = "#3fae5f";
-            ctx.fill();
-            ctx.strokeStyle = "rgba(10, 50, 25, 0.7)";
             ctx.lineWidth = 1;
             ctx.stroke();
         }
-
-        ctx.restore();
     }
 
-    function drawCityPins() {
-        for (const c of CITIES) {
-            // Pin base circle
-            ctx.beginPath();
-            ctx.arc(c.x, c.y, 10, 0, Math.PI * 2);
-            ctx.fillStyle = c.color;
-            ctx.fill();
-            ctx.strokeStyle = "rgba(0,0,0,0.4)";
-            ctx.lineWidth = 2;
-            ctx.stroke();
-
-            // Landmark emoji
-            ctx.font = "14px system-ui, sans-serif";
-            ctx.textAlign = "center";
-            ctx.textBaseline = "middle";
-            ctx.fillText(c.emoji, c.x, c.y - 18);
-
-            // Waiting passengers as small dots above the pin.
-            const waiting = state.passengers.filter((p) => p.cityId === c.id);
-            for (let i = 0; i < waiting.length; i++) {
-                const px = c.x - 8 + i * 8;
-                const py = c.y + 14;
-                ctx.beginPath();
-                ctx.arc(px, py, 4, 0, Math.PI * 2);
-                ctx.fillStyle = waiting[i].color;
-                ctx.fill();
-                ctx.strokeStyle = "rgba(0,0,0,0.4)";
-                ctx.lineWidth = 1;
-                ctx.stroke();
-            }
-        }
+    function drawCityCards() {
+        for (const c of CITIES) drawCityCard(c);
     }
 
     function drawHomeAirport() {
-        // Runway patch under HOME.
-        ctx.fillStyle = "rgba(255,255,255,0.15)";
-        roundRect(HOME.x - 22, HOME.y - 10, 44, 20, 6);
+        // A clean runway strip with dashed centerline.
+        const rw = 130, rh = 38;
+        const x = HOME.x - rw / 2;
+        const y = HOME.y - rh / 2;
+
+        // Runway shadow.
+        ctx.fillStyle = "rgba(0,0,0,0.18)";
+        roundRect(x + 2, y + 3, rw, rh, 8);
         ctx.fill();
-        ctx.font = "11px 'Courier New', monospace";
-        ctx.fillStyle = "rgba(255,255,255,0.85)";
+
+        // Runway body.
+        ctx.fillStyle = "#3a4052";
+        roundRect(x, y, rw, rh, 8);
+        ctx.fill();
+        ctx.strokeStyle = "rgba(255,255,255,0.3)";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // Dashed centerline.
+        ctx.strokeStyle = "#ffd23f";
+        ctx.lineWidth = 2;
+        ctx.setLineDash([8, 6]);
+        ctx.beginPath();
+        ctx.moveTo(x + 8, HOME.y);
+        ctx.lineTo(x + rw - 8, HOME.y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // HOME label.
+        ctx.font = "bold 9px 'Courier New', monospace";
+        ctx.fillStyle = "rgba(255,255,255,0.7)";
         ctx.textAlign = "center";
-        ctx.fillText("HOME", HOME.x, HOME.y + 22);
+        ctx.textBaseline = "middle";
+        ctx.fillText("HOME AIRPORT", HOME.x, HOME.y + rh / 2 + 10);
+    }
+
+    // Darkens or lightens a hex color. amt: -1..1
+    function shade(hex, amt) {
+        const h = hex.replace("#", "");
+        const r = parseInt(h.substring(0, 2), 16);
+        const g = parseInt(h.substring(2, 4), 16);
+        const b = parseInt(h.substring(4, 6), 16);
+        const t = amt < 0 ? 0 : 255;
+        const p = Math.abs(amt);
+        const mix = (c) => Math.round((t - c) * p + c);
+        const to2 = (n) => n.toString(16).padStart(2, "0");
+        return "#" + to2(mix(r)) + to2(mix(g)) + to2(mix(b));
     }
 
     function drawPlane() {
@@ -725,9 +694,9 @@
 
     function render() {
         drawSky();
-        drawWorldMap();
-        drawCityPins();
+        drawClouds();
         drawHomeAirport();
+        drawCityCards();
         drawPlane();
         drawBelt();
         drawEffects();
