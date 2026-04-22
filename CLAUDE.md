@@ -8,16 +8,44 @@ A static, no-build collection of small browser games. The root is a game launche
 
 ```
 /
-├── index.html          # Home page (game grid + per-card leaderboards)
-├── style.css           # Home styles (cards, grid, leaderboard pills)
+├── index.html               # Home page (game grid + per-card leaderboards)
+├── style.css                # Home styles (cards, grid, leaderboard pills)
 ├── README.md
-├── highway-dash/       # Game: dodge traffic on a highway
-├── whack-a-mole/       # Game: tap moles, skip bees
-├── add-it-up/          # Game: arithmetic quiz
-└── piano/              # Game: piano memory (Simon-style) + free play
+├── highway-dash/            # Dodge traffic on a highway
+├── whack-a-mole/            # Tap moles, skip bees
+├── add-it-up/               # Arithmetic quiz
+├── piano/                   # Piano memory (Simon-style) + free play
+├── bus-route-rush/          # Grid bus dispatcher, color-matched pickups
+├── clock-it/                # Set an analog clock to match a target time
+├── color-mixing/            # Pick two paint pots to match a target color
+├── critter-cruise/          # One-button hopper over rolling terrain
+├── airport-luggage-game/    # Drag colored luggage onto matching planes
+├── maze-game/               # Bunny through a procedurally generated maze
+└── hard/                    # Sub-gateway for harder games (e.g. flappy-bird)
+    └── flappy-bird/         # Tap-to-flap, dodge pipes
 ```
 
-Every game subfolder has exactly three files: `index.html`, `style.css`, `game.js`. No build step, no deps. Open `index.html` in a browser to run.
+Most game folders contain exactly three files: `index.html`, `style.css`, `game.js`. No build step, no deps. Open `index.html` in a browser to run. `hard/` is a gateway page, not a game.
+
+### Existing games at a glance
+
+Use this table instead of re-scanning each folder.
+
+| Slug | Theme | Core mechanic | Input | Render |
+|---|---|---|---|---|
+| highway-dash | Car race | Dodge traffic, grab coins | keys + lane buttons | canvas 2D |
+| whack-a-mole | Garden | Tap moles, skip bees | tap | DOM + CSS |
+| add-it-up | Math | Solve + / − problems | keypad | DOM |
+| piano | Music | Simon memory + free play | tap | DOM |
+| bus-route-rush | Transit | Grid pickup/drop-off, color match | keys/swipe | canvas 2D |
+| clock-it | Time | Set analog clock to target | keypad | SVG + DOM |
+| color-mixing | Art | Blend two pots to match target | tap | DOM + CSS |
+| critter-cruise | Platformer | One-button jump over hills | tap/space | canvas 2D |
+| airport-luggage-game | Airport | Drag luggage onto matching plane | drag | canvas 2D |
+| maze-game | Bunny | Navigate procedural maze to carrot | keys/swipe | canvas 2D |
+| hard/flappy-bird | Flappy | Tap to flap, dodge pipes | tap | canvas 2D |
+
+Each `.game-card` on the home page carries a `data-lb="<slug>-leaderboard"` attribute; the home-page script reads it to render the card's top-3 entries inline.
 
 ## Shared conventions
 
