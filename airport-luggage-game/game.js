@@ -311,20 +311,29 @@
     }
 
     // ---------- Render ----------
-    // Very rough continent silhouettes as filled polygons on the canvas.
+    // Continent silhouettes drawn as smooth catmull-like curves between these vertices.
     const CONTINENTS = [
-        // North America
-        [[30,95],[110,90],[135,135],[120,180],[80,200],[45,170]],
-        // South America
-        [[100,230],[145,225],[155,295],[125,345],[100,320]],
-        // Europe
-        [[175,100],[225,100],[230,150],[195,160],[180,140]],
-        // Africa
-        [[200,165],[250,170],[260,250],[225,310],[200,260]],
-        // Asia
-        [[235,95],[330,90],[345,180],[290,200],[250,170],[235,130]],
+        // North America — funnel with Central America tail
+        [[32,100],[55,88],[85,85],[110,92],[128,108],[135,130],[130,155],[120,175],[108,190],[92,205],[80,200],[72,188],[65,178],[55,172],[42,158],[32,135],[28,115]],
+        // South America — teardrop
+        [[98,228],[122,222],[148,232],[158,258],[158,288],[148,315],[128,340],[112,338],[100,318],[94,290],[92,258]],
+        // Europe — small cluster
+        [[168,105],[190,100],[215,102],[232,112],[238,128],[235,148],[222,158],[202,162],[182,158],[170,145],[165,125]],
+        // Africa — inverted teardrop
+        [[190,162],[218,158],[248,168],[260,190],[265,220],[258,250],[238,285],[218,310],[202,315],[190,295],[185,260],[182,220],[185,188]],
+        // Asia — massive mass
+        [[232,95],[265,82],[300,82],[335,92],[348,112],[350,138],[342,165],[325,185],[302,200],[278,205],[252,195],[238,175],[232,150],[230,120]],
         // Australia
-        [[285,275],[335,270],[340,310],[300,320]]
+        [[280,270],[305,263],[335,270],[345,290],[340,310],[318,322],[290,318],[275,300]]
+    ];
+
+    // Small islands for visual richness.
+    const ISLANDS = [
+        [180, 120, 4], // UK
+        [275, 142, 3], // Japan
+        [245, 230, 3], // Madagascar-ish
+        [322, 235, 3], // NZ-ish
+        [278, 215, 3]  // Indonesia
     ];
 
     function drawSky() {
@@ -346,34 +355,91 @@
         }
     }
 
+    function traceContinent(poly) {
+        // Catmull-like smoothing: draw quadratic curves through midpoints of edges.
+        const n = poly.length;
+        const last = poly[n - 1];
+        const first = poly[0];
+        ctx.beginPath();
+        ctx.moveTo((last[0] + first[0]) / 2, (last[1] + first[1]) / 2);
+        for (let i = 0; i < n; i++) {
+            const curr = poly[i];
+            const next = poly[(i + 1) % n];
+            const mx = (curr[0] + next[0]) / 2;
+            const my = (curr[1] + next[1]) / 2;
+            ctx.quadraticCurveTo(curr[0], curr[1], mx, my);
+        }
+        ctx.closePath();
+    }
+
     function drawWorldMap() {
-        // Ocean band behind continents.
-        ctx.fillStyle = "rgba(30, 80, 140, 0.35)";
+        // Ocean gradient.
+        const og = ctx.createLinearGradient(0, 80, 0, 340);
+        og.addColorStop(0, "#1d5a92");
+        og.addColorStop(0.5, "#0f4170");
+        og.addColorStop(1, "#0a2a52");
+        ctx.save();
+        // Clip future drawing to the rounded ocean rect so waves don't bleed.
         roundRect(10, 80, CANVAS_W - 20, 260, 18);
+        ctx.fillStyle = og;
+        ctx.fill();
+        ctx.clip();
+
+        // Soft wave shimmer.
+        ctx.strokeStyle = "rgba(180, 220, 255, 0.09)";
+        ctx.lineWidth = 0.8;
+        for (let y = 100; y < 340; y += 22) {
+            ctx.beginPath();
+            for (let x = 14; x <= CANVAS_W - 14; x += 6) {
+                const wy = y + Math.sin((x + state.elapsed / 14) / 20) * 1.3;
+                if (x === 14) ctx.moveTo(x, wy);
+                else ctx.lineTo(x, wy);
+            }
+            ctx.stroke();
+        }
+
+        // Polar ice cap at top of map.
+        ctx.fillStyle = "rgba(255,255,255,0.35)";
+        ctx.beginPath();
+        ctx.ellipse(180, 82, 165, 5, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Latitude grid.
-        ctx.strokeStyle = "rgba(255,255,255,0.08)";
-        ctx.lineWidth = 1;
-        for (let y = 110; y < 340; y += 30) {
-            ctx.beginPath();
-            ctx.moveTo(14, y);
-            ctx.lineTo(CANVAS_W - 14, y);
+        // Continents — shadow pass, then land.
+        for (const poly of CONTINENTS) {
+            ctx.save();
+            ctx.translate(1.5, 2);
+            traceContinent(poly);
+            ctx.fillStyle = "rgba(0, 20, 10, 0.45)";
+            ctx.fill();
+            ctx.restore();
+
+            traceContinent(poly);
+            const lg = ctx.createLinearGradient(0, 90, 0, 320);
+            lg.addColorStop(0, "#4bc074");
+            lg.addColorStop(1, "#2d8b52");
+            ctx.fillStyle = lg;
+            ctx.fill();
+            ctx.lineWidth = 1.1;
+            ctx.strokeStyle = "rgba(10, 50, 25, 0.7)";
             ctx.stroke();
         }
 
-        // Continents.
-        ctx.fillStyle = "#2fa36b";
-        ctx.strokeStyle = "rgba(0,0,0,0.25)";
-        ctx.lineWidth = 1;
-        for (const poly of CONTINENTS) {
+        // Small islands for visual richness.
+        for (const [x, y, r] of ISLANDS) {
             ctx.beginPath();
-            ctx.moveTo(poly[0][0], poly[0][1]);
-            for (let i = 1; i < poly.length; i++) ctx.lineTo(poly[i][0], poly[i][1]);
-            ctx.closePath();
+            ctx.arc(x + 1, y + 1.5, r, 0, Math.PI * 2);
+            ctx.fillStyle = "rgba(0, 20, 10, 0.45)";
             ctx.fill();
+            ctx.beginPath();
+            ctx.arc(x, y, r, 0, Math.PI * 2);
+            ctx.fillStyle = "#3fae5f";
+            ctx.fill();
+            ctx.strokeStyle = "rgba(10, 50, 25, 0.7)";
+            ctx.lineWidth = 1;
             ctx.stroke();
         }
+
+        ctx.restore();
     }
 
     function drawCityPins() {
@@ -448,6 +514,16 @@
 
         ctx.save();
         ctx.translate(x, y + bounce);
+
+        // Idle-with-cargo glow to hint at tappability.
+        if (p.state === "idle" && state.running && state.cargo.length > 0) {
+            const pulse = 0.35 + 0.25 * Math.sin(state.elapsed / 180);
+            ctx.beginPath();
+            ctx.arc(0, 0, 20, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(255, 214, 107, ${pulse * 0.5})`;
+            ctx.fill();
+        }
+
         // Rotate toward target during flight.
         if (p.state === "flying" || p.state === "returning") {
             const tx = p.state === "flying" ? p.tx : HOME.x;
@@ -455,27 +531,100 @@
             const ang = Math.atan2(ty - p.fromY, tx - p.fromX);
             ctx.rotate(ang);
         }
-        // Plane body
-        ctx.fillStyle = "#fdf6e3";
-        ctx.strokeStyle = "#2e3440";
-        ctx.lineWidth = 1.5;
+
+        // Soft shadow under the plane.
+        ctx.fillStyle = "rgba(0,0,0,0.2)";
         ctx.beginPath();
-        ctx.moveTo(12, 0);
-        ctx.lineTo(-8, -5);
-        ctx.lineTo(-10, 0);
-        ctx.lineTo(-8, 5);
+        ctx.ellipse(0, 8, 14, 3, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = "#1c1f2a";
+        ctx.lineWidth = 1.2;
+
+        // Main fuselage — elongated ellipse with gradient.
+        const fg = ctx.createLinearGradient(0, -5, 0, 5);
+        fg.addColorStop(0, "#ffffff");
+        fg.addColorStop(1, "#c9d1dc");
+        ctx.fillStyle = fg;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 16, 5, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // Red nose cone.
+        ctx.fillStyle = "#e94560";
+        ctx.beginPath();
+        ctx.moveTo(14, -3);
+        ctx.quadraticCurveTo(20, 0, 14, 3);
         ctx.closePath();
         ctx.fill();
         ctx.stroke();
-        // Wing
+
+        // Lower main wing (behind body).
+        ctx.fillStyle = "#4ec0ff";
         ctx.beginPath();
-        ctx.moveTo(-2, -2);
-        ctx.lineTo(-6, -10);
-        ctx.lineTo(2, -2);
+        ctx.moveTo(-2, 3);
+        ctx.lineTo(-12, 14);
+        ctx.lineTo(-4, 14);
+        ctx.lineTo(5, 4);
         ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // Upper main wing.
+        ctx.beginPath();
+        ctx.moveTo(-2, -3);
+        ctx.lineTo(-12, -14);
+        ctx.lineTo(-4, -14);
+        ctx.lineTo(5, -4);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // Tail fin (vertical).
         ctx.fillStyle = "#ff9f40";
+        ctx.beginPath();
+        ctx.moveTo(-13, -1);
+        ctx.lineTo(-18, -8);
+        ctx.lineTo(-13, -5);
+        ctx.closePath();
         ctx.fill();
         ctx.stroke();
+
+        // Horizontal tail fins.
+        ctx.beginPath();
+        ctx.moveTo(-13, -1);
+        ctx.lineTo(-18, -4);
+        ctx.lineTo(-13, 0);
+        ctx.closePath();
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(-13, 1);
+        ctx.lineTo(-18, 4);
+        ctx.lineTo(-13, 0);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // Cockpit windshield.
+        ctx.fillStyle = "#4ec0ff";
+        ctx.beginPath();
+        ctx.moveTo(6, -2);
+        ctx.quadraticCurveTo(12, -4, 12, -1);
+        ctx.lineTo(12, 1);
+        ctx.quadraticCurveTo(12, -1, 6, -1);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // Passenger windows.
+        ctx.fillStyle = "#ffe27a";
+        for (let i = 0; i < 4; i++) {
+            ctx.beginPath();
+            ctx.arc(2 - i * 3.5, 0, 0.9, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
         ctx.restore();
 
         // Parachute during delivery
@@ -672,15 +821,48 @@
             }
         }
 
-        // Priority 2: city pin (only when plane is idle and has cargo)
-        if (state.plane.state === "idle" && state.cargo.length > 0) {
-            for (const c of CITIES) {
-                if (Math.hypot(c.x - x, c.y - y) <= 16) {
-                    planeFlyTo(c);
-                    return;
+        // Priority 2: tap the airplane to take off.
+        if (state.plane.state === "idle" && Math.hypot(state.plane.x - x, state.plane.y - y) <= 24) {
+            if (state.cargo.length === 0) {
+                tone(160, 0.1, "sawtooth", 0.05);
+                state.floaters.push({ text: "Load bags first!", x: state.plane.x, y: state.plane.y - 24, life: 1.2, max: 1.2, color: "#ffd23f" });
+                return;
+            }
+            const city = pickBestCity();
+            if (city) planeFlyTo(city);
+            return;
+        }
+    }
+
+    // Picks the city that will deliver the most bags for this trip.
+    // Ties broken by nearest city (encourages variety early on).
+    function pickBestCity() {
+        const cargoByColor = {};
+        for (const b of state.cargo) cargoByColor[b.color] = (cargoByColor[b.color] || 0) + 1;
+
+        let best = null;
+        let bestScore = -1;
+        let bestDist = Infinity;
+        for (const c of CITIES) {
+            const waiting = state.passengers.filter((p) => p.cityId === c.id);
+            let matches = 0;
+            const seen = Object.assign({}, cargoByColor);
+            for (const p of waiting) {
+                if ((seen[p.color] || 0) > 0) {
+                    matches += 1;
+                    seen[p.color] -= 1;
                 }
             }
+            const dist = Math.hypot(c.x - HOME.x, c.y - HOME.y);
+            if (matches > bestScore || (matches === bestScore && dist < bestDist)) {
+                best = c;
+                bestScore = matches;
+                bestDist = dist;
+            }
         }
+        // If nobody matches, still fly to the nearest city with waiting passengers
+        // so something visibly happens — otherwise any city at all.
+        return best;
     }
 
     canvas.addEventListener("pointerdown", (e) => {
