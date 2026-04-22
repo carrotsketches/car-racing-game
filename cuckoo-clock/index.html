@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>Cuckoo Clock</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-wrapper">
+        <a class="home-link" href="../">← Games</a>
+        <header>
+            <h1>Cuckoo Clock</h1>
+            <div class="hud">
+                <div class="stat" id="player-tag">👤 <span id="player-name">—</span></div>
+                <div class="stat">Score: <span id="score">0</span></div>
+                <div class="stat time-stat" id="time-stat">⏱ <span id="time">60</span>s</div>
+                <div class="stat">Best: <span id="best">0</span></div>
+            </div>
+        </header>
+
+        <div class="stage">
+            <div class="clock" id="clock" aria-label="Cuckoo clock">
+                <div class="roof">
+                    <div class="roof-shade"></div>
+                    <div class="roof-trim"></div>
+                </div>
+
+                <div class="doors">
+                    <div class="door door-left" id="door-left"></div>
+                    <div class="door door-right" id="door-right"></div>
+                    <div class="cuckoo" id="cuckoo" aria-hidden="true">
+                        <div class="bird">
+                            <div class="bird-body">🐦</div>
+                        </div>
+                    </div>
+                    <div class="cuckoo-call" id="cuckoo-call">Cuckoo!</div>
+                </div>
+
+                <div class="face">
+                    <div class="tick tick-12">XII</div>
+                    <div class="tick tick-3">III</div>
+                    <div class="tick tick-6">VI</div>
+                    <div class="tick tick-9">IX</div>
+                    <div class="hand hand-hour" id="hand-hour"></div>
+                    <div class="hand hand-minute" id="hand-minute"></div>
+                    <div class="pivot"></div>
+                </div>
+
+                <div class="pendulum-box">
+                    <div class="chain chain-left"></div>
+                    <div class="chain chain-right"></div>
+                    <div class="pendulum" id="pendulum">
+                        <div class="pendulum-rod"></div>
+                        <div class="pendulum-bob"></div>
+                    </div>
+                </div>
+
+                <div class="feedback" id="feedback"></div>
+            </div>
+
+            <div id="overlay" class="overlay">
+                <div class="panel">
+                    <h2 id="overlay-title">Ready?</h2>
+                    <p id="overlay-msg">Wait for the cuckoo 🐦 to pop out, then tap the clock as fast as you can! Don't tap too early.</p>
+                    <label class="name-row" for="name-input">
+                        <span>Name</span>
+                        <input id="name-input" type="text" maxlength="12" autocomplete="off"
+                               spellcheck="false" placeholder="Player" />
+                    </label>
+                    <button id="start-btn">Start</button>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>60 seconds. Faster taps on the 🐦 = more points. Early taps cost −1.</p>
+        </footer>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
