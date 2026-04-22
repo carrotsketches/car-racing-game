@@ -129,8 +129,9 @@
         playerName: "",
         leaderboard: loadLeaderboard(),
         bags: [],        // on belt
+        flyingBags: [],  // tapped bags arcing up to the plane
         cargo: [],       // loaded on plane
-        passengers: [],  // { cityId, color, spawnedAt }
+        wants: [],       // { cityId, color, newAt } — what each city wants right now
         confetti: [],
         floaters: [],    // floating city-name text
         plane: { state: "idle", x: HOME.x, y: HOME.y, tx: HOME.x, ty: HOME.y, fromX: HOME.x, fromY: HOME.y, progress: 0, targetCity: null },
@@ -173,10 +174,10 @@
         return 50 + 60 * t;
     }
 
-    function currentPassengerInterval() {
-        // Ramp from 2000ms → 1000ms.
+    function currentWantInterval() {
+        // Ramp from 1800ms → 900ms.
         const t = Math.min(1, state.elapsed / (ROUND_SECONDS * 1000));
-        return 2000 - 1000 * t;
+        return 1800 - 900 * t;
     }
 
     function spawnBag() {
@@ -188,19 +189,17 @@
         });
     }
 
-    function spawnPassenger() {
-        // Pick a city with fewer than 3 waiting passengers.
+    function spawnWant() {
+        // Pick a city with fewer than 3 active wants.
         const candidates = CITIES.filter((c) => {
-            const waiting = state.passengers.filter((p) => p.cityId === c.id).length;
-            return waiting < 3;
+            return state.wants.filter((w) => w.cityId === c.id).length < 3;
         });
         if (candidates.length === 0) return;
         const city = candidates[Math.floor(Math.random() * candidates.length)];
-        state.passengers.push({
-            cityId: city.id,
-            color: city.color,
-            bob: Math.random() * Math.PI * 2
-        });
+        // Any of the 6 bag colors — not necessarily the city's own color.
+        const color = CITIES[Math.floor(Math.random() * CITIES.length)].color;
+        state.wants.push({ cityId: city.id, color, newAt: state.elapsed });
+        tone(900, 0.08, "triangle", 0.05); // bell-ding
     }
 
     // ---------- Plane state machine ----------
@@ -222,10 +221,10 @@
         const p = state.plane;
         if (p.state === "idle") return;
 
-        // Durations (seconds)
-        const TAKEOFF = 0.35;
-        const DELIVER = 0.6;
-        const speedPxPerSec = 260;
+        // Durations (seconds) — tight so kids don't wait.
+        const TAKEOFF = 0.22;
+        const DELIVER = 0.4;
+        const speedPxPerSec = 400;
 
         if (p.state === "takeoff") {
             p.progress += dt / TAKEOFF;
@@ -239,7 +238,7 @@
             const dx = tx - p.fromX;
             const dy = ty - p.fromY;
             const dist = Math.hypot(dx, dy) || 1;
-            const dur = Math.max(0.6, dist / speedPxPerSec);
+            const dur = Math.max(0.35, dist / speedPxPerSec);
             p.progress += dt / dur;
             if (p.progress >= 1) p.progress = 1;
             p.x = p.fromX + dx * p.progress;
@@ -271,11 +270,11 @@
 
     function deliverCargo(city) {
         let delivered = 0;
-        // Match cargo bags to waiting passengers at this city by color.
-        const waiting = state.passengers.filter((p) => p.cityId === city.id);
+        // Match cargo bags to wanted colors at this city.
+        const wants = state.wants.filter((w) => w.cityId === city.id);
         const remainingCargo = [];
         for (const bag of state.cargo) {
-            const hit = waiting.find((pax) => pax.color === bag.color && !pax.claimed);
+            const hit = wants.find((w) => w.color === bag.color && !w.claimed);
             if (hit) {
                 hit.claimed = true;
                 delivered += 1;
@@ -284,18 +283,55 @@
             }
         }
         state.cargo = remainingCargo;
-        state.passengers = state.passengers.filter((p) => !p.claimed);
+        state.wants = state.wants.filter((w) => !w.claimed);
 
         if (delivered > 0) {
             const points = 10 * delivered + 5 * Math.max(0, delivered - 1);
             state.score += points;
             scoreEl.textContent = state.score;
-            tone(city.note, 0.18, "triangle", 0.12);
+
+            // Happy chord: root + major third + fifth.
+            tone(city.note, 0.22, "triangle", 0.1);
+            tone(city.note * 1.25, 0.22, "triangle", 0.08);
+            tone(city.note * 1.5, 0.22, "triangle", 0.07);
+
+            // Bigger confetti burst.
             spawnConfetti(city.x, city.y, city.color);
-            state.floaters.push({ text: `${city.emoji} ${city.name}! +${points}`, x: city.x, y: city.y - 22, life: 1.4, max: 1.4, color: city.color });
+            spawnConfetti(city.x, city.y, "#ffffff");
+
+            // Staggered "+10" popups per delivered bag.
+            for (let i = 0; i < delivered; i++) {
+                const ox = (i - (delivered - 1) / 2) * 22;
+                state.floaters.push({ text: "+10", x: city.x + ox, y: city.y - 18 - i * 4, life: 1.1, max: 1.1, color: "#fff2a8" });
+            }
+
+            // Combo badge for 2+ matches.
+            if (delivered >= 2) {
+                state.floaters.push({ text: `COMBO x${delivered}!`, x: city.x, y: city.y - 40, life: 1.6, max: 1.6, color: "#fff" });
+            }
+
+            // City name cheer.
+            state.floaters.push({ text: `${city.emoji} ${city.name}!`, x: city.x, y: city.y + 52, life: 1.4, max: 1.4, color: city.color });
+
+            // Landmark bounce animation (used by drawCityCard).
+            city.bounceUntil = state.elapsed + 500;
+
+            // Full-card clear bonus: every want at this city is gone.
+            const leftover = state.wants.filter((w) => w.cityId === city.id).length;
+            if (leftover === 0) {
+                state.score += 25;
+                scoreEl.textContent = state.score;
+                spawnFireworks(city.x, city.y);
+                state.floaters.push({ text: "CLEARED! +25", x: city.x, y: city.y - 62, life: 2.0, max: 2.0, color: "#ffd23f" });
+                tone(city.note * 2, 0.3, "triangle", 0.1);
+                tone(city.note * 3, 0.3, "triangle", 0.06);
+                city.bounceUntil = state.elapsed + 900;
+            }
         } else {
-            tone(180, 0.12, "sawtooth", 0.06);
-            state.floaters.push({ text: "no match", x: city.x, y: city.y - 22, life: 1.0, max: 1.0, color: "#e0e0e0" });
+            // Sad trombone: descending tones.
+            tone(260, 0.12, "sawtooth", 0.06);
+            tone(200, 0.14, "sawtooth", 0.05);
+            state.floaters.push({ text: "no match 🙁", x: city.x, y: city.y - 22, life: 1.0, max: 1.0, color: "#e0e0e0" });
         }
     }
 
@@ -308,6 +344,24 @@
                 life: 0.9 + Math.random() * 0.4,
                 max: 1.3,
                 color: Math.random() < 0.5 ? color : "#fff2d1"
+            });
+        }
+    }
+
+    // A 360-degree rainbow burst for full-card clears.
+    function spawnFireworks(x, y) {
+        const palette = CITIES.map((c) => c.color);
+        const n = 44;
+        for (let i = 0; i < n; i++) {
+            const angle = (i / n) * Math.PI * 2;
+            const speed = 130 + Math.random() * 90;
+            state.confetti.push({
+                x, y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed - 40,
+                life: 1.3 + Math.random() * 0.4,
+                max: 1.7,
+                color: palette[i % palette.length]
             });
         }
     }
@@ -346,10 +400,63 @@
         }
     }
 
+    function drawBagIcon(cx, cy, size, color, filled) {
+        const w = size, h = size * 0.8;
+        const bx = cx - w / 2, by = cy - h / 2 + 1;
+
+        // Bag body.
+        roundRect(bx, by, w, h, 1.5);
+        if (filled) {
+            ctx.fillStyle = color;
+            ctx.fill();
+            ctx.strokeStyle = "rgba(0,0,0,0.55)";
+            ctx.lineWidth = 1.2;
+            ctx.stroke();
+        } else {
+            ctx.fillStyle = "rgba(0,0,0,0.18)";
+            ctx.fill();
+            ctx.setLineDash([2, 2]);
+            ctx.strokeStyle = "rgba(255,255,255,0.5)";
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+
+        // Handle.
+        ctx.beginPath();
+        ctx.arc(cx, by, w * 0.28, Math.PI, 2 * Math.PI);
+        ctx.lineWidth = 1.2;
+        ctx.strokeStyle = filled ? "rgba(0,0,0,0.6)" : "rgba(255,255,255,0.4)";
+        ctx.stroke();
+
+        // Clasp highlight.
+        if (filled) {
+            ctx.fillStyle = "rgba(255,255,255,0.85)";
+            ctx.fillRect(cx - 0.8, by + 1.5, 1.6, 1.6);
+        }
+    }
+
     function drawCityCard(city) {
         const cw = CARD.w, ch = CARD.h, r = CARD.r;
         const x = city.x - cw / 2;
         const y = city.y - ch / 2;
+
+        const wants = state.wants.filter((w) => w.cityId === city.id);
+        const hasMatch = state.plane.state === "idle" && state.cargo.length > 0 &&
+            wants.some((w) => state.cargo.some((b) => b.color === w.color));
+
+        // Match-hint pulsing halo when current cargo can deliver here.
+        if (hasMatch) {
+            const pulse = 0.55 + 0.35 * Math.sin(state.elapsed / 150);
+            ctx.save();
+            ctx.shadowColor = `rgba(255, 245, 160, ${pulse})`;
+            ctx.shadowBlur = 18;
+            ctx.strokeStyle = `rgba(255, 250, 190, ${pulse})`;
+            ctx.lineWidth = 3;
+            roundRect(x - 1, y - 1, cw + 2, ch + 2, r + 1);
+            ctx.stroke();
+            ctx.restore();
+        }
 
         // Drop shadow.
         ctx.fillStyle = "rgba(0,0,0,0.18)";
@@ -369,35 +476,43 @@
         ctx.lineWidth = 2;
         ctx.stroke();
 
-        // Landmark emoji.
+        // Landmark emoji — bounces briefly after a delivery.
+        let emojiScale = 1;
+        if (city.bounceUntil && state.elapsed < city.bounceUntil) {
+            const t = 1 - (city.bounceUntil - state.elapsed) / 500;
+            emojiScale = 1 + 0.55 * Math.sin(t * Math.PI);
+        }
+        ctx.save();
+        ctx.translate(city.x, city.y - 16);
+        ctx.scale(emojiScale, emojiScale);
         ctx.font = "30px system-ui, 'Apple Color Emoji', sans-serif";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.fillText(city.emoji, city.x, city.y - 16);
+        ctx.fillText(city.emoji, 0, 0);
+        ctx.restore();
 
         // City name.
         ctx.font = "bold 11px system-ui, sans-serif";
         ctx.fillStyle = "#fff";
         ctx.fillText(city.name.toUpperCase(), city.x, city.y + 14);
 
-        // Waiting passenger seats (up to 3, inside the card bottom).
-        const waiting = state.passengers.filter((p) => p.cityId === city.id);
+        // Wanted-luggage slots (up to 3). New wants pulse briefly after spawn.
         for (let i = 0; i < 3; i++) {
-            const sx = city.x - 14 + i * 14;
+            const sx = city.x - 16 + i * 16;
             const sy = city.y + 30;
-            ctx.beginPath();
-            ctx.arc(sx, sy, 5, 0, Math.PI * 2);
-            if (waiting[i]) {
-                ctx.fillStyle = waiting[i].color;
+            const w = wants[i];
+            if (w) {
+                const age = (state.elapsed - w.newAt) / 1000;
+                const pulse = age < 0.8 ? 1 + Math.sin(age * 12) * 0.35 * (1 - age / 0.8) : 1;
+                // Soft halo behind the bag icon.
+                ctx.beginPath();
+                ctx.arc(sx, sy, 9 * pulse, 0, Math.PI * 2);
+                ctx.fillStyle = w.color + "55";
                 ctx.fill();
-                ctx.strokeStyle = "rgba(0,0,0,0.45)";
+                drawBagIcon(sx, sy, 11 * pulse, w.color, true);
             } else {
-                ctx.fillStyle = "rgba(255,255,255,0.2)";
-                ctx.fill();
-                ctx.strokeStyle = "rgba(255,255,255,0.4)";
+                drawBagIcon(sx, sy, 11, null, false);
             }
-            ctx.lineWidth = 1;
-            ctx.stroke();
         }
     }
 
@@ -483,15 +598,6 @@
 
         ctx.save();
         ctx.translate(x, y + bounce);
-
-        // Idle-with-cargo glow to hint at tappability.
-        if (p.state === "idle" && state.running && state.cargo.length > 0) {
-            const pulse = 0.35 + 0.25 * Math.sin(state.elapsed / 180);
-            ctx.beginPath();
-            ctx.arc(0, 0, 20, 0, Math.PI * 2);
-            ctx.fillStyle = `rgba(255, 214, 107, ${pulse * 0.5})`;
-            ctx.fill();
-        }
 
         // Rotate toward target during flight.
         if (p.state === "flying" || p.state === "returning") {
@@ -692,6 +798,34 @@
         ctx.globalAlpha = 1;
     }
 
+    function drawFlyingBags() {
+        for (const fb of state.flyingBags) {
+            const t = fb.progress;
+            const x = fb.fromX + (state.plane.x - fb.fromX) * t;
+            const yLin = fb.fromY + (state.plane.y - fb.fromY) * t;
+            // Parabolic arc: lift peaks at t=0.5.
+            const y = yLin - 80 * Math.sin(Math.PI * t);
+            // Shadow trail.
+            ctx.beginPath();
+            ctx.arc(x, y, 14, 0, Math.PI * 2);
+            ctx.fillStyle = fb.color + "33";
+            ctx.fill();
+            // Bag.
+            ctx.beginPath();
+            ctx.arc(x, y, 11, 0, Math.PI * 2);
+            ctx.fillStyle = fb.color;
+            ctx.fill();
+            ctx.strokeStyle = "rgba(0,0,0,0.45)";
+            ctx.lineWidth = 1.4;
+            ctx.stroke();
+            ctx.font = "13px system-ui, sans-serif";
+            ctx.fillStyle = "#fff";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText("🧳", x, y);
+        }
+    }
+
     function render() {
         drawSky();
         drawClouds();
@@ -699,6 +833,7 @@
         drawCityCards();
         drawPlane();
         drawBelt();
+        drawFlyingBags();
         drawEffects();
     }
 
@@ -719,17 +854,26 @@
             state.bagSpawn.next = currentBagInterval();
         }
 
-        // Belt motion (only when plane is idle at home — easier for kids)
+        // Belt motion.
         const beltSpeed = currentBeltSpeed();
         for (const b of state.bags) b.x += beltSpeed * dt;
-        // Drop bags that fall off the right edge.
         state.bags = state.bags.filter((b) => b.x < BELT.x + BELT.w + 30);
 
-        // Passenger spawn
-        state.passSpawnNext = (state.passSpawnNext || 1500) - dt * 1000;
-        if (state.passSpawnNext <= 0) {
-            spawnPassenger();
-            state.passSpawnNext = currentPassengerInterval();
+        // Flying bags arc up to the plane; when they land they become cargo.
+        for (const fb of state.flyingBags) fb.progress += dt / fb.duration;
+        for (const fb of state.flyingBags.filter((f) => f.progress >= 1)) {
+            if (state.cargo.length < CARGO_MAX) {
+                state.cargo.push({ color: fb.color });
+                tone(520, 0.05, "triangle", 0.05); // tiny "plop" on land
+            }
+        }
+        state.flyingBags = state.flyingBags.filter((f) => f.progress < 1);
+
+        // Wanted-color spawn
+        state.wantSpawnNext = (state.wantSpawnNext || 1500) - dt * 1000;
+        if (state.wantSpawnNext <= 0) {
+            spawnWant();
+            state.wantSpawnNext = currentWantInterval();
         }
 
         // Plane
@@ -775,63 +919,44 @@
     function handleTap(x, y) {
         if (!state.running) return;
 
-        // Priority 1: bag on belt
+        // Priority 1: bag on belt — tap launches an arc up to the plane.
         for (let i = state.bags.length - 1; i >= 0; i--) {
             const b = state.bags[i];
             if (Math.hypot(b.x - x, b.y - y) <= b.r + 4) {
-                if (state.cargo.length >= CARGO_MAX) {
+                const reserved = state.cargo.length + state.flyingBags.length;
+                if (reserved >= CARGO_MAX) {
                     tone(160, 0.1, "sawtooth", 0.05);
                     return;
                 }
-                state.cargo.push({ color: b.color });
+                state.flyingBags.push({
+                    fromX: b.x, fromY: b.y,
+                    color: b.color,
+                    progress: 0,
+                    duration: 0.45
+                });
                 state.bags.splice(i, 1);
-                tone(420, 0.08, "square", 0.06);
+                tone(620, 0.07, "square", 0.05);
+                tone(880, 0.06, "square", 0.04);
                 return;
             }
         }
 
-        // Priority 2: tap the airplane to take off.
-        if (state.plane.state === "idle" && Math.hypot(state.plane.x - x, state.plane.y - y) <= 24) {
-            if (state.cargo.length === 0) {
-                tone(160, 0.1, "sawtooth", 0.05);
-                state.floaters.push({ text: "Load bags first!", x: state.plane.x, y: state.plane.y - 24, life: 1.2, max: 1.2, color: "#ffd23f" });
-                return;
-            }
-            const city = pickBestCity();
-            if (city) planeFlyTo(city);
-            return;
-        }
-    }
-
-    // Picks the city that will deliver the most bags for this trip.
-    // Ties broken by nearest city (encourages variety early on).
-    function pickBestCity() {
-        const cargoByColor = {};
-        for (const b of state.cargo) cargoByColor[b.color] = (cargoByColor[b.color] || 0) + 1;
-
-        let best = null;
-        let bestScore = -1;
-        let bestDist = Infinity;
-        for (const c of CITIES) {
-            const waiting = state.passengers.filter((p) => p.cityId === c.id);
-            let matches = 0;
-            const seen = Object.assign({}, cargoByColor);
-            for (const p of waiting) {
-                if ((seen[p.color] || 0) > 0) {
-                    matches += 1;
-                    seen[p.color] -= 1;
+        // Priority 2: tap a destination card to fly there.
+        if (state.plane.state === "idle") {
+            for (const c of CITIES) {
+                const dx = Math.abs(c.x - x);
+                const dy = Math.abs(c.y - y);
+                if (dx <= CARD.w / 2 && dy <= CARD.h / 2) {
+                    if (state.cargo.length === 0) {
+                        tone(160, 0.1, "sawtooth", 0.05);
+                        state.floaters.push({ text: "Load bags first!", x: state.plane.x, y: state.plane.y - 28, life: 1.2, max: 1.2, color: "#ffd23f" });
+                        return;
+                    }
+                    planeFlyTo(c);
+                    return;
                 }
             }
-            const dist = Math.hypot(c.x - HOME.x, c.y - HOME.y);
-            if (matches > bestScore || (matches === bestScore && dist < bestDist)) {
-                best = c;
-                bestScore = matches;
-                bestDist = dist;
-            }
         }
-        // If nobody matches, still fly to the nearest city with waiting passengers
-        // so something visibly happens — otherwise any city at all.
-        return best;
     }
 
     canvas.addEventListener("pointerdown", (e) => {
@@ -857,13 +982,14 @@
         state.elapsed = 0;
         state.timeLeft = ROUND_SECONDS;
         state.bags = [];
+        state.flyingBags = [];
         state.cargo = [];
-        state.passengers = [];
+        state.wants = [];
         state.confetti = [];
         state.floaters = [];
         state.plane = { state: "idle", x: HOME.x, y: HOME.y, tx: HOME.x, ty: HOME.y, fromX: HOME.x, fromY: HOME.y, progress: 0, targetCity: null };
         state.bagSpawn = { next: 600, interval: 1500 };
-        state.passSpawnNext = 900;
+        state.wantSpawnNext = 900;
         state.lastTs = 0;
 
         scoreEl.textContent = "0";
@@ -871,9 +997,10 @@
         timeStatEl.classList.remove("low");
         overlay.classList.add("hidden");
 
-        // Seed a couple of passengers so kids have targets immediately.
-        spawnPassenger();
-        spawnPassenger();
+        // Seed a few wanted colors so kids have targets immediately.
+        spawnWant();
+        spawnWant();
+        spawnWant();
 
         requestAnimationFrame(loop);
     }
