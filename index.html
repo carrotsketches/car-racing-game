@@ -2,103 +2,61 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <title>Fun Games</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Earth Day</title>
+    <link rel="stylesheet" href="earth-day/style.css">
 </head>
 <body>
-    <details class="top-menu">
-        <summary aria-label="Open menu">☰ Menu</summary>
-        <nav class="top-menu-panel" aria-label="More games">
-            <a href="beta/">🧪 Beta Games</a>
-            <a href="hard/">🔥 Hard Games</a>
-        </nav>
-    </details>
-    <main class="home">
-        <h1>🎮 Let's Play!</h1>
-        <p class="subtitle">Pick a game to start</p>
+    <div class="game-wrapper">
+        <header>
+            <h1>Earth Day</h1>
+            <div class="hud">
+                <div class="stat" id="player-tag">👤 <span id="player-name">—</span></div>
+                <div class="stat">Score: <span id="score">0</span></div>
+                <div class="stat time-stat" id="time-stat">⏱ <span id="time">60</span>s</div>
+                <div class="stat">Best: <span id="best">0</span></div>
+            </div>
+        </header>
 
-        <div class="game-grid">
-            <a class="game-card highway-dash" href="highway-dash/">
-                <div class="emoji" aria-hidden="true">🚗</div>
-                <div class="title">Highway Dash</div>
-                <div class="desc">Dodge traffic and grab coins!</div>
-                <div class="badge">Play</div>
-            </a>
+        <div class="stage" id="stage">
+            <div class="play-area" id="play-area"></div>
 
-            <a class="game-card whack-a-mole" href="whack-a-mole/">
-                <div class="emoji" aria-hidden="true">🐹</div>
-                <div class="title">Whack-a-Mole</div>
-                <div class="desc">Tap the moles, skip the bees!</div>
-                <div class="badge">Play</div>
-            </a>
+            <div class="bins" id="bins">
+                <button type="button" class="bin bin-recycle" id="bin-recycle" aria-label="Recycling bin">
+                    <span class="bin-icon">♻️</span>
+                </button>
+                <button type="button" class="bin bin-trash" id="bin-trash" aria-label="Trash bin">
+                    <span class="bin-icon">🗑️</span>
+                </button>
+            </div>
 
-            <a class="game-card add-it-up" href="add-it-up/">
-                <div class="emoji" aria-hidden="true">➕</div>
-                <div class="title">Add It Up!</div>
-                <div class="desc">Practice + and − — easy 1–10 or medium 1–20!</div>
-                <div class="badge">Play</div>
-            </a>
-
-            <a class="game-card piano" href="piano/">
-                <div class="emoji" aria-hidden="true">🎹</div>
-                <div class="title">Piano Memory</div>
-                <div class="desc">Hear the tune, then tap it back!</div>
-                <div class="badge">Play</div>
-            </a>
-
-            <a class="game-card bus-route-rush" href="bus-route-rush/">
-                <div class="emoji" aria-hidden="true">🚌</div>
-                <div class="title">Bus Route Rush</div>
-                <div class="desc">Pick up passengers and drop them at matching stops!</div>
-                <div class="badge">Play</div>
-            </a>
-
-            <a class="game-card clock-it" href="clock-it/">
-                <div class="emoji" aria-hidden="true">⏰</div>
-                <div class="title">Clock It!</div>
-                <div class="desc">Type a time — watch the clock hands move!</div>
-                <div class="badge">Play</div>
-            </a>
-
-            <a class="game-card maze-game" href="maze-game/">
-                <div class="emoji" aria-hidden="true">🐰</div>
-                <div class="title">Bunny Maze</div>
-                <div class="desc">Help 🐰 find the 🥕 — grab ⭐ for bonus!</div>
-                <div class="badge">New</div>
-            </a>
-
-            <a class="game-card color-mixing" href="color-mixing/">
-                <div class="emoji" aria-hidden="true">🎨</div>
-                <div class="title">Color Mixing</div>
-                <div class="desc">Mix two paints to match the color!</div>
-                <div class="badge">New</div>
-            </a>
-
-            <a class="game-card critter-cruise" href="critter-cruise/">
-                <div class="emoji" aria-hidden="true">🚙</div>
-                <div class="title">Critter Cruise</div>
-                <div class="desc">Cruise hilly roads, grab stars, hit boost pads!</div>
-                <div class="badge">New</div>
-            </a>
-
-            <a class="game-card airport-luggage-game" href="airport-luggage-game/">
-                <div class="emoji" aria-hidden="true">✈️</div>
-                <div class="title">Airport Luggage</div>
-                <div class="desc">Load bags, fly the world, deliver to matching travelers!</div>
-                <div class="badge">New</div>
-            </a>
-
-            <a class="game-card cuckoo-clock" href="cuckoo-clock/">
-                <div class="emoji" aria-hidden="true">🕰️</div>
-                <div class="title">Cuckoo Clock</div>
-                <div class="desc">Wait for the cuckoo 🐦 — then tap fast!</div>
-                <div class="badge">New</div>
-            </a>
-
+            <div id="overlay" class="overlay">
+                <div class="panel">
+                    <h2 id="overlay-title">Sort it out!</h2>
+                    <p id="overlay-msg">Tap the ♻️ bin for paper, cans, and bottles. Tap the 🗑️ bin for food scraps and trash.</p>
+                    <div class="toggle-row">
+                        <div class="mode-toggle" role="group" aria-label="Pick difficulty">
+                            <button type="button" class="toggle-btn selected" data-diff="easy">Easy</button>
+                            <button type="button" class="toggle-btn" data-diff="medium">Medium</button>
+                        </div>
+                    </div>
+                    <label class="name-row" for="name-input">
+                        <span>Name</span>
+                        <input id="name-input" type="text" maxlength="12" autocomplete="off"
+                               spellcheck="false" placeholder="Player" />
+                    </label>
+                    <button id="start-btn">Start</button>
+                </div>
+            </div>
         </div>
-    </main>
+
+        <footer>
+            <p>♻️ = paper, cans, bottles &nbsp; • &nbsp; 🗑️ = food &amp; scraps</p>
+        </footer>
+    </div>
+
+    <script src="earth-day/game.js"></script>
 </body>
 </html>
