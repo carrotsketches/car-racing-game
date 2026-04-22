@@ -821,15 +821,48 @@
             }
         }
 
-        // Priority 2: city pin (only when plane is idle and has cargo)
-        if (state.plane.state === "idle" && state.cargo.length > 0) {
-            for (const c of CITIES) {
-                if (Math.hypot(c.x - x, c.y - y) <= 16) {
-                    planeFlyTo(c);
-                    return;
+        // Priority 2: tap the airplane to take off.
+        if (state.plane.state === "idle" && Math.hypot(state.plane.x - x, state.plane.y - y) <= 24) {
+            if (state.cargo.length === 0) {
+                tone(160, 0.1, "sawtooth", 0.05);
+                state.floaters.push({ text: "Load bags first!", x: state.plane.x, y: state.plane.y - 24, life: 1.2, max: 1.2, color: "#ffd23f" });
+                return;
+            }
+            const city = pickBestCity();
+            if (city) planeFlyTo(city);
+            return;
+        }
+    }
+
+    // Picks the city that will deliver the most bags for this trip.
+    // Ties broken by nearest city (encourages variety early on).
+    function pickBestCity() {
+        const cargoByColor = {};
+        for (const b of state.cargo) cargoByColor[b.color] = (cargoByColor[b.color] || 0) + 1;
+
+        let best = null;
+        let bestScore = -1;
+        let bestDist = Infinity;
+        for (const c of CITIES) {
+            const waiting = state.passengers.filter((p) => p.cityId === c.id);
+            let matches = 0;
+            const seen = Object.assign({}, cargoByColor);
+            for (const p of waiting) {
+                if ((seen[p.color] || 0) > 0) {
+                    matches += 1;
+                    seen[p.color] -= 1;
                 }
             }
+            const dist = Math.hypot(c.x - HOME.x, c.y - HOME.y);
+            if (matches > bestScore || (matches === bestScore && dist < bestDist)) {
+                best = c;
+                bestScore = matches;
+                bestDist = dist;
+            }
         }
+        // If nobody matches, still fly to the nearest city with waiting passengers
+        // so something visibly happens — otherwise any city at all.
+        return best;
     }
 
     canvas.addEventListener("pointerdown", (e) => {
