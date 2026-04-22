@@ -218,6 +218,30 @@ canvas {
     pointer-events: none;
 }
 
+.end-btn {
+    font-size: 0.78rem;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: rgba(239, 68, 68, 0.18);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    cursor: pointer;
+    font-weight: 700;
+    white-space: nowrap;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.1s ease;
+}
+
+.end-btn:hover {
+    background: rgba(239, 68, 68, 0.32);
+}
+
+.end-btn:active {
+    transform: none;
+    box-shadow: none;
+}
+
 button {
     background: #ef4444;
     color: #fff;
