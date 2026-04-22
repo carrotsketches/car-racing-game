@@ -3,13 +3,14 @@
     const CANVAS_W = 360;
     const CANVAS_H = 540;
     const ROUND_SECONDS = 60;
-    const CARGO_CAP = 3;   // each plane takes off once it has this many matching bags
+    const CARGO_CAP = 2;   // each plane takes off once it has this many matching bags
 
-    // Three destinations, each paired with a same-colored plane.
+    // Four destinations, each paired with a same-colored plane.
     const CITIES = [
-        { id: "nyc",    name: "New York", emoji: "🗽", color: "#ff4d5e", x:  90, y: 90, note: 523.25 },
-        { id: "paris",  name: "Paris",    emoji: "🗼", color: "#4ec0ff", x: 180, y: 90, note: 659.25 },
-        { id: "tokyo",  name: "Tokyo",    emoji: "🏯", color: "#b36bff", x: 270, y: 90, note: 783.99 }
+        { id: "nyc",     name: "New York", emoji: "🗽", color: "#ff4d5e", x:  45, y: 90, note: 523.25 },
+        { id: "china",   name: "China",    emoji: "🐼", color: "#ffc94b", x: 135, y: 90, note: 659.25 },
+        { id: "japan",   name: "Japan",    emoji: "🗻", color: "#b36bff", x: 225, y: 90, note: 783.99 },
+        { id: "germany", name: "Germany",  emoji: "🏰", color: "#4ac867", x: 315, y: 90, note: 880.00 }
     ];
 
     // Plane home positions — each plane sits below its matching city.
