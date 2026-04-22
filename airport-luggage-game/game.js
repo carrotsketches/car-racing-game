@@ -196,9 +196,8 @@
         });
         if (candidates.length === 0) return;
         const city = candidates[Math.floor(Math.random() * candidates.length)];
-        // Any of the 6 bag colors — not necessarily the city's own color.
-        const color = CITIES[Math.floor(Math.random() * CITIES.length)].color;
-        state.wants.push({ cityId: city.id, color, newAt: state.elapsed });
+        // Each city only wants its own color — bag color must match card color.
+        state.wants.push({ cityId: city.id, color: city.color, newAt: state.elapsed });
         tone(900, 0.08, "triangle", 0.05); // bell-ding
     }
 
