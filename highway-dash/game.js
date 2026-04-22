@@ -316,8 +316,8 @@
     const CONFETTI_COLORS = ["#f5c451", "#e74c3c", "#3498db", "#2ecc71", "#9b59b6", "#ff7a59", "#ecf0f1"];
 
     function applyLevelDifficulty() {
-        state.baseSpeed = Math.min(5, BASE_SPEED_LV1 + (state.level - 1) * 0.3);
-        state.maxSpeed = Math.min(10, MAX_SPEED_LV1 + (state.level - 1) * 0.5);
+        state.baseSpeed = BASE_SPEED_LV1;
+        state.maxSpeed = MAX_SPEED_LV1;
     }
 
     function spawnConfetti() {
