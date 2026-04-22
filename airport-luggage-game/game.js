@@ -168,7 +168,7 @@
         leaderboard: loadLeaderboard(),
         bags: [],              // on belt
         flyingBags: [],        // bags arcing to a plane
-        selectedBag: null,     // { color, x, y } — the bag the kid tapped, waiting for plane
+        draggingBag: null,     // { color, x, y } — bag currently under the kid's finger
         planes: PLANES.map(makePlane),
         confetti: [],
         floaters: [],
@@ -519,22 +519,35 @@
         }
     }
 
-    function drawSelectedBag() {
-        const sb = state.selectedBag;
+    function drawDraggingBag() {
+        const sb = state.draggingBag;
         if (!sb) return;
-        const pulse = 1 + Math.sin(state.elapsed / 100) * 0.18;
+        // Soft shadow on the "ground" below finger.
         ctx.beginPath();
-        ctx.arc(sb.x, sb.y, 22 * pulse, 0, Math.PI * 2);
-        ctx.fillStyle = sb.color + "33";
+        ctx.ellipse(sb.x, sb.y + 18, 14, 4, 0, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(0,0,0,0.25)";
         ctx.fill();
+
+        // Match halo when dragging over a valid plane.
+        const over = findPlaneAt(sb.x, sb.y);
+        if (over && over.color === sb.color && over.state === "idle"
+            && over.cargo.length + countFlyingToPlane(over.id) < CARGO_CAP) {
+            const pulse = 1 + Math.sin(state.elapsed / 90) * 0.25;
+            ctx.beginPath();
+            ctx.arc(over.x, over.y, 28 * pulse, 0, Math.PI * 2);
+            ctx.fillStyle = sb.color + "44";
+            ctx.fill();
+        }
+
+        // Bag following the finger, slightly larger so it reads as "picked up".
         ctx.beginPath();
-        ctx.arc(sb.x, sb.y, 17, 0, Math.PI * 2);
+        ctx.arc(sb.x, sb.y, 19, 0, Math.PI * 2);
         ctx.fillStyle = sb.color;
         ctx.fill();
         ctx.strokeStyle = "rgba(0,0,0,0.55)";
         ctx.lineWidth = 2;
         ctx.stroke();
-        ctx.font = "14px system-ui, 'Apple Color Emoji', sans-serif";
+        ctx.font = "16px system-ui, 'Apple Color Emoji', sans-serif";
         ctx.fillStyle = "#fff";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
@@ -567,7 +580,7 @@
         drawBelt();
         drawBags();
         drawFlyingBags();
-        drawSelectedBag();
+        drawDraggingBag();
         drawEffects();
     }
 
@@ -762,7 +775,7 @@
     }
 
     function tryLoadBag(plane) {
-        const sb = state.selectedBag;
+        const sb = state.draggingBag;
         if (!sb) return false;
         if (plane.state !== "idle") {
             plane.rejectUntil = state.elapsed + 350;
@@ -784,16 +797,16 @@
             tone(180, 0.1, "sawtooth", 0.05);
             return false;
         }
-        // Valid load — arc bag onto plane.
+        // Valid load — short snap arc from drop point onto the plane.
         state.flyingBags.push({
             fromX: sb.x, fromY: sb.y,
             toX: plane.x, toY: plane.y,
             color: sb.color,
             planeId: plane.id,
             progress: 0,
-            duration: 0.45
+            duration: 0.22
         });
-        state.selectedBag = null;
+        state.draggingBag = null;
         tone(620, 0.07, "square", 0.05);
         tone(880, 0.06, "square", 0.04);
         return true;
@@ -803,51 +816,80 @@
         return state.flyingBags.filter((f) => f.planeId === id).length;
     }
 
-    function handleTap(x, y) {
-        if (!state.running) return;
-
-        // Priority 1: if a bag is selected, tapping a plane tries to load it.
-        if (state.selectedBag) {
-            for (const p of state.planes) {
-                if (Math.hypot(p.x - x, p.y - y) <= 28) {
-                    tryLoadBag(p);
-                    return;
-                }
-            }
+    function findPlaneAt(x, y) {
+        let hit = null, hitDist = Infinity;
+        for (const p of state.planes) {
+            const d = Math.hypot(p.x - x, p.y - y);
+            if (d < 36 && d < hitDist) { hit = p; hitDist = d; }
         }
-
-        // Priority 2: tap a bag on the belt to select it.
-        for (let i = state.bags.length - 1; i >= 0; i--) {
-            const b = state.bags[i];
-            if (Math.hypot(b.x - x, b.y - y) <= b.r + 4) {
-                state.selectedBag = { color: b.color, x: b.x, y: b.y };
-                state.bags.splice(i, 1);
-                tone(520, 0.07, "square", 0.05);
-                return;
-            }
-        }
-
-        // Priority 3: tapping somewhere else with a bag selected cancels & returns it.
-        if (state.selectedBag) {
-            const sb = state.selectedBag;
-            // Drop the bag back onto the belt so it rolls off naturally.
-            state.bags.push({
-                x: Math.max(BELT.x + 10, Math.min(BELT.x + BELT.w - 20, sb.x)),
-                y: BELT.y + BELT.h / 2,
-                r: BELT.bagR,
-                color: sb.color
-            });
-            state.selectedBag = null;
-            tone(240, 0.08, "sine", 0.05);
-        }
+        return hit;
     }
 
-    canvas.addEventListener("pointerdown", (e) => {
+    function returnBagToBelt() {
+        const sb = state.draggingBag;
+        if (!sb) return;
+        state.bags.push({
+            x: Math.max(BELT.x + 10, Math.min(BELT.x + BELT.w - 20, sb.x)),
+            y: BELT.y + BELT.h / 2,
+            r: BELT.bagR,
+            color: sb.color
+        });
+        state.draggingBag = null;
+        tone(240, 0.08, "sine", 0.05);
+    }
+
+    let activePointerId = null;
+
+    function onPointerDown(e) {
         ensureAudio();
+        if (!state.running) return;
         const { x, y } = canvasPos(e);
-        handleTap(x, y);
+        for (let i = state.bags.length - 1; i >= 0; i--) {
+            const b = state.bags[i];
+            if (Math.hypot(b.x - x, b.y - y) <= b.r + 8) {
+                state.draggingBag = { color: b.color, x, y };
+                state.bags.splice(i, 1);
+                activePointerId = e.pointerId;
+                if (canvas.setPointerCapture) {
+                    try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
+                }
+                tone(520, 0.07, "square", 0.05);
+                break;
+            }
+        }
         e.preventDefault();
-    });
+    }
+
+    function onPointerMove(e) {
+        if (activePointerId !== e.pointerId || !state.draggingBag) return;
+        const { x, y } = canvasPos(e);
+        state.draggingBag.x = x;
+        state.draggingBag.y = y;
+        e.preventDefault();
+    }
+
+    function onPointerUp(e) {
+        if (activePointerId !== e.pointerId) return;
+        activePointerId = null;
+        if (!state.draggingBag) return;
+        const { x, y } = canvasPos(e);
+        state.draggingBag.x = x;
+        state.draggingBag.y = y;
+        const plane = findPlaneAt(x, y);
+        if (plane) {
+            if (!tryLoadBag(plane) && state.draggingBag) {
+                returnBagToBelt();
+            }
+        } else {
+            returnBagToBelt();
+        }
+        e.preventDefault();
+    }
+
+    canvas.addEventListener("pointerdown", onPointerDown);
+    canvas.addEventListener("pointermove", onPointerMove);
+    canvas.addEventListener("pointerup", onPointerUp);
+    canvas.addEventListener("pointercancel", onPointerUp);
     canvas.addEventListener("touchstart", (e) => e.preventDefault(), { passive: false });
     canvas.addEventListener("touchmove",  (e) => e.preventDefault(), { passive: false });
     canvas.addEventListener("touchend",   (e) => e.preventDefault(), { passive: false });
@@ -873,7 +915,7 @@
         state.timeLeft = ROUND_SECONDS;
         state.bags = [];
         state.flyingBags = [];
-        state.selectedBag = null;
+        state.draggingBag = null;
         state.planes = PLANES.map(makePlane);
         state.confetti = [];
         state.floaters = [];
