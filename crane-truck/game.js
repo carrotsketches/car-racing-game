@@ -565,6 +565,12 @@
 
     canvas.addEventListener("pointerdown", (e) => { e.preventDefault(); onTap(); });
     window.addEventListener("keydown", (e) => {
+        // Don't hijack keyboard activation of focused links/buttons
+        // (e.g. pressing Enter on the "← Games" link or name input).
+        if (e.target) {
+            const tag = e.target.tagName;
+            if (tag === "INPUT" || tag === "A" || tag === "BUTTON") return;
+        }
         if (e.code === "Space" || e.code === "Enter") { e.preventDefault(); onTap(); }
     });
     startBtn.addEventListener("click", startGame);
