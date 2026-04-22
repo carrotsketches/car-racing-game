@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>Butterfly Garden</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-wrapper">
+        <a class="home-link" href="../">← Games</a>
+        <header>
+            <h1>Butterfly Garden</h1>
+            <div class="hud">
+                <div class="stat" id="player-tag">👤 <span id="player-name">—</span></div>
+                <div class="stat">Nectar: <span id="score">0</span></div>
+                <div class="stat time-stat" id="time-stat">⏱ <span id="time">60</span>s</div>
+                <div class="stat">Best: <span id="best">0</span></div>
+            </div>
+        </header>
+
+        <div class="stage" id="stage">
+            <div class="meadow" id="meadow"></div>
+            <canvas id="butterfly-canvas" width="400" height="600"></canvas>
+
+            <div id="overlay" class="overlay">
+                <div class="panel">
+                    <h2 id="overlay-title">Butterfly Garden 🦋</h2>
+                    <p id="overlay-msg">Follow the flowers 🌸 with your finger!</p>
+                    <label class="name-row" for="name-input">
+                        <span>Name</span>
+                        <input id="name-input" type="text" maxlength="12" autocomplete="off"
+                               spellcheck="false" placeholder="Player" />
+                    </label>
+                    <button id="start-btn">Start</button>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>Drift over glowing flowers to sip nectar. 🦋</p>
+        </footer>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>

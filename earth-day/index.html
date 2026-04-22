@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>Earth Day</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-wrapper">
+        <a class="home-link" href="../">← Games</a>
+        <header>
+            <h1>Earth Day</h1>
+            <div class="hud">
+                <div class="stat" id="player-tag">👤 <span id="player-name">—</span></div>
+                <div class="stat">Score: <span id="score">0</span></div>
+                <div class="stat time-stat" id="time-stat">⏱ <span id="time">60</span>s</div>
+                <div class="stat">Best: <span id="best">0</span></div>
+            </div>
+        </header>
+
+        <div class="stage" id="stage">
+            <div class="play-area" id="play-area"></div>
+
+            <div class="bins" id="bins">
+                <button type="button" class="bin bin-recycle" id="bin-recycle" aria-label="Recycling bin">
+                    <span class="bin-icon">♻️</span>
+                </button>
+                <button type="button" class="bin bin-trash" id="bin-trash" aria-label="Trash bin">
+                    <span class="bin-icon">🗑️</span>
+                </button>
+            </div>
+
+            <div id="overlay" class="overlay">
+                <div class="panel">
+                    <h2 id="overlay-title">Sort it out!</h2>
+                    <p id="overlay-msg">Tap the ♻️ bin for paper, cans, and bottles. Tap the 🗑️ bin for food scraps and trash.</p>
+                    <div class="toggle-row">
+                        <div class="mode-toggle" role="group" aria-label="Pick difficulty">
+                            <button type="button" class="toggle-btn selected" data-diff="easy">Easy</button>
+                            <button type="button" class="toggle-btn" data-diff="medium">Medium</button>
+                        </div>
+                    </div>
+                    <label class="name-row" for="name-input">
+                        <span>Name</span>
+                        <input id="name-input" type="text" maxlength="12" autocomplete="off"
+                               spellcheck="false" placeholder="Player" />
+                    </label>
+                    <button id="start-btn">Start</button>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>♻️ = paper, cans, bottles &nbsp; • &nbsp; 🗑️ = food &amp; scraps</p>
+        </footer>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
