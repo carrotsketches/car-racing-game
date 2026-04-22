@@ -5,7 +5,6 @@
 
     const scoreEl = document.getElementById("score");
     const bestEl = document.getElementById("best");
-    const timeEl = document.getElementById("time");
     const overlay = document.getElementById("overlay");
     const overlayTitle = document.getElementById("overlay-title");
     const overlayMsg = document.getElementById("overlay-msg");
@@ -15,12 +14,12 @@
     const lbList = document.getElementById("leaderboard-list");
     const winchBtn = document.getElementById("winch-btn");
     const winchFill = document.getElementById("winch-fill");
+    const endBtn = document.getElementById("end-btn");
     const laneBtns = document.querySelectorAll(".touch-btn.lane");
 
     const NAME_KEY = "highway-dash-last-name";
     const LB_KEY = "tow-truck-leaderboard";
     const LB_MAX = 20;
-    const ROUND_MS = 60000;
 
     const LANE_YS = [260, 360, 460];
     const TRUCK_SCREEN_X = 90;
@@ -61,7 +60,6 @@
     const state = {
         running: false,
         score: 0,
-        timeLeft: ROUND_MS,
         cameraX: 0,
         speed: 180,
         truckLane: 1,
@@ -258,7 +256,6 @@
 
     function reset() {
         state.score = 0;
-        state.timeLeft = ROUND_MS;
         state.cameraX = 0;
         state.speed = 180;
         state.truckLane = 1;
@@ -272,7 +269,6 @@
         state.wheelAngle = 0;
         winchFill.style.width = "0%";
         scoreEl.textContent = 0;
-        timeEl.textContent = Math.ceil(ROUND_MS / 1000);
         // prime a couple of pairs
         spawnPair();
         spawnPair();
@@ -310,7 +306,7 @@
         let msg = `${state.playerName} rescued ${state.score} cars!`;
         if (rank === 0) msg += " 🏆 New top score!";
         else if (rank >= 0 && rank < 10) msg += ` Rank #${rank + 1}.`;
-        overlayTitle.textContent = "Time's up!";
+        overlayTitle.textContent = "Shift complete!";
         overlayMsg.textContent = msg;
         startBtn.textContent = "Play Again";
         overlay.classList.remove("hidden");
@@ -477,7 +473,6 @@
     }
 
     let lastTime = performance.now();
-    let timeLow = false;
     function loop(now) {
         const dtMs = now - lastTime;
         lastTime = now;
@@ -488,19 +483,7 @@
         drawRoad();
 
         if (state.running) {
-            state.timeLeft -= dtMs;
-            if (state.timeLeft <= 0) {
-                timeEl.textContent = 0;
-                endGame();
-            } else {
-                const curr = Math.ceil(state.timeLeft / 1000);
-                if (curr !== Number(timeEl.textContent)) {
-                    timeEl.textContent = curr;
-                    if (curr <= 5) playTick();
-                }
-                const low = curr <= 10;
-                if (low !== timeLow) { timeLow = low; }
-
+            {
                 // Slow the truck to a crawl while actively winching a nearby car,
                 // otherwise the adjacency window is shorter than the winch
                 // duration and the car would scroll past before being picked up.
@@ -554,6 +537,9 @@
     requestAnimationFrame(loop);
 
     startBtn.addEventListener("click", startGame);
+    if (endBtn) {
+        endBtn.addEventListener("click", () => { if (state.running) endGame(); });
+    }
 
     ["touchstart", "touchmove", "touchend"].forEach(evt => {
         canvas.addEventListener(evt, e => e.preventDefault(), { passive: false });
