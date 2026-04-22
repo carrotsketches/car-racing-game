@@ -5,16 +5,16 @@
     const ROUND_SECONDS = 60;
     const CARGO_MAX = 6;
 
-    const HOME = { x: 180, y: 215 }; // runway hub between the two rows of city cards
+    const HOME = { x: 180, y: 360 }; // runway sits at the bottom, just above the belt
 
-    // Cities laid out as a 3x2 grid of destination cards above/below the runway.
+    // Cities laid out as a 3x2 grid of destination cards above the runway.
     const CITIES = [
-        { id: "nyc",    name: "New York", country: "USA",       emoji: "🗽", color: "#ff4d5e", x:  65, y: 135, note: 523.25 },
-        { id: "paris",  name: "Paris",    country: "France",    emoji: "🗼", color: "#4ec0ff", x: 180, y: 135, note: 659.25 },
-        { id: "tokyo",  name: "Tokyo",    country: "Japan",     emoji: "🏯", color: "#b36bff", x: 295, y: 135, note: 783.99 },
-        { id: "rio",    name: "Rio",      country: "Brazil",    emoji: "🏖️", color: "#3ddc84", x:  65, y: 295, note: 587.33 },
-        { id: "cairo",  name: "Cairo",    country: "Egypt",     emoji: "🐪", color: "#ffd23f", x: 180, y: 295, note: 698.46 },
-        { id: "sydney", name: "Sydney",   country: "Australia", emoji: "🦘", color: "#ff9f40", x: 295, y: 295, note: 880.00 }
+        { id: "nyc",    name: "New York", country: "USA",       emoji: "🗽", color: "#ff4d5e", x:  65, y:  90, note: 523.25 },
+        { id: "paris",  name: "Paris",    country: "France",    emoji: "🗼", color: "#4ec0ff", x: 180, y:  90, note: 659.25 },
+        { id: "tokyo",  name: "Tokyo",    country: "Japan",     emoji: "🏯", color: "#b36bff", x: 295, y:  90, note: 783.99 },
+        { id: "rio",    name: "Rio",      country: "Brazil",    emoji: "🏖️", color: "#3ddc84", x:  65, y: 220, note: 587.33 },
+        { id: "cairo",  name: "Cairo",    country: "Egypt",     emoji: "🐪", color: "#ffd23f", x: 180, y: 220, note: 698.46 },
+        { id: "sydney", name: "Sydney",   country: "Australia", emoji: "🦘", color: "#ff9f40", x: 295, y: 220, note: 880.00 }
     ];
 
     const CARD = { w: 92, h: 84, r: 14 };
@@ -379,13 +379,13 @@
 
     function drawClouds() {
         const t = state.elapsed / 1000;
+        // Clouds tucked into the gaps above, between, and below the card rows
+        // so they never overlap destinations or the runway.
         const clouds = [
-            { seed: 20,  y:  45, r: 18, speed: 8  },
-            { seed: 180, y:  58, r: 14, speed: 6  },
-            { seed: 290, y:  42, r: 16, speed: 10 },
-            { seed: 60,  y: 215, r: 13, speed: 7  },
-            { seed: 270, y: 218, r: 15, speed: 9  },
-            { seed: 150, y: 385, r: 12, speed: 5  }
+            { seed: 30,  y:  22, r: 14, speed: 8 },
+            { seed: 220, y:  30, r: 11, speed: 6 },
+            { seed: 100, y: 155, r: 12, speed: 7 },
+            { seed: 280, y: 300, r: 11, speed: 9 }
         ];
         for (const c of clouds) {
             const x = ((c.seed + t * c.speed) % (CANVAS_W + 80)) - 40;
