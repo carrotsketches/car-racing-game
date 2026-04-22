@@ -514,6 +514,16 @@
 
         ctx.save();
         ctx.translate(x, y + bounce);
+
+        // Idle-with-cargo glow to hint at tappability.
+        if (p.state === "idle" && state.running && state.cargo.length > 0) {
+            const pulse = 0.35 + 0.25 * Math.sin(state.elapsed / 180);
+            ctx.beginPath();
+            ctx.arc(0, 0, 20, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(255, 214, 107, ${pulse * 0.5})`;
+            ctx.fill();
+        }
+
         // Rotate toward target during flight.
         if (p.state === "flying" || p.state === "returning") {
             const tx = p.state === "flying" ? p.tx : HOME.x;
@@ -521,27 +531,100 @@
             const ang = Math.atan2(ty - p.fromY, tx - p.fromX);
             ctx.rotate(ang);
         }
-        // Plane body
-        ctx.fillStyle = "#fdf6e3";
-        ctx.strokeStyle = "#2e3440";
-        ctx.lineWidth = 1.5;
+
+        // Soft shadow under the plane.
+        ctx.fillStyle = "rgba(0,0,0,0.2)";
         ctx.beginPath();
-        ctx.moveTo(12, 0);
-        ctx.lineTo(-8, -5);
-        ctx.lineTo(-10, 0);
-        ctx.lineTo(-8, 5);
+        ctx.ellipse(0, 8, 14, 3, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = "#1c1f2a";
+        ctx.lineWidth = 1.2;
+
+        // Main fuselage — elongated ellipse with gradient.
+        const fg = ctx.createLinearGradient(0, -5, 0, 5);
+        fg.addColorStop(0, "#ffffff");
+        fg.addColorStop(1, "#c9d1dc");
+        ctx.fillStyle = fg;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 16, 5, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // Red nose cone.
+        ctx.fillStyle = "#e94560";
+        ctx.beginPath();
+        ctx.moveTo(14, -3);
+        ctx.quadraticCurveTo(20, 0, 14, 3);
         ctx.closePath();
         ctx.fill();
         ctx.stroke();
-        // Wing
+
+        // Lower main wing (behind body).
+        ctx.fillStyle = "#4ec0ff";
         ctx.beginPath();
-        ctx.moveTo(-2, -2);
-        ctx.lineTo(-6, -10);
-        ctx.lineTo(2, -2);
+        ctx.moveTo(-2, 3);
+        ctx.lineTo(-12, 14);
+        ctx.lineTo(-4, 14);
+        ctx.lineTo(5, 4);
         ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // Upper main wing.
+        ctx.beginPath();
+        ctx.moveTo(-2, -3);
+        ctx.lineTo(-12, -14);
+        ctx.lineTo(-4, -14);
+        ctx.lineTo(5, -4);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // Tail fin (vertical).
         ctx.fillStyle = "#ff9f40";
+        ctx.beginPath();
+        ctx.moveTo(-13, -1);
+        ctx.lineTo(-18, -8);
+        ctx.lineTo(-13, -5);
+        ctx.closePath();
         ctx.fill();
         ctx.stroke();
+
+        // Horizontal tail fins.
+        ctx.beginPath();
+        ctx.moveTo(-13, -1);
+        ctx.lineTo(-18, -4);
+        ctx.lineTo(-13, 0);
+        ctx.closePath();
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(-13, 1);
+        ctx.lineTo(-18, 4);
+        ctx.lineTo(-13, 0);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // Cockpit windshield.
+        ctx.fillStyle = "#4ec0ff";
+        ctx.beginPath();
+        ctx.moveTo(6, -2);
+        ctx.quadraticCurveTo(12, -4, 12, -1);
+        ctx.lineTo(12, 1);
+        ctx.quadraticCurveTo(12, -1, 6, -1);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // Passenger windows.
+        ctx.fillStyle = "#ffe27a";
+        for (let i = 0; i < 4; i++) {
+            ctx.beginPath();
+            ctx.arc(2 - i * 3.5, 0, 0.9, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
         ctx.restore();
 
         // Parachute during delivery
