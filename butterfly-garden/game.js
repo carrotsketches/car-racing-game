@@ -528,6 +528,37 @@
         // sipped again instantly (which freezes the player in place and
         // cascades through color changes without any input).
         respawnFlower(flower, state.butterfly.color.name);
+        // Guarantee at least one flower matches the butterfly's new color so the
+        // player always has a reachable target. The replacement above avoids the
+        // butterfly's new color, and the other 5 flowers might not match either.
+        // If no match exists, recolor a flower that's OUTSIDE sipping range
+        // (farthest from the butterfly) so the player must fly to it — this
+        // prevents the instant-sip cascade that auto-respawn was designed to avoid.
+        const wingName = state.butterfly.color.name;
+        const hasMatch = state.flowers.some((f) => f && !f.fading && f.color.name === wingName);
+        if (!hasMatch && state.flowers.length > 0) {
+            const b = state.butterfly;
+            let farthestIdx = -1;
+            let farthestDistSq = -1;
+            for (let i = 0; i < state.flowers.length; i++) {
+                const f = state.flowers[i];
+                if (!f || f.fading) continue;
+                const dx = f.x - b.x;
+                const dy = f.y - b.y;
+                const d2 = dx * dx + dy * dy;
+                // Prefer flowers outside sipping range; among those, pick farthest.
+                if (d2 > farthestDistSq) {
+                    farthestDistSq = d2;
+                    farthestIdx = i;
+                }
+            }
+            if (farthestIdx !== -1) {
+                const old = state.flowers[farthestIdx];
+                const pos = { x: old.x, y: old.y };
+                if (old.el && old.el.parentNode) old.el.parentNode.removeChild(old.el);
+                state.flowers[farthestIdx] = createFlower(state.butterfly.color, pos);
+            }
+        }
         // After spawning the new flower the butterfly has a new wing color; refresh highlights.
         refreshFlowerHighlights();
     }

@@ -147,9 +147,11 @@
 
     function spawnBlocks() {
         state.blocks = [];
-        // 4 slots, leaving the centre of the canvas clear so the house
-        // silhouette has empty ground to sit on.
-        const xs = [30, W / 2 - 57, W / 2 + 57, W - 30];
+        // 4 slots, all within the pendulum's horizontal reach
+        // (ARM_PIVOT_X ± sin(MAX_ANGLE) * ARM_LEN ≈ [70, 330]) and leaving
+        // a clear gap in the centre so the house silhouette has empty
+        // ground to sit on.
+        const xs = [80, W / 2 - 60, W / 2 + 60, W - 80];
         for (const x of xs) {
             state.blocks.push({
                 x,
@@ -210,7 +212,11 @@
             releaseBlock();
         } else {
             state.rope.dropping = true;
-            state.rope.target = GROUND_Y - ARM_PIVOT_Y - BLOCK_SIZE / 2;
+            // Upper bound on the rope length. The actual drop stops early
+            // when the hook reaches the block's vertical level (see loop()),
+            // so this just needs to be larger than any realistic drop --
+            // GROUND_Y - ARM_PIVOT_Y is enough even when the arm is vertical.
+            state.rope.target = GROUND_Y - ARM_PIVOT_Y;
         }
     }
     function releaseBlock() {
@@ -519,11 +525,16 @@
                 const SPEED = 520;
                 if (state.rope.dropping) {
                     state.rope.len = Math.min(state.rope.target, state.rope.len + SPEED * dt);
-                    if (state.rope.len >= state.rope.target) {
+                    // Stop (and try pickup) as soon as the hook reaches the
+                    // block's vertical level -- not at some fixed rope length
+                    // -- so the swinging arm angle doesn't overshoot the
+                    // blocks off the bottom of the canvas.
+                    const hp = hookPos();
+                    const blockY = GROUND_Y - BLOCK_SIZE / 2;
+                    if (hp.y >= blockY || state.rope.len >= state.rope.target) {
                         state.rope.dropping = false;
                         // try pickup
-                        const { x } = hookPos();
-                        const b = nearestBlock(x);
+                        const b = nearestBlock(hp.x);
                         if (b) {
                             state.carrying = { color: b.color };
                             b.taken = true;
