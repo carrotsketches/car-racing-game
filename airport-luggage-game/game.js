@@ -310,18 +310,281 @@
         }
     }
 
-    // Draw a static preview so the canvas isn't blank before the game is wired up.
-    function drawPreview() {
-        ctx.fillStyle = "#0b1830";
+    // ---------- Render ----------
+    // Very rough continent silhouettes as filled polygons on the canvas.
+    const CONTINENTS = [
+        // North America
+        [[30,95],[110,90],[135,135],[120,180],[80,200],[45,170]],
+        // South America
+        [[100,230],[145,225],[155,295],[125,345],[100,320]],
+        // Europe
+        [[175,100],[225,100],[230,150],[195,160],[180,140]],
+        // Africa
+        [[200,165],[250,170],[260,250],[225,310],[200,260]],
+        // Asia
+        [[235,95],[330,90],[345,180],[290,200],[250,170],[235,130]],
+        // Australia
+        [[285,275],[335,270],[340,310],[300,320]]
+    ];
+
+    function drawSky() {
+        // Sunset gradient inside the canvas.
+        const g = ctx.createLinearGradient(0, 0, 0, CANVAS_H);
+        g.addColorStop(0, "#ffb26b");
+        g.addColorStop(0.35, "#ff6b9a");
+        g.addColorStop(0.7, "#5b2a8c");
+        g.addColorStop(1, "#0b1c3a");
+        ctx.fillStyle = g;
         ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
-        ctx.fillStyle = "#9bb4e0";
-        ctx.font = "bold 18px 'Courier New', monospace";
-        ctx.textAlign = "center";
-        ctx.fillText("✈ Airport Luggage", CANVAS_W / 2, CANVAS_H / 2 - 8);
-        ctx.font = "12px 'Courier New', monospace";
-        ctx.fillText("tap Start Flight", CANVAS_W / 2, CANVAS_H / 2 + 14);
+
+        // Stars in the upper band.
+        ctx.fillStyle = "rgba(255,255,255,0.7)";
+        for (let i = 0; i < 14; i++) {
+            const sx = ((i * 37) % CANVAS_W);
+            const sy = (i * 13) % 70 + 10;
+            ctx.fillRect(sx, sy, 2, 2);
+        }
     }
-    drawPreview();
+
+    function drawWorldMap() {
+        // Ocean band behind continents.
+        ctx.fillStyle = "rgba(30, 80, 140, 0.35)";
+        roundRect(10, 80, CANVAS_W - 20, 260, 18);
+        ctx.fill();
+
+        // Latitude grid.
+        ctx.strokeStyle = "rgba(255,255,255,0.08)";
+        ctx.lineWidth = 1;
+        for (let y = 110; y < 340; y += 30) {
+            ctx.beginPath();
+            ctx.moveTo(14, y);
+            ctx.lineTo(CANVAS_W - 14, y);
+            ctx.stroke();
+        }
+
+        // Continents.
+        ctx.fillStyle = "#2fa36b";
+        ctx.strokeStyle = "rgba(0,0,0,0.25)";
+        ctx.lineWidth = 1;
+        for (const poly of CONTINENTS) {
+            ctx.beginPath();
+            ctx.moveTo(poly[0][0], poly[0][1]);
+            for (let i = 1; i < poly.length; i++) ctx.lineTo(poly[i][0], poly[i][1]);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+        }
+    }
+
+    function drawCityPins() {
+        for (const c of CITIES) {
+            // Pin base circle
+            ctx.beginPath();
+            ctx.arc(c.x, c.y, 10, 0, Math.PI * 2);
+            ctx.fillStyle = c.color;
+            ctx.fill();
+            ctx.strokeStyle = "rgba(0,0,0,0.4)";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Landmark emoji
+            ctx.font = "14px system-ui, sans-serif";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(c.emoji, c.x, c.y - 18);
+
+            // Waiting passengers as small dots above the pin.
+            const waiting = state.passengers.filter((p) => p.cityId === c.id);
+            for (let i = 0; i < waiting.length; i++) {
+                const px = c.x - 8 + i * 8;
+                const py = c.y + 14;
+                ctx.beginPath();
+                ctx.arc(px, py, 4, 0, Math.PI * 2);
+                ctx.fillStyle = waiting[i].color;
+                ctx.fill();
+                ctx.strokeStyle = "rgba(0,0,0,0.4)";
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            }
+        }
+    }
+
+    function drawHomeAirport() {
+        // Runway patch under HOME.
+        ctx.fillStyle = "rgba(255,255,255,0.15)";
+        roundRect(HOME.x - 22, HOME.y - 10, 44, 20, 6);
+        ctx.fill();
+        ctx.font = "11px 'Courier New', monospace";
+        ctx.fillStyle = "rgba(255,255,255,0.85)";
+        ctx.textAlign = "center";
+        ctx.fillText("HOME", HOME.x, HOME.y + 22);
+    }
+
+    function drawPlane() {
+        const p = state.plane;
+        let x = p.x, y = p.y;
+        let bounce = 0;
+
+        if (p.state === "takeoff") bounce = -8 * Math.sin(Math.PI * p.progress);
+        if (p.state === "delivering") {
+            // Hover + mini wiggle while the parachute drops.
+            bounce = Math.sin(p.progress * Math.PI * 2) * 2;
+        }
+
+        // Contrail dots while flying/returning.
+        if (p.state === "flying" || p.state === "returning") {
+            const dx = p.x - p.fromX;
+            const dy = p.y - p.fromY;
+            for (let i = 1; i <= 6; i++) {
+                const t = Math.max(0, p.progress - i * 0.05);
+                const cx = p.fromX + dx * t;
+                const cy = p.fromY + dy * t;
+                ctx.beginPath();
+                ctx.arc(cx, cy, 2.2, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(255,255,255,${0.4 - i * 0.05})`;
+                ctx.fill();
+            }
+        }
+
+        ctx.save();
+        ctx.translate(x, y + bounce);
+        // Rotate toward target during flight.
+        if (p.state === "flying" || p.state === "returning") {
+            const tx = p.state === "flying" ? p.tx : HOME.x;
+            const ty = p.state === "flying" ? p.ty : HOME.y;
+            const ang = Math.atan2(ty - p.fromY, tx - p.fromX);
+            ctx.rotate(ang);
+        }
+        // Plane body
+        ctx.fillStyle = "#fdf6e3";
+        ctx.strokeStyle = "#2e3440";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(12, 0);
+        ctx.lineTo(-8, -5);
+        ctx.lineTo(-10, 0);
+        ctx.lineTo(-8, 5);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        // Wing
+        ctx.beginPath();
+        ctx.moveTo(-2, -2);
+        ctx.lineTo(-6, -10);
+        ctx.lineTo(2, -2);
+        ctx.closePath();
+        ctx.fillStyle = "#ff9f40";
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+
+        // Parachute during delivery
+        if (p.state === "delivering" && p.targetCity) {
+            const drop = p.progress;
+            const px = p.x;
+            const py = p.y + 4 + drop * 22;
+            ctx.fillStyle = p.targetCity.color;
+            ctx.beginPath();
+            ctx.arc(px, py - 8, 9, Math.PI, 0);
+            ctx.fill();
+            ctx.strokeStyle = "rgba(0,0,0,0.4)";
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(px - 8, py - 8); ctx.lineTo(px, py);
+            ctx.moveTo(px + 8, py - 8); ctx.lineTo(px, py);
+            ctx.stroke();
+            ctx.font = "12px system-ui, sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText("🧳", px, py + 2);
+        }
+    }
+
+    function drawBelt() {
+        // Belt body
+        ctx.fillStyle = "#2a2a2a";
+        roundRect(BELT.x, BELT.y, BELT.w, BELT.h, 10);
+        ctx.fill();
+        ctx.strokeStyle = "#444";
+        ctx.stroke();
+
+        // Animated belt lines (visual only).
+        const phase = (state.elapsed / 10) % 20;
+        ctx.strokeStyle = "rgba(255,255,255,0.18)";
+        ctx.lineWidth = 2;
+        for (let x = BELT.x - 20 + phase; x < BELT.x + BELT.w; x += 20) {
+            ctx.beginPath();
+            ctx.moveTo(x, BELT.y + BELT.h - 4);
+            ctx.lineTo(x + 10, BELT.y + BELT.h - 4);
+            ctx.stroke();
+        }
+
+        // Bags
+        for (const b of state.bags) {
+            ctx.beginPath();
+            ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+            ctx.fillStyle = b.color;
+            ctx.fill();
+            ctx.strokeStyle = "rgba(0,0,0,0.45)";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            ctx.font = "16px system-ui, sans-serif";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText("🧳", b.x, b.y);
+        }
+
+        // Cargo indicator above the belt (plane's capacity).
+        ctx.font = "11px 'Courier New', monospace";
+        ctx.fillStyle = "#fdf6e3";
+        ctx.textAlign = "left";
+        ctx.fillText(`Cargo ${state.cargo.length}/${CARGO_MAX}`, BELT.x + 6, BELT.y - 10);
+        for (let i = 0; i < CARGO_MAX; i++) {
+            const cx = BELT.x + 86 + i * 14;
+            const cy = BELT.y - 14;
+            ctx.beginPath();
+            ctx.arc(cx, cy, 5, 0, Math.PI * 2);
+            ctx.fillStyle = state.cargo[i] ? state.cargo[i].color : "rgba(255,255,255,0.15)";
+            ctx.fill();
+            ctx.strokeStyle = "rgba(0,0,0,0.4)";
+            ctx.lineWidth = 1;
+            ctx.stroke();
+        }
+    }
+
+    function drawEffects() {
+        // Confetti
+        for (const c of state.confetti) {
+            const a = Math.max(0, c.life / c.max);
+            ctx.globalAlpha = a;
+            ctx.fillStyle = c.color;
+            ctx.fillRect(c.x - 2, c.y - 2, 4, 4);
+        }
+        ctx.globalAlpha = 1;
+
+        // Floating text
+        for (const f of state.floaters) {
+            const a = Math.max(0, f.life / f.max);
+            ctx.globalAlpha = a;
+            ctx.font = "bold 13px system-ui, sans-serif";
+            ctx.fillStyle = f.color;
+            ctx.textAlign = "center";
+            ctx.fillText(f.text, f.x, f.y);
+        }
+        ctx.globalAlpha = 1;
+    }
+
+    function render() {
+        drawSky();
+        drawWorldMap();
+        drawCityPins();
+        drawHomeAirport();
+        drawPlane();
+        drawBelt();
+        drawEffects();
+    }
+
+    render();
 
     startBtn.addEventListener("click", () => {
         // Temporary handler until startGame is implemented.
