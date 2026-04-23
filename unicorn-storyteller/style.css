@@ -502,3 +502,24 @@ footer {
 }
 
 #start-btn:active { transform: scale(0.97); }
+
+@media (max-height: 780px), (max-width: 420px) {
+    body { padding: 12px; align-items: flex-start; }
+    .game-wrapper { gap: 10px; }
+    .stage { gap: 10px; }
+    h1 { font-size: 1.4rem; }
+    .scene { height: 180px; }
+    .unicorn { font-size: 70px; bottom: 24px; }
+    .ground { height: 44px; }
+    .prop.rainbow { font-size: 56px; top: 6px; }
+    .prop.castle { font-size: 48px; bottom: 44px; }
+    .prop.wings { font-size: 96px; bottom: 50px; }
+    .sentence-tray { min-height: 60px; padding: 12px 10px; font-size: 1.05rem; }
+    .tiles { min-height: 108px; gap: 8px; }
+    .tile { padding: 10px 6px; }
+    .tile .tile-emoji { font-size: 34px; }
+    .tile .tile-word { font-size: 0.95rem; }
+    .next-btn { padding: 12px 16px; font-size: 1rem; }
+    .icon-btn { width: 46px; height: 46px; font-size: 20px; }
+    footer { display: none; }
+}
