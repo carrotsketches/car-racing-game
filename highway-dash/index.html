@@ -10,7 +10,10 @@
 </head>
 <body>
     <div class="game-wrapper">
-        <a class="home-link" href="../">← Games</a>
+        <div class="nav-row">
+            <a class="home-link" href="../">← Games</a>
+            <button class="help-btn" id="help-btn" aria-label="How to play">?</button>
+        </div>
         <header>
             <h1>Highway Dash</h1>
             <div class="hud">
@@ -67,6 +70,14 @@
         <footer>
             <p>Tap the buttons or use &larr; &rarr; &uarr; keys to drive!</p>
         </footer>
+
+        <div id="help-modal" class="help-modal" hidden>
+            <div class="help-panel">
+                <button class="help-close" id="help-close" aria-label="Close">✕</button>
+                <h3>How to Play</h3>
+                <p>Use ← → keys or tap the lane buttons to steer. ↑ gives a speed boost. Dodge oncoming traffic and grab 🪙 coins for points. You have 3 lives — don't crash!</p>
+            </div>
+        </div>
     </div>
 
     <script src="game.js"></script>

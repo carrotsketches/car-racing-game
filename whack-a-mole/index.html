@@ -10,7 +10,10 @@
 </head>
 <body>
     <div class="game-wrapper">
-        <a class="home-link" href="../">← Games</a>
+        <div class="nav-row">
+            <a class="home-link" href="../">← Games</a>
+            <button class="help-btn" id="help-btn" aria-label="How to play">?</button>
+        </div>
         <header>
             <h1>Whack-a-Mole</h1>
             <div class="hud">
@@ -41,6 +44,14 @@
         <footer>
             <p>60 seconds. Tap 🐹 for points, skip 🐝!</p>
         </footer>
+
+        <div id="help-modal" class="help-modal" hidden>
+            <div class="help-panel">
+                <button class="help-close" id="help-close" aria-label="Close">✕</button>
+                <h3>How to Play</h3>
+                <p>Tap the moles 🐹 as fast as you can — each hit scores a point. Don't tap the bees 🐝 or you'll lose a point! You have 60 seconds to score as high as you can.</p>
+            </div>
+        </div>
     </div>
 
     <script src="game.js"></script>

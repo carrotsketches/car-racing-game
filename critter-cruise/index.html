@@ -10,7 +10,10 @@
 </head>
 <body>
     <div class="game-wrapper">
-        <a class="home-link" href="../">← Games</a>
+        <div class="nav-row">
+            <a class="home-link" href="../">← Games</a>
+            <button class="help-btn" id="help-btn" aria-label="How to play">?</button>
+        </div>
         <header>
             <h1>Critter Cruise</h1>
             <div class="hud">
@@ -41,6 +44,14 @@
         <footer>
             <p>Tap / click / Space to jump. Ride the hills, grab treats, dodge cones, catch the boost pads!</p>
         </footer>
+
+        <div id="help-modal" class="help-modal" hidden>
+            <div class="help-panel">
+                <button class="help-close" id="help-close" aria-label="Close">✕</button>
+                <h3>How to Play</h3>
+                <p>Tap, click, or press Space to jump. Your critter runs forward automatically — time your jumps to avoid orange cones. Grab ⭐ stars and 🪙 coins, and hit boost pads for extra height!</p>
+            </div>
+        </div>
     </div>
 
     <script src="game.js"></script>

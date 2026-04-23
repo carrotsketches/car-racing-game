@@ -10,7 +10,10 @@
 </head>
 <body>
     <div class="game-wrapper">
-        <a class="home-link" href="../">← Games</a>
+        <div class="nav-row">
+            <a class="home-link" href="../">← Games</a>
+            <button class="help-btn" id="help-btn" aria-label="How to play">?</button>
+        </div>
         <header>
             <h1>Piano Memory</h1>
             <div class="hud" id="hud">
@@ -48,6 +51,14 @@
         <footer>
             <p id="footer-text">Tap the keys in the same order you hear them.</p>
         </footer>
+
+        <div id="help-modal" class="help-modal" hidden>
+            <div class="help-panel">
+                <button class="help-close" id="help-close" aria-label="Close">✕</button>
+                <h3>How to Play</h3>
+                <p>In Memory mode: listen to the tune, then tap the piano keys to repeat it exactly — each round adds one more note! Switch to Free Play to explore the keys however you like.</p>
+            </div>
+        </div>
     </div>
 
     <script src="game.js"></script>

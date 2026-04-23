@@ -25,6 +25,8 @@ A static, no-build collection of small browser games. The root is a game launche
 ├── tow-truck/               # Rescue broken cars, deliver to matching garage
 ├── butterfly-garden/        # Finger-trail butterfly sipping matching flowers
 ├── earth-day/               # Falling items sorted into recycling vs. trash
+├── cuckoo-clock/            # Reaction-time tap when cuckoo pops out
+├── unicorn-storyteller/     # Build magical sentences; unicorn acts them out
 └── hard/                    # Sub-gateway for harder games (e.g. flappy-bird)
     └── flappy-bird/         # Tap-to-flap, dodge pipes
 ```
@@ -51,6 +53,8 @@ Use this table instead of re-scanning each folder.
 | tow-truck | Rescue | 3-lane drive, hold-to-winch, color-match garage | lane + hold buttons | canvas 2D |
 | butterfly-garden | Nature | Finger-trail butterfly, match-color flowers | pointer move | canvas + DOM emoji |
 | earth-day | Environment | Falling-item sort into 2 bins (♻️ / 🗑️) | tap bin / swipe | DOM |
+| cuckoo-clock | Reaction | Wait for cuckoo 🐦, tap fast, penalize early taps | tap | DOM + CSS |
+| unicorn-storyteller | Story | Pick word tiles to build sentences; unicorn acts | tap | DOM |
 | hard/flappy-bird | Flappy | Tap to flap, dodge pipes | tap | canvas 2D |
 
 Each `.game-card` on the home page carries a `data-lb="<slug>-leaderboard"` attribute; the home-page script reads it to render the card's top-3 entries inline.
@@ -67,7 +71,7 @@ Each `.game-card` on the home page carries a `data-lb="<slug>-leaderboard"` attr
   <meta name="apple-mobile-web-app-capable" content="yes">
   ```
 - **Color theme**: dark radial background (`radial-gradient(circle at top, #1b2735 0%, #090a0f 100%)`), per-game accent color.
-- **Home link** in every game: `<a class="home-link" href="../">← Games</a>`.
+- **Home link + help button** in every game: wrap in `.nav-row` with a `#help-btn` button. A `#help-modal` div at the bottom of `.game-wrapper` holds game-specific instructions (toggled via JS in `game.js`). CSS lives at the bottom of each `style.css` under `/* ── Help modal ── */`.
 - **Prevent stray touch behavior** on the game surface with `touchstart/move/end` preventDefault listeners.
 
 ## Adding a new game
@@ -100,7 +104,10 @@ Use `whack-a-mole/` or `piano/` as the template (they share the cleanest structu
 </head>
 <body>
     <div class="game-wrapper">
-        <a class="home-link" href="../">← Games</a>
+        <div class="nav-row">
+            <a class="home-link" href="../">← Games</a>
+            <button class="help-btn" id="help-btn" aria-label="How to play">?</button>
+        </div>
         <header>
             <h1><Game Name></h1>
             <div class="hud">
@@ -128,6 +135,14 @@ Use `whack-a-mole/` or `piano/` as the template (they share the cleanest structu
         </div>
 
         <footer><p>Short tip.</p></footer>
+
+        <div id="help-modal" class="help-modal" hidden>
+            <div class="help-panel">
+                <button class="help-close" id="help-close" aria-label="Close">✕</button>
+                <h3>How to Play</h3>
+                <p>Game-specific instructions here.</p>
+            </div>
+        </div>
     </div>
 
     <script src="game.js"></script>

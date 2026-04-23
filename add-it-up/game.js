@@ -730,3 +730,14 @@
 
     startBtn.addEventListener("click", startGame);
 })();
+
+(() => {
+    const btn = document.getElementById("help-btn");
+    const modal = document.getElementById("help-modal");
+    const closeBtn = document.getElementById("help-close");
+    if (!btn || !modal) return;
+    btn.addEventListener("click", () => modal.removeAttribute("hidden"));
+    closeBtn.addEventListener("click", () => modal.setAttribute("hidden", ""));
+    modal.addEventListener("click", e => { if (e.target === modal) modal.setAttribute("hidden", ""); });
+    document.addEventListener("keydown", e => { if (e.key === "Escape") modal.setAttribute("hidden", ""); });
+})();
