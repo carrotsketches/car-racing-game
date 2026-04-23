@@ -10,7 +10,10 @@
 </head>
 <body>
     <div class="game-wrapper">
-        <a class="home-link" href="../">← Games</a>
+        <div class="nav-row">
+            <a class="home-link" href="../">← Games</a>
+            <button class="help-btn" id="help-btn" aria-label="How to play">?</button>
+        </div>
         <header>
             <h1>Color Mixing</h1>
             <div class="hud">
@@ -60,6 +63,14 @@
         <footer>
             <p>Tap two pots to mix. Make as many colors as you can in 60 seconds!</p>
         </footer>
+
+        <div id="help-modal" class="help-modal" hidden>
+            <div class="help-panel">
+                <button class="help-close" id="help-close" aria-label="Close">✕</button>
+                <h3>How to Play</h3>
+                <p>Tap any two color pots to blend them together. Try to match the target color shown at the top. You have 60 seconds — make as many correct matches as you can! 🎨</p>
+            </div>
+        </div>
     </div>
 
     <script src="game.js"></script>

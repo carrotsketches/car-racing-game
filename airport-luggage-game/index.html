@@ -10,7 +10,10 @@
 </head>
 <body>
     <div class="game-wrapper">
-        <a class="home-link" href="../">← Games</a>
+        <div class="nav-row">
+            <a class="home-link" href="../">← Games</a>
+            <button class="help-btn" id="help-btn" aria-label="How to play">?</button>
+        </div>
 
         <header class="boarding-pass">
             <div class="pass-stub">
@@ -63,6 +66,14 @@
         <footer>
             <p>🧳 Drag a bag onto the matching-color ✈ ➜ 🎉 Plane delivers!</p>
         </footer>
+
+        <div id="help-modal" class="help-modal" hidden>
+            <div class="help-panel">
+                <button class="help-close" id="help-close" aria-label="Close">✕</button>
+                <h3>How to Play</h3>
+                <p>Drag a colored 🧳 bag from the belt onto the same-colored ✈ airplane. Fill each plane completely and it takes off! Don't let too many bags pile up or you'll lose a life.</p>
+            </div>
+        </div>
     </div>
 
     <script src="game.js"></script>

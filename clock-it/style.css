@@ -269,3 +269,63 @@ footer {
     .colon { font-size: 2rem; }
     .key { padding: 12px 0; font-size: 1.3rem; }
 }
+
+/* ── Help modal ── */
+.nav-row { display: flex; justify-content: space-between; align-items: center; }
+.help-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    color: #e8eef7;
+    font-size: 1.05rem;
+    font-weight: 700;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    padding: 0;
+    line-height: 1;
+}
+.help-btn:hover { background: rgba(255, 255, 255, 0.22); }
+.help-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.72);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+    padding: 20px;
+}
+.help-modal[hidden] { display: none; }
+.help-panel {
+    background: #1b2a3b;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 16px;
+    padding: 24px 24px 20px;
+    max-width: 340px;
+    width: 100%;
+    position: relative;
+}
+.help-panel h3 { font-size: 1.05rem; margin-bottom: 10px; color: #fff; }
+.help-panel p { font-size: 0.9rem; line-height: 1.65; color: #cfd7e3; margin: 0; }
+.help-close {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: #e8eef7;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.help-close:hover { background: rgba(255, 255, 255, 0.22); }

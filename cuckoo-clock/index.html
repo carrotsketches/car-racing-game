@@ -10,7 +10,10 @@
 </head>
 <body>
     <div class="game-wrapper">
-        <a class="home-link" href="../">← Games</a>
+        <div class="nav-row">
+            <a class="home-link" href="../">← Games</a>
+            <button class="help-btn" id="help-btn" aria-label="How to play">?</button>
+        </div>
         <header>
             <h1>Cuckoo Clock</h1>
             <div class="hud">
@@ -78,6 +81,14 @@
         <footer>
             <p>60 seconds. Faster taps on the 🐦 = more points. Early taps cost −1.</p>
         </footer>
+
+        <div id="help-modal" class="help-modal" hidden>
+            <div class="help-panel">
+                <button class="help-close" id="help-close" aria-label="Close">✕</button>
+                <h3>How to Play</h3>
+                <p>Wait for the cuckoo 🐦 to pop out of the clock doors — then tap it as fast as you can! Tapping too early costs −1 point. The quicker your reaction, the more you score. You have 60 seconds!</p>
+            </div>
+        </div>
     </div>
 
     <script src="game.js"></script>
