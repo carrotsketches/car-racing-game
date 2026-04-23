@@ -287,6 +287,6 @@ Wire them up in JS to call a `setMode(mode)` function that safely stops any in-p
 4. **Push** with `-u origin <branch>` (force-with-lease only if the rebase rewrote history).
 5. **Create a PR** via the GitHub MCP tools (`mcp__github__create_pull_request`). Never use `gh` — it's not available.
 6. **Always reply with the PR URL** so the user can jump to it.
-7. **Always subscribe to PR activity** (`mcp__github__subscribe_pr_activity`) immediately after creating the PR, then check CI status + review comments and address anything actionable.
+7. **Always subscribe to PR activity** (`mcp__github__subscribe_pr_activity`) immediately after creating the PR — no exceptions. Then monitor CI status + review comments and address anything actionable.
 
 For follow-up commits on the same branch: push, and the existing PR updates automatically — no new PR needed. Still rebase first if the base has moved.
