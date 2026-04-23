@@ -42,6 +42,8 @@
         { emoji: "🦴", category: "trash" },
         { emoji: "🍕", category: "trash" },
         { emoji: "👟", category: "trash" },
+        { emoji: "🇷", category: "recycle" },
+        { emoji: "🇬", category: "trash" },
     ];
 
     // ----- Leaderboard -----

@@ -109,17 +109,24 @@
     function tone({ freq = 440, endFreq = null, type = "sine", duration = 0.15, volume = 0.2, delay = 0 }) {
         const ac = ensureAudio();
         if (!ac) return;
-        const t0 = ac.currentTime + delay;
-        const osc = ac.createOscillator();
-        const gain = ac.createGain();
-        osc.type = type;
-        osc.frequency.setValueAtTime(freq, t0);
-        if (endFreq != null) osc.frequency.linearRampToValueAtTime(endFreq, t0 + duration);
-        gain.gain.setValueAtTime(volume, t0);
-        gain.gain.exponentialRampToValueAtTime(0.001, t0 + duration);
-        osc.connect(gain).connect(ac.destination);
-        osc.start(t0);
-        osc.stop(t0 + duration);
+        const play = () => {
+            const t0 = ac.currentTime + delay;
+            const osc = ac.createOscillator();
+            const gain = ac.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, t0);
+            if (endFreq != null) osc.frequency.linearRampToValueAtTime(endFreq, t0 + duration);
+            gain.gain.setValueAtTime(volume, t0);
+            gain.gain.exponentialRampToValueAtTime(0.001, t0 + duration);
+            osc.connect(gain).connect(ac.destination);
+            osc.start(t0);
+            osc.stop(t0 + duration);
+        };
+        if (ac.state === "suspended") {
+            ac.resume().then(play);
+        } else {
+            play();
+        }
     }
     function playSparkle() {
         tone({ freq: 880, endFreq: 1320, type: "triangle", duration: 0.14, volume: 0.18 });
