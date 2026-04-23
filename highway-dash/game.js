@@ -533,7 +533,7 @@
         // Cruise speed rises gently with score; boost/brake nudge off that target
         const cruise = Math.min(state.maxSpeed, state.baseSpeed + state.score * 0.003);
         let target = cruise;
-        if (state.keys.up) target = Math.min(9, cruise * 1.6);
+        if (state.keys.up) target = Math.min(18, cruise * 3);
         else if (state.keys.down) target = Math.max(1.5, cruise * 0.55);
         state.speed += (target - state.speed) * 0.08;
 

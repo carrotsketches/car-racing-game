@@ -81,6 +81,7 @@
         template: null,
         blankIndex: 0,
         filled: {},
+        tileProcessing: false,
         sessionCount: 0,
         stories: loadStories(),
         playerName: "",
@@ -192,6 +193,7 @@
         state.template = pickTemplate();
         state.filled = {};
         state.blankIndex = 0;
+        state.tileProcessing = false;
         nextBtn.textContent = "Next Story";
         nextBtn.classList.remove("magic");
         renderSentence();
@@ -225,6 +227,7 @@
     }
 
     function renderChoices() {
+        state.tileProcessing = false;
         tilesEl.innerHTML = "";
         const blanks = state.template.parts.filter((p) => typeof p === "object");
         if (state.blankIndex >= blanks.length) return;
@@ -246,6 +249,8 @@
     }
 
     function onTileTap(tile, choice) {
+        if (state.tileProcessing) return;
+        state.tileProcessing = true;
         tile.classList.add("tapped");
         playSparkle();
         emitSparkles(tile);
