@@ -292,7 +292,8 @@
     }
 
     function playFullStory(words) {
-        if (state.mode === "listen") speak(sentenceText());
+        const text = words.map((w) => w.word).join(" ");
+        if (state.mode === "listen") speak(text);
         let delay = 0;
         for (const w of words) {
             if (w.emoji) {
@@ -307,6 +308,7 @@
             storyBook.classList.remove("visible");
             return;
         }
+        const wasVisible = storyBook.classList.contains("visible");
         storyBook.classList.add("visible");
         storyBookList.innerHTML = "";
         for (const s of state.stories) {
@@ -316,9 +318,13 @@
             btn.textContent = s.sentence;
             btn.addEventListener("click", () => {
                 ensureAudio();
+                clearScene();
                 playFullStory(s.words);
             });
             storyBookList.appendChild(btn);
+        }
+        if (!wasVisible) {
+            setTimeout(() => storyBook.scrollIntoView({ behavior: "smooth", block: "nearest" }), 100);
         }
     }
 
@@ -466,10 +472,9 @@
 
     startBtn.addEventListener("click", startGame);
 
-    const stage = document.querySelector(".stage");
+    const scene = document.getElementById("scene");
     ["touchstart", "touchmove", "touchend"].forEach((ev) => {
-        stage.addEventListener(ev, (e) => {
-            if (e.target.closest("input, button")) return;
+        scene.addEventListener(ev, (e) => {
             if (e.cancelable) e.preventDefault();
         }, { passive: false });
     });
