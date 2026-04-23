@@ -394,23 +394,46 @@
         // (the hook body extends 12 px below hookY), so the block visually
         // hangs snugly from the hook with no gap.
         if (state.carrying) {
-            ctx.fillStyle = state.carrying.color;
-            ctx.fillRect(hookX - BLOCK_SIZE / 2, hookY + 12, BLOCK_SIZE, BLOCK_SIZE);
-            ctx.strokeStyle = "rgba(0,0,0,0.35)";
-            ctx.strokeRect(hookX - BLOCK_SIZE / 2, hookY + 12, BLOCK_SIZE, BLOCK_SIZE);
+            drawBlock3D(hookX, hookY + 12 + BLOCK_SIZE / 2, state.carrying.color);
         }
+    }
+    function drawBlock3D(x, y, color) {
+        const bx = x - BLOCK_SIZE / 2, by = y - BLOCK_SIZE / 2;
+        // Drop shadow
+        ctx.fillStyle = "rgba(0,0,0,0.45)";
+        ctx.fillRect(bx + 4, by + 4, BLOCK_SIZE, BLOCK_SIZE);
+        // Main face
+        ctx.fillStyle = color;
+        ctx.fillRect(bx, by, BLOCK_SIZE, BLOCK_SIZE);
+        // Dark outline
+        ctx.strokeStyle = "rgba(0,0,0,0.55)";
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(bx, by, BLOCK_SIZE, BLOCK_SIZE);
+        // Top highlight strip (3D sheen)
+        ctx.fillStyle = "rgba(255,255,255,0.30)";
+        ctx.fillRect(bx + 2, by + 2, BLOCK_SIZE - 4, 9);
+        // Left highlight strip
+        ctx.fillStyle = "rgba(255,255,255,0.18)";
+        ctx.fillRect(bx + 2, by + 11, 7, BLOCK_SIZE - 13);
+        // Bottom-right shadow strip
+        ctx.fillStyle = "rgba(0,0,0,0.18)";
+        ctx.fillRect(bx + 2, by + BLOCK_SIZE - 9, BLOCK_SIZE - 4, 7);
     }
     function drawBlocks() {
         for (const b of state.blocks) {
             if (b.taken) continue;
-            ctx.fillStyle = b.color;
-            ctx.fillRect(b.x - BLOCK_SIZE / 2, b.y - BLOCK_SIZE / 2, BLOCK_SIZE, BLOCK_SIZE);
-            ctx.strokeStyle = "rgba(0,0,0,0.35)";
-            ctx.strokeRect(b.x - BLOCK_SIZE / 2, b.y - BLOCK_SIZE / 2, BLOCK_SIZE, BLOCK_SIZE);
+            drawBlock3D(b.x, b.y, b.color);
         }
     }
     function drawTrucks() {
         for (const t of state.trucks) {
+            // Colored floor zone under this truck
+            ctx.save();
+            ctx.globalAlpha = 0.12;
+            ctx.fillStyle = t.color;
+            ctx.fillRect(t.x - TRUCK_W / 2 - 4, GROUND_Y, TRUCK_W + 8, H - GROUND_Y);
+            ctx.restore();
+
             // Pulse + arrow on the matching truck while carrying
             if (state.carrying && state.carrying.color === t.color) {
                 const pulse = 0.5 + 0.5 * Math.sin(state.t * 6);
@@ -431,28 +454,88 @@
                 ctx.fillText("▼", t.x, TRUCK_Y - 60 + bounce);
                 ctx.restore();
             }
+
+            // Truck body (flatbed)
             ctx.fillStyle = t.color;
             ctx.fillRect(t.x - TRUCK_W / 2, TRUCK_Y - 30, TRUCK_W, 36);
+
+            // Dashed delivery-zone outline on the flatbed
+            ctx.save();
+            ctx.setLineDash([5, 3]);
+            ctx.strokeStyle = "rgba(255,255,255,0.5)";
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(t.x - TRUCK_W / 2 + 6, TRUCK_Y - 26, TRUCK_W - 12, 28);
+            ctx.setLineDash([]);
+            ctx.restore();
+
+            // "DELIVER" label on the flatbed
+            ctx.save();
+            ctx.fillStyle = "rgba(255,255,255,0.72)";
+            ctx.font = "bold 9px 'Segoe UI', sans-serif";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText("DELIVER", t.x + 14, TRUCK_Y - 12);
+            ctx.restore();
+
+            // Cabin
             ctx.fillStyle = "#1b2735";
             ctx.fillRect(t.x - TRUCK_W / 2 + 10, TRUCK_Y - 48, 34, 22);
+            // Cabin window
+            ctx.fillStyle = "rgba(100,180,255,0.35)";
+            ctx.fillRect(t.x - TRUCK_W / 2 + 14, TRUCK_Y - 44, 24, 14);
+
+            // Wheels
             ctx.fillStyle = "#222";
             ctx.beginPath();
             ctx.arc(t.x - TRUCK_W / 2 + 22, TRUCK_Y + 12, 10, 0, Math.PI * 2);
             ctx.arc(t.x + TRUCK_W / 2 - 22, TRUCK_Y + 12, 10, 0, Math.PI * 2);
             ctx.fill();
+            // Wheel hubcaps
+            ctx.fillStyle = "#555";
+            ctx.beginPath();
+            ctx.arc(t.x - TRUCK_W / 2 + 22, TRUCK_Y + 12, 4, 0, Math.PI * 2);
+            ctx.arc(t.x + TRUCK_W / 2 - 22, TRUCK_Y + 12, 4, 0, Math.PI * 2);
+            ctx.fill();
         }
     }
     function drawHouse(dt) {
-        // Ghost outline of the target house, rendered faintly so the kid can
-        // see what they're building toward.
+        // Subtle zone background in the center gap between trucks
+        const zoneX = HOUSE_CENTER_X - 55, zoneW = 110;
         ctx.save();
-        ctx.globalAlpha = 0.18;
-        ctx.fillStyle = "#ffffff";
+        ctx.globalAlpha = 0.08;
+        ctx.fillStyle = "#f5a524";
+        ctx.fillRect(zoneX, GROUND_Y, zoneW, H - GROUND_Y);
+        ctx.restore();
+
+        // Ghost outline of the target house — visible enough to guide the player
+        ctx.save();
+        ctx.globalAlpha = 0.42;
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 1;
         for (let i = 0; i < HOUSE_GOAL; i++) {
             const { x, y } = houseBrickPos(i);
-            ctx.fillRect(x - HOUSE_BRICK_W / 2, y - HOUSE_BRICK_H / 2,
-                         HOUSE_BRICK_W, HOUSE_BRICK_H);
+            ctx.strokeRect(x - HOUSE_BRICK_W / 2, y - HOUSE_BRICK_H / 2,
+                           HOUSE_BRICK_W, HOUSE_BRICK_H);
         }
+        // Ghost roof outline
+        const rowW = HOUSE_COLS * HOUSE_BRICK_W;
+        const ghostRoofBaseY = HOUSE_BASE_Y - Math.ceil(HOUSE_GOAL / HOUSE_COLS) * HOUSE_BRICK_H;
+        ctx.beginPath();
+        ctx.moveTo(HOUSE_CENTER_X - rowW / 2 - 4, ghostRoofBaseY);
+        ctx.lineTo(HOUSE_CENTER_X + rowW / 2 + 4, ghostRoofBaseY);
+        ctx.lineTo(HOUSE_CENTER_X, ghostRoofBaseY - 28);
+        ctx.closePath();
+        ctx.stroke();
+        ctx.restore();
+
+        // "🏠 HOUSE" label above the ghost
+        ctx.save();
+        ctx.globalAlpha = 0.75;
+        ctx.fillStyle = "#f5e6a3";
+        ctx.font = "bold 10px 'Segoe UI', sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "bottom";
+        ctx.fillText("🏠 BUILD", HOUSE_CENTER_X, ghostRoofBaseY - 32);
         ctx.restore();
 
         // Delivered bricks
@@ -469,12 +552,12 @@
         const done = state.house.bricks.length;
         if (done >= HOUSE_COLS) {
             const rows = Math.ceil(done / HOUSE_COLS);
-            const rowW = HOUSE_COLS * HOUSE_BRICK_W;
+            const roofRowW = HOUSE_COLS * HOUSE_BRICK_W;
             const roofBaseY = HOUSE_BASE_Y - rows * HOUSE_BRICK_H;
             ctx.fillStyle = "#b23a3a";
             ctx.beginPath();
-            ctx.moveTo(HOUSE_CENTER_X - rowW / 2 - 4, roofBaseY);
-            ctx.lineTo(HOUSE_CENTER_X + rowW / 2 + 4, roofBaseY);
+            ctx.moveTo(HOUSE_CENTER_X - roofRowW / 2 - 4, roofBaseY);
+            ctx.lineTo(HOUSE_CENTER_X + roofRowW / 2 + 4, roofBaseY);
             ctx.lineTo(HOUSE_CENTER_X, roofBaseY - 28);
             ctx.closePath();
             ctx.fill();
