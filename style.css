@@ -176,6 +176,11 @@ h1 {
     border-color: rgba(233, 184, 114, 0.4);
 }
 
+.game-card.unicorn-storyteller {
+    background: linear-gradient(135deg, rgba(255, 127, 199, 0.26), rgba(168, 100, 255, 0.22));
+    border-color: rgba(255, 127, 199, 0.45);
+}
+
 .top-menu {
     position: fixed;
     top: 16px;
