@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>Unicorn Storyteller</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-wrapper">
+        <a class="home-link" href="../">← Games</a>
+        <header>
+            <h1>🦄 Unicorn Storyteller</h1>
+            <div class="hud">
+                <div class="stat" id="player-tag">👤 <span id="player-name">—</span></div>
+                <div class="stat">Stories: <span id="story-count">0</span></div>
+            </div>
+            <div class="mode-toggle" role="group" aria-label="Pick a mode">
+                <button type="button" class="toggle-btn selected" data-mode="listen">🎧 Listen</button>
+                <button type="button" class="toggle-btn" data-mode="read">👀 Read</button>
+            </div>
+        </header>
+
+        <div class="stage">
+            <div class="scene" id="scene">
+                <div class="scene-props" id="scene-props" aria-hidden="true"></div>
+                <div class="unicorn" id="unicorn" aria-hidden="true">🦄</div>
+                <div class="scene-fx" id="scene-fx" aria-hidden="true"></div>
+                <div class="ground" aria-hidden="true"></div>
+            </div>
+
+            <div class="sentence-tray" id="sentence-tray" aria-live="polite"></div>
+
+            <div class="tiles" id="tiles" role="group" aria-label="Word choices"></div>
+
+            <div class="action-row">
+                <button type="button" id="speak-btn" class="icon-btn" aria-label="Read sentence">🔊</button>
+                <button type="button" id="next-btn" class="next-btn">Next Story</button>
+            </div>
+
+            <div class="story-book" id="story-book" aria-label="Saved stories">
+                <div class="story-book-title">✨ Story Book</div>
+                <div class="story-book-list" id="story-book-list"></div>
+            </div>
+
+            <div id="overlay" class="overlay">
+                <div class="panel">
+                    <h2 id="overlay-title">🦄 Ready to play?</h2>
+                    <p id="overlay-msg">Pick a word to build a magical sentence. The unicorn will act it out!</p>
+                    <label class="name-row" for="name-input">
+                        <span>Name</span>
+                        <input id="name-input" type="text" maxlength="12" autocomplete="off"
+                               spellcheck="false" placeholder="Player" />
+                    </label>
+                    <button id="start-btn">Start</button>
+                </div>
+            </div>
+        </div>
+
+        <footer><p>Tap a word. Listen. Watch the unicorn!</p></footer>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
