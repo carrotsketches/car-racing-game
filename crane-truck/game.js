@@ -411,6 +411,26 @@
     }
     function drawTrucks() {
         for (const t of state.trucks) {
+            // Pulse + arrow on the matching truck while carrying
+            if (state.carrying && state.carrying.color === t.color) {
+                const pulse = 0.5 + 0.5 * Math.sin(state.t * 6);
+                ctx.save();
+                ctx.shadowColor = t.color;
+                ctx.shadowBlur = 14 + 10 * pulse;
+                ctx.strokeStyle = t.color;
+                ctx.lineWidth = 3;
+                ctx.globalAlpha = 0.65 + 0.35 * pulse;
+                ctx.strokeRect(t.x - TRUCK_W / 2 - 4, TRUCK_Y - 52, TRUCK_W + 8, 95);
+                ctx.restore();
+                const bounce = Math.sin(state.t * 5) * 5;
+                ctx.save();
+                ctx.fillStyle = "#fff";
+                ctx.font = "bold 22px 'Segoe UI', sans-serif";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "bottom";
+                ctx.fillText("▼", t.x, TRUCK_Y - 60 + bounce);
+                ctx.restore();
+            }
             ctx.fillStyle = t.color;
             ctx.fillRect(t.x - TRUCK_W / 2, TRUCK_Y - 30, TRUCK_W, 36);
             ctx.fillStyle = "#1b2735";
@@ -478,6 +498,26 @@
             ctx.fillText("+5 bonus", W / 2, H / 2 - 12);
             ctx.restore();
         }
+    }
+
+    function drawHint() {
+        if (!state.running) return;
+        let text = null;
+        if (state.carrying) {
+            text = "Got it! Tap again when over the glowing truck ▼";
+        } else if (!state.rope.dropping && !state.rope.raising) {
+            text = "Tap to drop the hook onto a block";
+        }
+        if (!text) return;
+        ctx.save();
+        ctx.fillStyle = "rgba(0,0,0,0.48)";
+        ctx.fillRect(W / 2 - 168, H - 46, 336, 28);
+        ctx.fillStyle = state.carrying ? "#fde68a" : "#e8eef7";
+        ctx.font = "13px 'Segoe UI', sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(text, W / 2, H - 32);
+        ctx.restore();
     }
 
     function drawParticles(dt) {
@@ -558,6 +598,7 @@
         drawBlocks();
         drawCrane();
         drawParticles(dt);
+        drawHint();
 
         requestAnimationFrame(loop);
     }
