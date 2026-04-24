@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>Pattern Party</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-wrapper">
+        <div class="nav-row">
+            <a class="home-link" href="../">← Games</a>
+            <button class="help-btn" id="help-btn" aria-label="How to play">?</button>
+        </div>
+        <header>
+            <h1>Pattern Party</h1>
+            <div class="hud">
+                <div class="stat" id="player-tag">👤 <span id="player-name">—</span></div>
+                <div class="stat">Q <span id="q-num">0</span>/<span id="q-total">10</span></div>
+                <div class="stat">Score: <span id="score">0</span></div>
+                <div class="stat">Best: <span id="best">0</span></div>
+            </div>
+        </header>
+
+        <div class="stage">
+            <div class="cheer" id="cheer" aria-live="polite"></div>
+            <div class="pad" id="pad">
+                <div class="toggle-row">
+                    <div class="mode-toggle" role="group" aria-label="Switch difficulty">
+                        <button type="button" class="toggle-btn selected" data-level="easy">Easy</button>
+                        <button type="button" class="toggle-btn" data-level="medium">Medium</button>
+                    </div>
+                </div>
+
+                <div class="q-title" id="q-title">What comes next?</div>
+                <div class="q-stage" id="q-stage" aria-live="polite"></div>
+
+                <div class="hint" id="hint">Tap the matching tile!</div>
+
+                <div class="answers" id="answers" data-count="4"></div>
+            </div>
+
+            <div id="overlay" class="overlay">
+                <div class="panel">
+                    <h2 id="overlay-title">Ready?</h2>
+                    <p id="overlay-msg">Look at the picture puzzle and tap the answer. 10 rounds — patterns, odd one out, counting, and spot the different!</p>
+                    <label class="name-row" for="name-input">
+                        <span>Name</span>
+                        <input id="name-input" type="text" maxlength="12" autocomplete="off"
+                               spellcheck="false" placeholder="Player" />
+                    </label>
+
+                    <button id="start-btn">Start</button>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>Tap the right answer. Two tries per question.</p>
+        </footer>
+
+        <div id="help-modal" class="help-modal" hidden>
+            <div class="help-panel">
+                <button class="help-close" id="help-close" aria-label="Close">✕</button>
+                <h3>How to Play</h3>
+                <p>Each round shows a little picture puzzle: a pattern to finish, an odd one out, a counting row, or a same/different trio. Tap the answer tile at the bottom. Get it right on the first try for +10, second try for +5. After two misses the correct tile lights up and you move on. 10 rounds per game.</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>

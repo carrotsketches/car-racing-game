@@ -111,6 +111,11 @@ h1 {
     border-color: rgba(243, 184, 217, 0.4);
 }
 
+.game-card.pattern-party {
+    background: linear-gradient(135deg, rgba(134, 227, 206, 0.22), rgba(120, 86, 200, 0.2));
+    border-color: rgba(134, 227, 206, 0.4);
+}
+
 .game-card.piano {
     background: linear-gradient(135deg, rgba(166, 184, 255, 0.22), rgba(110, 130, 220, 0.18));
     border-color: rgba(166, 184, 255, 0.4);
