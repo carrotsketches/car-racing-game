@@ -64,6 +64,22 @@
         { parts: ["The", { blank: "adjectives" }, "unicorn", "can", { blank: "verbs" }], label: "The ___ unicorn can ___" },
     ];
 
+    // Which adjectives can truthfully describe each noun. Keeps the
+    // storyteller from generating sentences like "My sun is little" or
+    // "Look at the funny rainbow".
+    const NOUN_ADJ_OK = {
+        unicorn: ["big", "little", "pretty", "funny", "red", "blue", "pink", "yellow"],
+        rainbow: ["big", "little", "pretty"],
+        castle:  ["big", "little", "pretty", "red", "blue", "pink", "yellow"],
+        star:    ["big", "little", "pretty", "red", "blue", "yellow"],
+        cake:    ["big", "little", "pretty", "funny", "red", "blue", "pink", "yellow"],
+        bird:    ["big", "little", "pretty", "funny", "red", "blue", "pink", "yellow"],
+        flower:  ["big", "little", "pretty", "red", "blue", "pink", "yellow"],
+        moon:    ["big", "little", "pretty", "red", "blue", "pink", "yellow"],
+        sun:     ["big", "pretty", "red", "yellow"],
+        cloud:   ["big", "little", "pretty", "funny", "pink", "yellow"],
+    };
+
     function loadStories() {
         try {
             const raw = localStorage.getItem(STORIES_KEY);
@@ -232,7 +248,21 @@
         const blanks = state.template.parts.filter((p) => typeof p === "object");
         if (state.blankIndex >= blanks.length) return;
         const category = blanks[state.blankIndex].blank;
-        const pool = WORDS[category];
+        let pool = WORDS[category];
+
+        if (state.blankIndex > 0) {
+            const prevCat = blanks[state.blankIndex - 1].blank;
+            const prevWord = state.filled[state.blankIndex - 1]?.word;
+            if (prevWord) {
+                if (category === "nouns" && prevCat === "adjectives") {
+                    pool = pool.filter((n) => (NOUN_ADJ_OK[n.word] || []).includes(prevWord));
+                } else if (category === "adjectives" && prevCat === "nouns") {
+                    const okAdj = NOUN_ADJ_OK[prevWord] || [];
+                    pool = pool.filter((a) => okAdj.includes(a.word));
+                }
+            }
+        }
+
         const choices = shuffle(pool).slice(0, 3);
         for (const c of choices) {
             const tile = document.createElement("button");
