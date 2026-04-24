@@ -87,47 +87,6 @@ h1 {
     gap: 8px;
 }
 
-.toggle-row {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 6px;
-    margin-bottom: 4px;
-}
-
-.mode-toggle {
-    display: inline-flex;
-    align-items: center;
-    background: rgba(91, 160, 209, 0.12);
-    border: 1px solid rgba(91, 160, 209, 0.35);
-    border-radius: 999px;
-    padding: 3px;
-    gap: 2px;
-}
-
-.toggle-btn {
-    padding: 5px 16px;
-    background: transparent;
-    border: none;
-    border-radius: 999px;
-    font-size: 0.8rem;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-    color: #4a6684;
-    cursor: pointer;
-    transition: background 0.15s ease, color 0.15s ease;
-    font-family: inherit;
-}
-
-.toggle-btn:hover { color: #3a8fb7; }
-
-.toggle-btn.selected {
-    background: #5ba0d1;
-    color: #fff;
-    box-shadow: 0 2px 6px rgba(91, 160, 209, 0.35);
-}
-
 .q-title {
     text-align: center;
     font-size: 1.05rem;
@@ -170,6 +129,25 @@ h1 {
     font-size: 2.4rem;
     font-weight: 900;
     animation: slotPulse 1.2s ease-in-out infinite;
+}
+
+/* Sized tiles (for size-sequence prompts): drop the fixed box
+   so the emoji can set its own size. */
+.q-tile.q-tile-sized {
+    width: auto;
+    height: auto;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 4px 8px;
+    background: #fff;
+}
+
+.q-inline-prompt {
+    font-size: 1rem;
+    color: #4a6684;
+    font-weight: 600;
+    text-align: center;
+    padding: 10px 8px;
 }
 
 .q-group {
