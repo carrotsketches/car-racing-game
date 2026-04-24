@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>Stats</title>
+    <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+    <a class="back-link" href="../">← Back</a>
+    <main class="home">
+        <h1 class="stats-title">📊 Stats</h1>
+        <p class="subtitle">Play counts from the leaderboards on this device</p>
+
+        <section class="stats-section">
+            <h2>Most-played games</h2>
+            <table class="stats-table" id="games-table">
+                <thead>
+                    <tr><th>#</th><th>Game</th><th>Plays</th></tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+            <p class="empty-note" id="games-empty" hidden>No games played yet — go play some!</p>
+        </section>
+
+        <section class="stats-section">
+            <h2>Most-active players</h2>
+            <table class="stats-table" id="players-table">
+                <thead>
+                    <tr><th>#</th><th>Player</th><th>Games</th><th>Plays</th></tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+            <p class="empty-note" id="players-empty" hidden>No players recorded yet.</p>
+        </section>
+    </main>
+
+    <script src="stats.js"></script>
+</body>
+</html>

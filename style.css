@@ -293,6 +293,77 @@ h1 {
     text-shadow: 0 2px 12px rgba(255, 94, 87, 0.4);
 }
 
+.home h1.stats-title {
+    color: #8ad4ff;
+    text-shadow: 0 2px 12px rgba(108, 196, 255, 0.4);
+}
+
+.stats-section {
+    margin-top: 28px;
+    text-align: left;
+}
+
+.stats-section h2 {
+    font-size: 1.15rem;
+    color: #f5c451;
+    margin-bottom: 10px;
+    letter-spacing: 0.5px;
+}
+
+.stats-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 14px;
+    overflow: hidden;
+}
+
+.stats-table th,
+.stats-table td {
+    padding: 10px 14px;
+    font-size: 0.95rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.stats-table th {
+    background: rgba(255, 255, 255, 0.08);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: #cfd7e3;
+    text-align: left;
+}
+
+.stats-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.stats-table td.rank {
+    width: 40px;
+    color: #8892a5;
+    font-weight: 700;
+}
+
+.stats-table td.num,
+.stats-table th:nth-child(n+3) {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    color: #fff;
+}
+
+.stats-table .game-cell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.stats-table .game-emoji {
+    font-size: 1.2rem;
+    line-height: 1;
+}
+
 @media (max-width: 500px) {
     .top-menu,
     .back-link {
