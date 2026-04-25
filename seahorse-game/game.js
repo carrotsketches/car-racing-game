@@ -83,6 +83,10 @@
         tone(base, 0.18, "sine", 0.045);
         tone(base * 1.5, 0.22, "sine", 0.03);
     }
+    function hurtBuzz() {
+        tone(160, 0.22, "square", 0.05);
+        tone(110, 0.28, "square", 0.04);
+    }
 
     // ---------- State ----------
     const state = {
@@ -382,6 +386,107 @@
         }
     }
 
+    // ---------- Jellyfish ----------
+    // Drift horizontally, bob vertically with a sine wave, sting on contact.
+    const JELLY_HIT_INVULN_MS = 1200;
+    let nextJellyAt = 0;
+
+    function spawnJelly() {
+        const fromLeft = Math.random() < 0.5;
+        const baseY = randRange(80, H - 140);
+        state.jellies.push({
+            x: fromLeft ? -40 : W + 40,
+            baseY,
+            y: baseY,
+            vx: (fromLeft ? 1 : -1) * randRange(35, 60),
+            bobAmp: randRange(8, 22),
+            bobFreq: randRange(0.6, 1.1),
+            phase: Math.random() * Math.PI * 2,
+            r: 22 // bell radius
+        });
+    }
+
+    function updateJellies(dt) {
+        const t = state.elapsed / 1000;
+        const sx = state.seahorse.x;
+        const sy = state.seahorse.y;
+        const invuln = state.elapsed < state.seahorse.invulnUntil;
+        for (const j of state.jellies) {
+            j.x += j.vx * dt;
+            j.y = j.baseY + Math.sin(t * j.bobFreq + j.phase) * j.bobAmp;
+            // Collision check (only when running and not invulnerable).
+            if (state.running && !invuln) {
+                const dx = j.x - sx;
+                const dy = (j.y + 6) - sy; // bias toward bell + tentacles
+                const reach = j.r + 14;
+                if (dx * dx + dy * dy <= reach * reach) {
+                    handleJellyHit();
+                }
+            }
+        }
+        // Drop jellies that have drifted fully off-screen.
+        state.jellies = state.jellies.filter((j) => j.x > -80 && j.x < W + 80);
+    }
+
+    function handleJellyHit() {
+        state.seahorse.invulnUntil = state.elapsed + JELLY_HIT_INVULN_MS;
+        state.lives = Math.max(0, state.lives - 1);
+        livesEl.textContent = state.lives;
+        hurtBuzz();
+        if (state.lives <= 0 && state.running) {
+            // endGame is wired in the next commit; flag the state so the loop
+            // picks it up there.
+            state.running = false;
+        }
+    }
+
+    function drawJellies() {
+        for (const j of state.jellies) {
+            ctx.save();
+            ctx.translate(j.x, j.y);
+
+            // Tentacles — wavy quadratic curves trailing below the bell.
+            ctx.strokeStyle = "rgba(255, 150, 200, 0.7)";
+            ctx.lineWidth = 2;
+            ctx.lineCap = "round";
+            const t = state.elapsed / 200;
+            for (let i = -2; i <= 2; i++) {
+                const x0 = i * 6;
+                const sway = Math.sin(t + i * 0.5) * 4;
+                ctx.beginPath();
+                ctx.moveTo(x0, 8);
+                ctx.quadraticCurveTo(x0 + sway, 18, x0 - sway, 30);
+                ctx.quadraticCurveTo(x0 + sway, 38, x0, 46);
+                ctx.stroke();
+            }
+
+            // Bell.
+            const bell = ctx.createRadialGradient(0, -4, 4, 0, 0, j.r);
+            bell.addColorStop(0, "rgba(255, 220, 240, 0.85)");
+            bell.addColorStop(0.6, "rgba(240, 130, 200, 0.65)");
+            bell.addColorStop(1, "rgba(180, 80, 160, 0.45)");
+            ctx.fillStyle = bell;
+            ctx.beginPath();
+            ctx.ellipse(0, 0, j.r, j.r * 0.8, 0, Math.PI, 0);
+            ctx.lineTo(j.r, 6);
+            ctx.quadraticCurveTo(j.r * 0.5, 12, 0, 8);
+            ctx.quadraticCurveTo(-j.r * 0.5, 12, -j.r, 6);
+            ctx.closePath();
+            ctx.fill();
+            ctx.strokeStyle = "rgba(255, 200, 230, 0.55)";
+            ctx.lineWidth = 1.2;
+            ctx.stroke();
+
+            // Inner glow / stinger dot.
+            ctx.fillStyle = "rgba(255, 230, 240, 0.5)";
+            ctx.beginPath();
+            ctx.ellipse(0, -2, j.r * 0.45, j.r * 0.35, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+        }
+    }
+
     // ---------- Sparkles (bubble pop confetti) ----------
     function spawnSparkles(x, y, tier) {
         const n = tier === "small" ? 12 : tier === "medium" ? 9 : 7;
@@ -446,8 +551,20 @@
         updateBubbles(dt);
         updateSparkles(dt);
 
+        // Jellyfish only spawn during a running round; in-flight ones still
+        // animate after the round ends so they drift off-screen naturally.
+        if (state.running && state.elapsed >= nextJellyAt) {
+            const cap = state.score >= 10 ? 2 : 1;
+            if (state.jellies.length < cap) {
+                spawnJelly();
+            }
+            nextJellyAt = state.elapsed + randRange(2800, 4200);
+        }
+        updateJellies(dt);
+
         ctx.clearRect(0, 0, W, H);
         drawBubbles();
+        drawJellies();
         drawSparkles();
         drawSeahorse(state.seahorse, state.seahorse.flap);
 
