@@ -434,9 +434,7 @@
         livesEl.textContent = state.lives;
         hurtBuzz();
         if (state.lives <= 0 && state.running) {
-            // endGame is wired in the next commit; flag the state so the loop
-            // picks it up there.
-            state.running = false;
+            endGame("hearts");
         }
     }
 
@@ -543,6 +541,16 @@
         if (Math.abs(dx) > 1) state.seahorse.facing = dx >= 0 ? 1 : -1;
         state.seahorse.flap += dt;
 
+        // Tick the round timer.
+        if (state.running) {
+            state.timeLeft = Math.max(0, state.timeLeft - dt);
+            const shown = Math.ceil(state.timeLeft);
+            if (timeEl.textContent !== String(shown)) timeEl.textContent = shown;
+            if (state.timeLeft <= 10) timeStatEl.classList.add("low");
+            else timeStatEl.classList.remove("low");
+            if (state.timeLeft <= 0) endGame("time");
+        }
+
         // Bubble field — runs even on the overlay so the scene feels alive.
         if (state.elapsed >= nextBubbleAt) {
             spawnBubble();
@@ -572,13 +580,58 @@
     }
     requestAnimationFrame(idleStep);
 
-    // Temporary start handler — full startGame lands with the game loop.
-    startBtn.addEventListener("click", () => {
+    // ---------- Start / End ----------
+    function startGame() {
         ensureAudio();
         state.playerName = sanitizeName(nameInput.value);
         localStorage.setItem(NAME_KEY, state.playerName);
         playerNameEl.textContent = state.playerName;
-    });
+
+        state.running = true;
+        state.score = 0;
+        state.lives = MAX_LIVES;
+        state.timeLeft = ROUND_SECONDS;
+        state.bubbles = [];
+        state.jellies = [];
+        state.sparkles = [];
+        state.seahorse.invulnUntil = 0;
+        nextBubbleAt = state.elapsed; // resume spawning from now
+        nextJellyAt = state.elapsed + randRange(1200, 2200);
+
+        scoreEl.textContent = "0";
+        livesEl.textContent = MAX_LIVES;
+        timeEl.textContent = ROUND_SECONDS;
+        timeStatEl.classList.remove("low");
+
+        overlay.classList.add("hidden");
+        stage.classList.add("playing");
+    }
+
+    function endGame(reason) {
+        if (!state.running) return;
+        state.running = false;
+        stage.classList.remove("playing");
+        timeStatEl.classList.remove("low");
+
+        const entry = { name: state.playerName, score: state.score, at: Date.now() };
+        state.leaderboard.push(entry);
+        state.leaderboard.sort((a, b) => b.score - a.score);
+        state.leaderboard = state.leaderboard.slice(0, LB_MAX);
+        saveLeaderboard();
+        bestEl.textContent = personalBest(state.playerName);
+
+        if (reason === "hearts") {
+            overlayTitle.textContent = "Stung! 🪼";
+            overlayMsg.textContent = `The jellyfish caught you. Final score: ${state.score}.`;
+        } else {
+            overlayTitle.textContent = "Time's up! 🐚";
+            overlayMsg.textContent = `You popped your way to ${state.score} points.`;
+        }
+        startBtn.textContent = "Play Again";
+        overlay.classList.remove("hidden");
+    }
+
+    startBtn.addEventListener("click", startGame);
 })();
 
 (() => {
