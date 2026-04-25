@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>Excavator Dig</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-wrapper">
+        <div class="nav-row">
+            <a class="home-link" href="../">← Games</a>
+            <button class="help-btn" id="help-btn" aria-label="How to play">?</button>
+        </div>
+        <header>
+            <h1>Excavator Dig</h1>
+            <div class="hud">
+                <div class="stat" id="player-tag">👤 <span id="player-name">—</span></div>
+                <div class="stat">Score: <span id="score">0</span></div>
+                <div class="stat time-stat" id="time-stat">⏱ <span id="time">60</span>s</div>
+                <div class="stat">Best: <span id="best">0</span></div>
+            </div>
+        </header>
+
+        <div class="stage">
+            <canvas id="game" width="400" height="500" aria-label="Excavator dig play area"></canvas>
+
+            <div id="overlay" class="overlay">
+                <div class="panel">
+                    <h2 id="overlay-title">Ready to Dig?</h2>
+                    <p id="overlay-msg">Rotate the arm over the dirt, press DIG to scoop. Swing to the truck and press DUMP to unload. Fill 4 trucks for a big bonus!</p>
+                    <label class="name-row" for="name-input">
+                        <span>Name</span>
+                        <input id="name-input" type="text" maxlength="12" autocomplete="off"
+                               spellcheck="false" placeholder="Player" />
+                    </label>
+                    <button id="start-btn">Start</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="touch-controls">
+            <button type="button" class="touch-btn rotate-btn" id="left-btn" aria-label="Rotate arm left">◀</button>
+            <button type="button" class="touch-btn action-btn" id="action-btn" aria-label="Dig or dump">⛏</button>
+            <button type="button" class="touch-btn rotate-btn" id="right-btn" aria-label="Rotate arm right">▶</button>
+        </div>
+
+        <footer><p>◀ ▶ to swing the arm · ⛏ to dig dirt · dump into the truck!</p></footer>
+
+        <div id="help-modal" class="help-modal" hidden>
+            <div class="help-panel">
+                <button class="help-close" id="help-close" aria-label="Close">✕</button>
+                <h3>How to Play</h3>
+                <p>
+                    <strong>Rotate:</strong> Tap ◀ / ▶ (or press A / D or ← / → keys) to swing the excavator arm.<br><br>
+                    <strong>Dig:</strong> Swing the bucket over the <em>dirt pile</em> on the left, then tap ⛏ (or press Space) to scoop a load.<br><br>
+                    <strong>Dump:</strong> Swing back right over the <em>truck bed</em> and tap ⛏ to dump the dirt in.<br><br>
+                    Fill the truck with <strong>4 loads</strong> to send it off and earn a bonus. Score as many points as you can in <strong>60 seconds</strong>!
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
