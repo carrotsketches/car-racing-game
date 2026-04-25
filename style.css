@@ -186,6 +186,11 @@ h1 {
     border-color: rgba(255, 127, 199, 0.45);
 }
 
+.game-card.seahorse-game {
+    background: linear-gradient(135deg, rgba(120, 220, 255, 0.22), rgba(255, 209, 102, 0.2));
+    border-color: rgba(120, 220, 255, 0.4);
+}
+
 .top-menu {
     position: fixed;
     top: 16px;
