@@ -172,12 +172,15 @@
         setTimeout(() => tone({ freq: 784, type: "triangle", duration: 0.25, volume: 0.24 }), 260);
     }
 
-    // ----- Question generators -----
-    // Each returns { type, title, stage, options, correctIdx, answersCount }
-    // Option kinds: { kind:"emoji", value } | { kind:"group", emoji, count } | { kind:"sized", emoji, size }
-    // Stage kinds: "sequence" | "size-sequence" | "count-prompt" | "inline-prompt"
-
-    function genSeq() {
+    // ----- Pattern generator -----
+    // Returns {
+    //   visible: [emoji|null, ...],  // null means a blank "?" tile
+    //   blankPositions: [idx, ...],  // positions of blanks in `visible`, left-to-right
+    //   answers: [emoji, ...],       // correct emoji for each blank, same order as blankPositions
+    //   options: [{kind:"emoji", value}, ...],
+    //   answersCount: 4,
+    // }
+    function genPattern() {
         const shapes = ["AB", "AABB", "ABC", "AAB", "ABB"];
         const shape = pick(shapes);
         const cat = pick(POOL_KEYS);
@@ -188,7 +191,6 @@
             elems = pickN(POOLS[cat], needed);
             attempts += 1;
         }
-
         const [A, B, C] = elems;
         let cycle;
         if (shape === "AB") cycle = [A, B];
@@ -197,245 +199,82 @@
         else if (shape === "AAB") cycle = [A, A, B];
         else cycle = [A, B, B]; // ABB
 
-        // Show at least one full cycle + some repetition so the pattern is unambiguous.
-        const minTiles = Math.max(5, cycle.length + 2);
-        const maxTiles = minTiles + 2;
-        const len = minTiles + Math.floor(Math.random() * (maxTiles - minTiles + 1));
-        const visible = [];
-        for (let i = 0; i < len; i++) visible.push(cycle[i % cycle.length]);
-        const answer = cycle[len % cycle.length];
+        // Always show enough so the cycle is obvious — at least two full
+        // cycles visible (after blanks are revealed).
+        const minTotal = Math.max(6, cycle.length * 2);
+        const maxTotal = Math.min(8, minTotal + 1);
+        const total = minTotal + Math.floor(Math.random() * (maxTotal - minTotal + 1));
 
+        // Build the full true sequence first.
+        const full = [];
+        for (let i = 0; i < total; i++) full.push(cycle[i % cycle.length]);
+
+        // Pick number of blanks: 1 or 2. Always trailing so the kid is
+        // filling in "what comes next" — easiest to spot.
+        const numBlanks = Math.random() < 0.5 ? 2 : 1;
+        const blankPositions = [];
+        for (let i = total - numBlanks; i < total; i++) blankPositions.push(i);
+
+        const visible = full.map((e, i) => (blankPositions.includes(i) ? null : e));
+        const answers = blankPositions.map((p) => full[p]);
+
+        // Build option set: cycle elements + filler distractors. 4 buttons.
         const optSet = new Set(cycle);
         const poolExtras = POOLS[cat].filter((e) => !optSet.has(e));
         while (optSet.size < 4 && poolExtras.length) {
             const extra = poolExtras.splice(Math.floor(Math.random() * poolExtras.length), 1)[0];
-            if (!isLookalike(extra, answer)) optSet.add(extra);
+            if (!answers.some((a) => isLookalike(extra, a))) optSet.add(extra);
         }
         while (optSet.size < 4) {
             const other = pick(POOLS[pick(POOL_KEYS.filter((k) => k !== cat))]);
-            if (!isLookalike(other, answer) && !optSet.has(other)) optSet.add(other);
+            if (!answers.some((a) => isLookalike(other, a)) && !optSet.has(other)) optSet.add(other);
         }
         const options = shuffle(Array.from(optSet)).slice(0, 4);
-        const correctIdx = options.indexOf(answer);
 
         return {
-            type: "seq",
-            title: "What comes next?",
-            stage: { kind: "sequence", visible, mystery: true },
+            visible,
+            blankPositions,
+            answers,
             options: options.map((e) => ({ kind: "emoji", value: e })),
-            correctIdx,
             answersCount: 4,
         };
-    }
-
-    function genOdd() {
-        const [cat1, cat2] = pickN(POOL_KEYS, 2);
-        let group = pickN(POOLS[cat1], 3);
-        let outlier = pick(POOLS[cat2]);
-        let attempts = 0;
-        while (attempts < 4 && (group.some((g) => isLookalike(g, outlier)) || hasLookalikeGroup(group))) {
-            group = pickN(POOLS[cat1], 3);
-            outlier = pick(POOLS[cat2]);
-            attempts += 1;
-        }
-        const tiles = shuffle([...group, outlier]);
-        const correctIdx = tiles.indexOf(outlier);
-
-        return {
-            type: "odd",
-            title: "Which one doesn't belong?",
-            stage: { kind: "inline-prompt", text: "Tap the one that's different 👇" },
-            options: tiles.map((e) => ({ kind: "emoji", value: e })),
-            correctIdx,
-            answersCount: 4,
-        };
-    }
-
-    function genCount() {
-        const cat = pick(POOL_KEYS);
-        const e = pick(POOLS[cat]);
-        const promptGroups = [1, 2, 3];
-        const distractors = shuffle([2, 3, 5]);
-        const counts = shuffle([4, ...distractors]);
-        const correctIdx = counts.indexOf(4);
-
-        return {
-            type: "count",
-            title: "How many come next?",
-            stage: { kind: "count-prompt", emoji: e, promptCounts: promptGroups },
-            options: counts.map((n) => ({ kind: "group", emoji: e, count: n })),
-            correctIdx,
-            answersCount: 4,
-        };
-    }
-
-    function genSameDiff() {
-        const cat = pick(POOL_KEYS);
-        let pair = pickN(POOLS[cat], 2);
-        let attempts = 0;
-        while (isLookalike(pair[0], pair[1]) && attempts < 3) {
-            pair = pickN(POOLS[cat], 2);
-            attempts += 1;
-        }
-        const [a, b] = pair;
-        const tiles = shuffle([a, a, b]);
-        const correctIdx = tiles.indexOf(b);
-
-        return {
-            type: "samediff",
-            title: "Which one is different?",
-            stage: { kind: "inline-prompt", text: "Tap the odd tile 👇" },
-            options: tiles.map((e) => ({ kind: "emoji", value: e })),
-            correctIdx,
-            answersCount: 3,
-        };
-    }
-
-    // Size-growing (or shrinking) sequence: small → medium → large → ?
-    function genSize() {
-        const cat = pick(POOL_KEYS);
-        const emoji = pick(POOLS[cat]);
-        const growing = Math.random() < 0.5;
-        const baseSizes = growing ? [1.2, 1.8, 2.4] : [2.6, 2.0, 1.4];
-        const answerSize = growing ? 3.0 : 0.9;
-        // Distractors: sizes that don't continue the trend.
-        const distractors = growing ? [1.0, 1.5, 2.1] : [3.0, 2.4, 1.8];
-        const optSizes = shuffle([answerSize, ...shuffle(distractors).slice(0, 3)]);
-        const correctIdx = optSizes.indexOf(answerSize);
-
-        return {
-            type: "size",
-            title: growing ? "Tap the one that keeps growing!" : "Tap the one that keeps shrinking!",
-            stage: { kind: "size-sequence", emoji, sizes: baseSizes, mystery: true },
-            options: optSizes.map((sz) => ({ kind: "sized", emoji, size: sz })),
-            correctIdx,
-            answersCount: 4,
-        };
-    }
-
-    // Pick the biggest (or smallest) of 4 tiles showing same emoji at different sizes.
-    function genBiggerSmaller() {
-        const cat = pick(POOL_KEYS);
-        const emoji = pick(POOLS[cat]);
-        const pickBiggest = Math.random() < 0.5;
-        const sizes = shuffle([1.0, 1.6, 2.2, 2.8]);
-        const target = pickBiggest ? 2.8 : 1.0;
-        const correctIdx = sizes.indexOf(target);
-
-        return {
-            type: "biggersmaller",
-            title: pickBiggest ? "Tap the BIGGEST one!" : "Tap the SMALLEST one!",
-            stage: { kind: "inline-prompt", text: pickBiggest ? "Find the biggest 👇" : "Find the smallest 👇" },
-            options: sizes.map((sz) => ({ kind: "sized", emoji, size: sz })),
-            correctIdx,
-            answersCount: 4,
-        };
-    }
-
-    // 4 groups of emoji: 3 have the same count, one has a different count — tap the different.
-    function genOddCount() {
-        const cat = pick(POOL_KEYS);
-        const emoji = pick(POOLS[cat]);
-        const commonCount = 2 + Math.floor(Math.random() * 3); // 2, 3, or 4
-        // Odd count differs by 1 or 2, clamped to >=1
-        const delta = Math.random() < 0.5 ? 1 : 2;
-        const oddCount = Math.random() < 0.5
-            ? Math.max(1, commonCount - delta)
-            : commonCount + delta;
-        const counts = shuffle([commonCount, commonCount, commonCount, oddCount]);
-        const correctIdx = counts.indexOf(oddCount);
-
-        return {
-            type: "oddcount",
-            title: "Which group is different?",
-            stage: { kind: "inline-prompt", text: "One has a different number 👇" },
-            options: counts.map((n) => ({ kind: "group", emoji, count: n })),
-            correctIdx,
-            answersCount: 4,
-        };
-    }
-
-    const GENERATORS = {
-        seq: genSeq,
-        odd: genOdd,
-        count: genCount,
-        samediff: genSameDiff,
-        size: genSize,
-        biggersmaller: genBiggerSmaller,
-        oddcount: genOddCount,
-    };
-
-    // Fixed 10-round mix: variety across all pattern types, then shuffled.
-    function buildRoundTypes() {
-        const mix = [
-            "seq", "seq", "seq",
-            "odd", "odd",
-            "count",
-            "samediff",
-            "size",
-            "biggersmaller",
-            "oddcount",
-        ];
-        return shuffle(mix.slice());
     }
 
     // ----- Rendering -----
     function renderStage(current) {
         qStageEl.innerHTML = "";
-        const s = current.stage;
-        if (s.kind === "sequence") {
-            s.visible.forEach((emo) => {
-                const t = document.createElement("div");
+        current.visible.forEach((emo, i) => {
+            const t = document.createElement("div");
+            if (emo == null) {
+                t.className = "q-tile mystery";
+                t.textContent = "?";
+                t.dataset.blankIdx = String(current.blankPositions.indexOf(i));
+            } else {
                 t.className = "q-tile";
                 t.textContent = emo;
-                qStageEl.appendChild(t);
-            });
-            if (s.mystery) qStageEl.appendChild(buildMysteryTile());
-        } else if (s.kind === "size-sequence") {
-            s.sizes.forEach((sz) => {
-                const t = document.createElement("div");
-                t.className = "q-tile q-tile-sized";
-                t.style.fontSize = `${sz}rem`;
-                t.textContent = s.emoji;
-                qStageEl.appendChild(t);
-            });
-            if (s.mystery) qStageEl.appendChild(buildMysteryTile());
-        } else if (s.kind === "count-prompt") {
-            s.promptCounts.forEach((n) => {
-                qStageEl.appendChild(buildGroupEl(s.emoji, n));
-            });
-            const mystery = document.createElement("div");
-            mystery.className = "q-group mystery";
-            const mark = document.createElement("span");
-            mark.className = "mystery-mark";
-            mark.textContent = "?";
-            mystery.appendChild(mark);
-            qStageEl.appendChild(mystery);
-        } else if (s.kind === "inline-prompt") {
-            const txt = document.createElement("div");
-            txt.className = "q-inline-prompt";
-            txt.textContent = s.text;
-            qStageEl.appendChild(txt);
-        }
+            }
+            qStageEl.appendChild(t);
+        });
+        markActiveBlank();
     }
 
-    function buildMysteryTile() {
-        const m = document.createElement("div");
-        m.className = "q-tile mystery";
-        m.textContent = "?";
-        return m;
+    function markActiveBlank() {
+        const c = state.current;
+        if (!c) return;
+        const tiles = qStageEl.querySelectorAll(".q-tile.mystery");
+        tiles.forEach((t) => {
+            const idx = Number(t.dataset.blankIdx);
+            t.classList.toggle("active", idx === c.blanksFilled);
+            t.classList.toggle("waiting", idx > c.blanksFilled);
+        });
     }
 
-    function buildGroupEl(emoji, count) {
-        const g = document.createElement("div");
-        g.className = "q-group";
-        for (let i = 0; i < count; i++) {
-            const span = document.createElement("span");
-            span.className = "mini";
-            span.textContent = emoji;
-            g.appendChild(span);
-        }
-        return g;
+    function fillBlank(blankIdx, emoji) {
+        const tile = qStageEl.querySelector(`.q-tile.mystery[data-blank-idx="${blankIdx}"]`);
+        if (!tile) return;
+        tile.classList.remove("mystery", "active", "waiting");
+        tile.classList.add("filled");
+        tile.textContent = emoji;
     }
 
     function renderAnswers(current) {
@@ -446,40 +285,24 @@
             btn.type = "button";
             btn.className = "ans";
             btn.dataset.idx = String(idx);
-            if (opt.kind === "emoji") {
-                const span = document.createElement("span");
-                span.className = "ans-emoji";
-                span.textContent = opt.value;
-                btn.appendChild(span);
-            } else if (opt.kind === "sized") {
-                const span = document.createElement("span");
-                span.className = "ans-emoji";
-                span.style.fontSize = `${opt.size}rem`;
-                span.textContent = opt.emoji;
-                btn.appendChild(span);
-            } else if (opt.kind === "group") {
-                const g = document.createElement("div");
-                g.className = "ans-group";
-                for (let i = 0; i < opt.count; i++) {
-                    const s = document.createElement("span");
-                    s.className = "mini";
-                    s.textContent = opt.emoji;
-                    g.appendChild(s);
-                }
-                btn.appendChild(g);
-            }
+            const span = document.createElement("span");
+            span.className = "ans-emoji";
+            span.textContent = opt.value;
+            btn.appendChild(span);
             answersEl.appendChild(btn);
         });
     }
 
     function renderCurrent() {
         if (!state.current) return;
-        qTitleEl.textContent = state.current.title;
+        qTitleEl.textContent = "What comes next?";
         renderStage(state.current);
         renderAnswers(state.current);
         qNumEl.textContent = state.qIndex + 1;
         hintEl.className = "hint";
-        hintEl.textContent = "Tap the matching tile!";
+        hintEl.textContent = state.current.answers.length > 1
+            ? "Tap to fill each ❓ in order"
+            : "Tap the matching tile";
     }
 
     // ----- Round lifecycle -----
@@ -492,7 +315,7 @@
         state.score = 0;
         state.qIndex = 0;
         scoreEl.textContent = 0;
-        state.rounds = buildRoundTypes();
+        state.rounds = new Array(Q_TOTAL).fill("seq");
         overlay.classList.add("hidden");
         state.running = true;
         nextRound();
@@ -503,8 +326,8 @@
             endGame();
             return;
         }
-        const type = state.rounds[state.qIndex];
-        state.current = GENERATORS[type]();
+        const round = genPattern();
+        state.current = { ...round, blanksFilled: 0 };
         state.mistakes = 0;
         state.locked = false;
         renderCurrent();
@@ -522,23 +345,41 @@
         const tile = tiles[idx];
         if (!tile) return;
 
-        if (idx === c.correctIdx) {
-            state.locked = true;
+        const expected = c.answers[c.blanksFilled];
+        const expectedIdx = c.options.findIndex((o) => o.value === expected);
+        const correct = idx === expectedIdx;
+
+        if (correct) {
             tile.classList.add("correct");
             playGood();
-            const gained = state.mistakes === 0 ? POINTS_FIRST_TRY : POINTS_RETRY;
-            state.score += gained;
-            scoreEl.textContent = state.score;
-            hintEl.className = "hint good";
-            hintEl.textContent = `✓ Nice! +${gained}`;
-            showCheer();
-            flashPad();
-            setTimeout(advance, 950);
+            const blankIdx = c.blanksFilled;
+            fillBlank(blankIdx, expected);
+            c.blanksFilled += 1;
+
+            // Brief tile flash
+            setTimeout(() => tile.classList.remove("correct"), 280);
+
+            if (c.blanksFilled >= c.answers.length) {
+                // Round complete
+                state.locked = true;
+                const gained = state.mistakes === 0 ? POINTS_FIRST_TRY : POINTS_RETRY;
+                state.score += gained;
+                scoreEl.textContent = state.score;
+                hintEl.className = "hint good";
+                hintEl.textContent = `✓ Nice! +${gained}`;
+                showCheer();
+                flashPad();
+                setTimeout(advance, 950);
+            } else {
+                markActiveBlank();
+                hintEl.className = "hint good";
+                hintEl.textContent = "Yes! Now the next ❓";
+            }
         } else {
             playBad();
             state.mistakes += 1;
             tile.classList.add("wrong");
-            if (state.mistakes === 1) {
+            if (state.mistakes < 2) {
                 state.locked = true;
                 hintEl.className = "hint bad";
                 hintEl.textContent = "Not quite — try again!";
@@ -548,14 +389,28 @@
                     state.locked = false;
                 }, 550);
             } else {
+                // Reveal all remaining blanks and advance.
                 state.locked = true;
                 tile.classList.remove("wrong");
                 tile.classList.add("dim", "wrong");
-                const correctTile = tiles[c.correctIdx];
-                if (correctTile) correctTile.classList.add("reveal");
+                while (c.blanksFilled < c.answers.length) {
+                    const blankIdx = c.blanksFilled;
+                    const ans = c.answers[blankIdx];
+                    const blankTile = qStageEl.querySelector(`.q-tile.mystery[data-blank-idx="${blankIdx}"]`);
+                    if (blankTile) {
+                        blankTile.classList.remove("mystery", "active", "waiting");
+                        blankTile.classList.add("filled", "reveal");
+                        blankTile.textContent = ans;
+                    }
+                    // Highlight the right answer button
+                    const rightOptIdx = c.options.findIndex((o) => o.value === ans);
+                    const rightBtn = tiles[rightOptIdx];
+                    if (rightBtn) rightBtn.classList.add("reveal");
+                    c.blanksFilled += 1;
+                }
                 hintEl.className = "hint bad";
-                hintEl.textContent = "This one! 👉";
-                setTimeout(advance, 1200);
+                hintEl.textContent = "Like this 👆";
+                setTimeout(advance, 1500);
             }
         }
     }

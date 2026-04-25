@@ -19,8 +19,14 @@
         { slug: "pattern-party", name: "Pattern Party", emoji: "🧩" },
         { slug: "unicorn-storyteller", name: "Unicorn Storyteller", emoji: "🦄" },
         { slug: "flappy-bird", name: "Flying Bird", emoji: "🐤" },
+        { slug: "seahorse-game", name: "Seahorse Splash", emoji: "🐚" },
     ];
     const BY_SLUG = Object.fromEntries(GAMES.map((g) => [g.slug, g]));
+    function gameMeta(slug) {
+        if (BY_SLUG[slug]) return BY_SLUG[slug];
+        const pretty = String(slug).replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+        return { slug, name: pretty, emoji: "🎮" };
+    }
 
     let store = {};
     try {
@@ -31,8 +37,12 @@
     const games = (store.games && typeof store.games === "object") ? store.games : {};
     const players = (store.players && typeof store.players === "object") ? store.players : {};
 
-    const gameRows = GAMES
-        .map((g) => ({ ...g, plays: (games[g.slug] && games[g.slug].plays) || 0 }))
+    const gameRows = Object.keys(games)
+        .map((slug) => {
+            const meta = gameMeta(slug);
+            const plays = (games[slug] && games[slug].plays) || 0;
+            return { ...meta, plays };
+        })
         .filter((g) => g.plays > 0)
         .sort((a, b) => b.plays - a.plays || a.name.localeCompare(b.name));
 
