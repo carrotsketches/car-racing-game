@@ -602,7 +602,7 @@
         }
 
         // Belt motion.
-        const beltSpeed = 60 + Math.min(60, state.elapsed / 700);
+        const beltSpeed = 30 + Math.min(30, state.elapsed / 700);
         for (const b of state.bags) b.x += beltSpeed * dt;
         state.bags = state.bags.filter((b) => b.x < BELT.x + BELT.w + 30);
 

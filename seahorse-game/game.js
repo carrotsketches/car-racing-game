@@ -10,18 +10,13 @@
     const nameInput = document.getElementById("name-input");
     const playerNameEl = document.getElementById("player-name");
     const scoreEl = document.getElementById("score");
-    const livesEl = document.getElementById("lives");
     const friendsEl = document.getElementById("friends");
     const friendsStatEl = friendsEl ? friendsEl.closest(".friends-stat") : null;
-    const timeEl = document.getElementById("time");
-    const timeStatEl = document.getElementById("time-stat");
+    const doneBtn = document.getElementById("done-btn");
     const bestEl = document.getElementById("best");
 
     const W = canvas.width;   // 400
     const H = canvas.height;  // 600
-    const ROUND_SECONDS = 60;
-    const MAX_LIVES = 3;
-
     const NAME_KEY = "highway-dash-last-name";
     const LB_KEY = "seahorse-game-leaderboard";
     const LB_MAX = 20;
@@ -127,9 +122,7 @@
     const state = {
         running: false,
         score: 0,
-        lives: MAX_LIVES,
         friendCount: 0,
-        timeLeft: ROUND_SECONDS,
         elapsed: 0,
         lastTs: 0,
         pointer: { x: W / 2, y: H * 0.65 },
@@ -157,7 +150,6 @@
         playerNameEl.textContent = savedName;
     }
     bestEl.textContent = personalBest(savedName);
-    livesEl.textContent = MAX_LIVES;
 
     nameInput.addEventListener("input", () => {
         const n = nameInput.value.trim().slice(0, 12);
@@ -472,12 +464,7 @@
 
     function handleJellyHit() {
         state.seahorse.invulnUntil = state.elapsed + JELLY_HIT_INVULN_MS;
-        state.lives = Math.max(0, state.lives - 1);
-        livesEl.textContent = state.lives;
         hurtBuzz();
-        if (state.lives <= 0 && state.running) {
-            endGame("hearts");
-        }
     }
 
     function drawJellies() {
@@ -728,16 +715,6 @@
         if (Math.abs(dx) > 1) state.seahorse.facing = dx >= 0 ? 1 : -1;
         state.seahorse.flap += dt;
 
-        // Tick the round timer.
-        if (state.running) {
-            state.timeLeft = Math.max(0, state.timeLeft - dt);
-            const shown = Math.ceil(state.timeLeft);
-            if (timeEl.textContent !== String(shown)) timeEl.textContent = shown;
-            if (state.timeLeft <= 10) timeStatEl.classList.add("low");
-            else timeStatEl.classList.remove("low");
-            if (state.timeLeft <= 0) endGame("time");
-        }
-
         // Bubble field — runs even on the overlay so the scene feels alive.
         if (state.elapsed >= nextBubbleAt) {
             spawnBubble();
@@ -788,9 +765,7 @@
 
         state.running = true;
         state.score = 0;
-        state.lives = MAX_LIVES;
         state.friendCount = 0;
-        state.timeLeft = ROUND_SECONDS;
         state.bubbles = [];
         state.jellies = [];
         state.sparkles = [];
@@ -802,20 +777,18 @@
         nextWildAt = state.elapsed + randRange(900, 1800);
 
         scoreEl.textContent = "0";
-        livesEl.textContent = MAX_LIVES;
         friendsEl.textContent = "0";
-        timeEl.textContent = ROUND_SECONDS;
-        timeStatEl.classList.remove("low");
+        doneBtn.removeAttribute("hidden");
 
         overlay.classList.add("hidden");
         stage.classList.add("playing");
     }
 
-    function endGame(reason) {
+    function endGame() {
         if (!state.running) return;
         state.running = false;
         stage.classList.remove("playing");
-        timeStatEl.classList.remove("low");
+        doneBtn.setAttribute("hidden", "");
 
         const entry = { name: state.playerName, score: state.score, at: Date.now() };
         state.leaderboard.push(entry);
@@ -827,18 +800,14 @@
         const friendsLine = state.friendCount > 0
             ? ` You made ${state.friendCount} new ${state.friendCount === 1 ? "friend" : "friends"}! 💞`
             : "";
-        if (reason === "hearts") {
-            overlayTitle.textContent = "Stung! 🪼";
-            overlayMsg.textContent = `The jellyfish caught you. Final score: ${state.score}.${friendsLine}`;
-        } else {
-            overlayTitle.textContent = "Time's up! 🐚";
-            overlayMsg.textContent = `You popped your way to ${state.score} points.${friendsLine}`;
-        }
+        overlayTitle.textContent = "Nice swim! 🌊";
+        overlayMsg.textContent = `You scored ${state.score} points.${friendsLine}`;
         startBtn.textContent = "Play Again";
         overlay.classList.remove("hidden");
     }
 
     startBtn.addEventListener("click", startGame);
+    doneBtn.addEventListener("click", endGame);
 })();
 
 (() => {

@@ -78,16 +78,6 @@ h1 {
     color: #ffd166;
 }
 
-.lives-stat {
-    background: rgba(255, 99, 132, 0.16);
-    border: 1px solid rgba(255, 99, 132, 0.35);
-    padding: 4px 10px;
-    border-radius: 10px;
-}
-
-.lives-stat span {
-    color: #ff7591;
-}
 
 .friends-stat {
     background: rgba(255, 158, 204, 0.16);
@@ -110,36 +100,17 @@ h1 {
     100% { transform: scale(1); }
 }
 
-.time-stat {
-    font-size: 1rem;
-    background: rgba(120, 220, 255, 0.14);
-    border: 1px solid rgba(120, 220, 255, 0.35);
+.done-btn {
+    background: rgba(100, 220, 160, 0.2);
+    border: 1px solid rgba(100, 220, 160, 0.5);
+    color: #a0f0c8;
+    font-size: 0.85rem;
     padding: 4px 12px;
     border-radius: 10px;
+    cursor: pointer;
+    font-family: inherit;
 }
-
-.time-stat span {
-    font-size: 1.2rem;
-    color: #ffd166;
-    display: inline-block;
-    min-width: 1.6em;
-    text-align: center;
-}
-
-.time-stat.low {
-    background: rgba(231, 76, 60, 0.22);
-    border-color: rgba(231, 76, 60, 0.55);
-}
-
-.time-stat.low span {
-    color: #ff8a8a;
-    animation: timePulse 500ms ease-in-out infinite;
-}
-
-@keyframes timePulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.2); }
-}
+.done-btn:hover { background: rgba(100, 220, 160, 0.35); }
 
 .stage {
     position: relative;
@@ -310,9 +281,6 @@ footer {
     .panel { padding: 18px 20px; }
 }
 
-@media (prefers-reduced-motion: reduce) {
-    .time-stat.low span { animation: none; }
-}
 
 /* ── Help modal ── */
 .nav-row { display: flex; justify-content: space-between; align-items: center; }
