@@ -11,6 +11,8 @@
     const playerNameEl = document.getElementById("player-name");
     const scoreEl = document.getElementById("score");
     const livesEl = document.getElementById("lives");
+    const friendsEl = document.getElementById("friends");
+    const friendsStatEl = friendsEl ? friendsEl.closest(".friends-stat") : null;
     const timeEl = document.getElementById("time");
     const timeStatEl = document.getElementById("time-stat");
     const bestEl = document.getElementById("best");
@@ -51,6 +53,13 @@
     }
     function lerp(a, b, k) { return a + (b - a) * k; }
     function randRange(lo, hi) { return lo + Math.random() * (hi - lo); }
+    function hexToRgba(hex, alpha) {
+        const h = hex.replace("#", "");
+        const r = parseInt(h.slice(0, 2), 16);
+        const g = parseInt(h.slice(2, 4), 16);
+        const b = parseInt(h.slice(4, 6), 16);
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
 
     // ---------- Audio ----------
     let audio = null;
@@ -87,12 +96,39 @@
         tone(160, 0.22, "square", 0.05);
         tone(110, 0.28, "square", 0.04);
     }
+    function friendChime() {
+        tone(660, 0.14, "triangle", 0.05);
+        setTimeout(() => tone(880, 0.18, "triangle", 0.04), 80);
+        setTimeout(() => tone(1320, 0.22, "triangle", 0.035), 160);
+    }
+
+    // ---------- Seahorse palettes ----------
+    // The player is a classic golden seahorse. Wild seahorses that drift
+    // through the ocean can be befriended and will then follow the player
+    // in a happy train, each keeping their own color.
+    const PLAYER_PALETTE = {
+        name: "gold",
+        body: "#f5b341", belly: "#ffd884", crest: "#ff8a3d",
+    };
+    const FRIEND_PALETTES = [
+        { name: "pink",   body: "#ff8ac4", belly: "#ffc2de", crest: "#ff5fa2" },
+        { name: "purple", body: "#b89cf0", belly: "#dcc2ff", crest: "#7b55d8" },
+        { name: "blue",   body: "#6ec6ff", belly: "#b3e0ff", crest: "#2b9ce8" },
+        { name: "green",  body: "#7bd6a4", belly: "#c1edcf", crest: "#3ba86d" },
+        { name: "coral",  body: "#ff8f77", belly: "#ffc2b3", crest: "#e85a42" },
+        { name: "teal",   body: "#5ecdbe", belly: "#a8e8df", crest: "#2a9e92" },
+        { name: "cream",  body: "#ffe7a6", belly: "#fff5d0", crest: "#e8c05a" },
+    ];
+    function pickFriendPalette() {
+        return FRIEND_PALETTES[Math.floor(Math.random() * FRIEND_PALETTES.length)];
+    }
 
     // ---------- State ----------
     const state = {
         running: false,
         score: 0,
         lives: MAX_LIVES,
+        friendCount: 0,
         timeLeft: ROUND_SECONDS,
         elapsed: 0,
         lastTs: 0,
@@ -102,11 +138,14 @@
             y: H * 0.65,
             facing: 1,         // +1 right, -1 left
             flap: 0,
-            invulnUntil: 0
+            invulnUntil: 0,
+            palette: PLAYER_PALETTE,
         },
         bubbles: [],
         jellies: [],
         sparkles: [],
+        wildHorses: [],       // friendly seahorses drifting by, waiting to be befriended
+        friends: [],          // seahorses that are following the player in a train
         playerName: "",
         leaderboard: loadLeaderboard()
     };
@@ -165,32 +204,35 @@
     }, { passive: false });
 
     // ---------- Seahorse drawing ----------
-    // Drawn from primitives — golden body with a coiled tail, snout, dorsal
-    // fin, and a crest of small triangles along the back. Faces left or right
-    // depending on which side of the pointer it is on.
-    function drawSeahorse(s, t) {
+    // Drawn from primitives — curled body with a coiled tail, snout, dorsal
+    // fin, and a crest of small triangles along the back. Takes a palette so
+    // friend seahorses can have their own colors, and a scale so followers
+    // can be drawn a bit smaller than the player.
+    function drawSeahorse(s, t, opts = {}) {
+        const scale = opts.scale || 1;
+        const palette = s.palette || PLAYER_PALETTE;
         const flap = reduceMotion() ? 0 : Math.sin(t * 12);
-        const invuln = state.elapsed < s.invulnUntil;
-        // Flicker during invulnerability.
+        const invuln = state.elapsed < (s.invulnUntil || 0);
+        // Flicker during invulnerability (player only).
         if (invuln && Math.floor(state.elapsed / 80) % 2 === 0) return;
 
         ctx.save();
         ctx.translate(s.x, s.y);
-        ctx.scale(s.facing, 1);
+        ctx.scale(s.facing * scale, scale);
 
-        // Soft halo behind the seahorse.
+        // Soft halo behind the seahorse, tinted by body color.
         const halo = ctx.createRadialGradient(0, 0, 6, 0, 0, 30);
-        halo.addColorStop(0, "rgba(255, 230, 150, 0.35)");
-        halo.addColorStop(1, "rgba(255, 230, 150, 0)");
+        halo.addColorStop(0, hexToRgba(palette.body, 0.35));
+        halo.addColorStop(1, hexToRgba(palette.body, 0));
         ctx.fillStyle = halo;
         ctx.beginPath();
         ctx.arc(0, 0, 30, 0, Math.PI * 2);
         ctx.fill();
 
-        // Body — curved spine made of stacked golden ellipses.
-        const bodyHex = "#f5b341";
-        const bellyHex = "#ffd884";
-        const outline = "rgba(80, 45, 10, 0.85)";
+        // Body — curved spine made of stacked ellipses.
+        const bodyHex = palette.body;
+        const bellyHex = palette.belly;
+        const outline = "rgba(45, 30, 10, 0.8)";
 
         // Belly (lighter blob behind the main body).
         ctx.fillStyle = bellyHex;
@@ -248,7 +290,7 @@
         ctx.stroke();
 
         // Crest of tiny fin spikes along the back of the head.
-        ctx.fillStyle = "#ff8a3d";
+        ctx.fillStyle = palette.crest;
         for (let i = 0; i < 3; i++) {
             ctx.beginPath();
             ctx.moveTo(-3 - i * 3, -28);
@@ -263,8 +305,8 @@
         ctx.translate(-6, -2);
         ctx.rotate(flap * 0.18);
         const finGrad = ctx.createLinearGradient(0, -6, 0, 8);
-        finGrad.addColorStop(0, "rgba(255, 200, 120, 0.95)");
-        finGrad.addColorStop(1, "rgba(240, 130, 60, 0.85)");
+        finGrad.addColorStop(0, hexToRgba(palette.belly, 0.95));
+        finGrad.addColorStop(1, hexToRgba(palette.crest, 0.9));
         ctx.fillStyle = finGrad;
         ctx.strokeStyle = outline;
         ctx.lineWidth = 1;
@@ -485,6 +527,151 @@
         }
     }
 
+    // ---------- Wild seahorses + friend train ----------
+    // Wild seahorses drift onto the stage from either side with gentle bobbing,
+    // waving a little heart above their head. When the player's seahorse bumps
+    // into one, the wild one becomes a friend and joins the train behind the
+    // player. Each friend keeps its own color and follows the one in front.
+    const FRIEND_POINTS = 2;
+    const WILD_CAP = 2;
+    let nextWildAt = 0;
+
+    function spawnWildSeahorse() {
+        if (state.wildHorses.length >= WILD_CAP) return;
+        const fromLeft = Math.random() < 0.5;
+        const y = randRange(80, H - 160);
+        state.wildHorses.push({
+            x: fromLeft ? -30 : W + 30,
+            y,
+            baseY: y,
+            vx: (fromLeft ? 1 : -1) * randRange(28, 48),
+            bobAmp: randRange(8, 16),
+            bobFreq: randRange(0.6, 1.2),
+            phase: Math.random() * Math.PI * 2,
+            facing: fromLeft ? 1 : -1,
+            flap: Math.random() * 10,
+            palette: pickFriendPalette(),
+            heartPhase: Math.random() * Math.PI * 2,
+        });
+    }
+
+    function updateWildHorses(dt) {
+        const t = state.elapsed / 1000;
+        const sx = state.seahorse.x;
+        const sy = state.seahorse.y;
+        for (const w of state.wildHorses) {
+            w.x += w.vx * dt;
+            w.y = w.baseY + Math.sin(t * w.bobFreq + w.phase) * w.bobAmp;
+            w.flap += dt;
+            // Face the player when close so befriending feels personal.
+            const toPlayer = sx - w.x;
+            if (Math.abs(toPlayer) > 2) w.facing = toPlayer >= 0 ? 1 : -1;
+            // Friendship check — generous hit radius so little fingers connect easily.
+            const dx = w.x - sx;
+            const dy = w.y - sy;
+            const reach = 30;
+            if (state.running && dx * dx + dy * dy <= reach * reach) {
+                befriend(w);
+                w.befriended = true;
+            }
+        }
+        state.wildHorses = state.wildHorses.filter((w) =>
+            !w.befriended && w.x > -60 && w.x < W + 60
+        );
+    }
+
+    function befriend(w) {
+        state.friends.push({
+            x: w.x, y: w.y,
+            facing: w.facing,
+            flap: w.flap,
+            palette: w.palette,
+            scale: 0.72,
+        });
+        state.friendCount += 1;
+        state.score += FRIEND_POINTS;
+        scoreEl.textContent = state.score;
+        friendsEl.textContent = state.friendCount;
+        if (friendsStatEl) {
+            friendsStatEl.classList.remove("bump");
+            void friendsStatEl.offsetWidth;
+            friendsStatEl.classList.add("bump");
+        }
+        spawnHearts(w.x, w.y, w.palette);
+        friendChime();
+    }
+
+    function drawWildHorses() {
+        const t = state.elapsed / 1000;
+        for (const w of state.wildHorses) {
+            drawSeahorse(w, w.flap, { scale: 0.9 });
+            // Floating heart above — signals "come say hi!"
+            const hx = w.x;
+            const hy = w.y - 34 + Math.sin(t * 2 + w.heartPhase) * 3;
+            drawHeart(hx, hy, 6, w.palette.crest);
+        }
+    }
+
+    function drawHeart(x, y, size, color) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.fillStyle = color;
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.85)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(0, size * 0.9);
+        ctx.bezierCurveTo(size * 1.2, size * 0.1, size * 0.6, -size * 0.9, 0, -size * 0.2);
+        ctx.bezierCurveTo(-size * 0.6, -size * 0.9, -size * 1.2, size * 0.1, 0, size * 0.9);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    // Offset along the train so followers line up instead of stacking on each other.
+    const FRIEND_GAP = 22;
+    function updateFriendTrain() {
+        // Each friend springs toward the one in front of it, offset behind.
+        for (let i = 0; i < state.friends.length; i++) {
+            const f = state.friends[i];
+            const lead = i === 0 ? state.seahorse : state.friends[i - 1];
+            // Target is offset behind the lead, opposite its facing so we trail it.
+            const tx = lead.x - lead.facing * FRIEND_GAP;
+            const ty = lead.y + 6;
+            f.x = lerp(f.x, tx, 0.16);
+            f.y = lerp(f.y, ty, 0.16);
+            const dx = tx - f.x;
+            if (Math.abs(dx) > 1) f.facing = dx >= 0 ? 1 : -1;
+            f.flap += 0.06;
+        }
+    }
+
+    function drawFriends() {
+        // Draw back-to-front so closer friends overlap ones further back.
+        for (let i = state.friends.length - 1; i >= 0; i--) {
+            const f = state.friends[i];
+            drawSeahorse(f, f.flap, { scale: f.scale || 0.7 });
+        }
+    }
+
+    function spawnHearts(x, y, palette) {
+        // Pink/palette-tinted burst that looks like hearts flying out.
+        const n = 10;
+        for (let i = 0; i < n; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = 50 + Math.random() * 90;
+            state.sparkles.push({
+                x, y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed - 20,
+                life: 0.7 + Math.random() * 0.4,
+                max: 1.1,
+                r: 2 + Math.random() * 1.8,
+                color: palette ? palette.crest : "#ff8ac4",
+            });
+        }
+    }
+
     // ---------- Sparkles (bubble pop confetti) ----------
     function spawnSparkles(x, y, tier) {
         const n = tier === "small" ? 12 : tier === "medium" ? 9 : 7;
@@ -514,7 +701,7 @@
         for (const s of state.sparkles) {
             const a = Math.max(0, s.life / s.max);
             ctx.globalAlpha = a;
-            ctx.fillStyle = "#cdeaff";
+            ctx.fillStyle = s.color || "#cdeaff";
             ctx.beginPath();
             ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
             ctx.fill();
@@ -570,10 +757,22 @@
         }
         updateJellies(dt);
 
+        // Wild seahorses only spawn while the round is live — they're the
+        // little "friends to make" that the player chases down. The train of
+        // already-befriended friends keeps following after the round ends.
+        if (state.running && state.elapsed >= nextWildAt) {
+            spawnWildSeahorse();
+            nextWildAt = state.elapsed + randRange(2400, 4600);
+        }
+        updateWildHorses(dt);
+        updateFriendTrain();
+
         ctx.clearRect(0, 0, W, H);
         drawBubbles();
         drawJellies();
+        drawWildHorses();
         drawSparkles();
+        drawFriends();
         drawSeahorse(state.seahorse, state.seahorse.flap);
 
         requestAnimationFrame(idleStep);
@@ -590,16 +789,21 @@
         state.running = true;
         state.score = 0;
         state.lives = MAX_LIVES;
+        state.friendCount = 0;
         state.timeLeft = ROUND_SECONDS;
         state.bubbles = [];
         state.jellies = [];
         state.sparkles = [];
+        state.wildHorses = [];
+        state.friends = [];
         state.seahorse.invulnUntil = 0;
         nextBubbleAt = state.elapsed; // resume spawning from now
         nextJellyAt = state.elapsed + randRange(1200, 2200);
+        nextWildAt = state.elapsed + randRange(900, 1800);
 
         scoreEl.textContent = "0";
         livesEl.textContent = MAX_LIVES;
+        friendsEl.textContent = "0";
         timeEl.textContent = ROUND_SECONDS;
         timeStatEl.classList.remove("low");
 
@@ -620,12 +824,15 @@
         saveLeaderboard();
         bestEl.textContent = personalBest(state.playerName);
 
+        const friendsLine = state.friendCount > 0
+            ? ` You made ${state.friendCount} new ${state.friendCount === 1 ? "friend" : "friends"}! 💞`
+            : "";
         if (reason === "hearts") {
             overlayTitle.textContent = "Stung! 🪼";
-            overlayMsg.textContent = `The jellyfish caught you. Final score: ${state.score}.`;
+            overlayMsg.textContent = `The jellyfish caught you. Final score: ${state.score}.${friendsLine}`;
         } else {
             overlayTitle.textContent = "Time's up! 🐚";
-            overlayMsg.textContent = `You popped your way to ${state.score} points.`;
+            overlayMsg.textContent = `You popped your way to ${state.score} points.${friendsLine}`;
         }
         startBtn.textContent = "Play Again";
         overlay.classList.remove("hidden");

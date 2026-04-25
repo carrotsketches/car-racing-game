@@ -89,6 +89,27 @@ h1 {
     color: #ff7591;
 }
 
+.friends-stat {
+    background: rgba(255, 158, 204, 0.16);
+    border: 1px solid rgba(255, 158, 204, 0.38);
+    padding: 4px 10px;
+    border-radius: 10px;
+}
+
+.friends-stat span {
+    color: #ffb3d9;
+}
+
+.friends-stat.bump span {
+    animation: friendPop 420ms ease-out;
+}
+
+@keyframes friendPop {
+    0%   { transform: scale(1); }
+    45%  { transform: scale(1.45); }
+    100% { transform: scale(1); }
+}
+
 .time-stat {
     font-size: 1rem;
     background: rgba(120, 220, 255, 0.14);
