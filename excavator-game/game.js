@@ -25,10 +25,13 @@
 
     // ── Geometry ────────────────────────────────────────────────────────────
     const GROUND_Y     = 390;
-    const PIVOT_X      = 155;
     const PIVOT_Y      = 355;
     const ARM_LEN      = 130;
     const ARM_SPEED    = 2.2;       // rad/s
+    const EXCAV_MIN_X  = 120;       // leftmost excavator position
+    const EXCAV_MAX_X  = 220;       // rightmost (before truck)
+    const EXCAV_SPEED  = 95;        // px/s driving speed
+    const TRUCK_HOME   = W - 145;   // 255
 
     // Arm angle: 0 = straight up, positive = clockwise
     const ANGLE_MIN    = -1.85;
@@ -67,6 +70,7 @@
         leaderboard:  loadLeaderboard(),
 
         angle:        -1.6,     // current arm angle (rad)
+        excavatorX:   155,      // current excavator body x position
         bucket:       0,        // 0=empty, 1=full
         truckLoad:    0,        // scoops in current truck
         truckX:       0,        // truck draw x (animated on depart)
@@ -152,7 +156,7 @@
     // ── Helpers ──────────────────────────────────────────────────────────────
     function bucketPos() {
         return {
-            x: PIVOT_X + ARM_LEN * Math.sin(state.angle),
+            x: state.excavatorX + ARM_LEN * Math.sin(state.angle),
             y: PIVOT_Y - ARM_LEN * Math.cos(state.angle),
         };
     }
@@ -233,12 +237,23 @@
 
     // ── Update ────────────────────────────────────────────────────────────────
     function update(dt) {
-        // Rotate arm
-        if (state.keys["ArrowLeft"] || state.keys["a"] || state.keys["A"]) {
-            state.angle = Math.max(ANGLE_MIN, state.angle - ARM_SPEED * dt);
+        // Rotate arm; when arm hits its limit, drive the excavator instead
+        const leftHeld  = state.keys["ArrowLeft"]  || state.keys["a"] || state.keys["A"];
+        const rightHeld = state.keys["ArrowRight"] || state.keys["d"] || state.keys["D"];
+
+        if (leftHeld) {
+            if (state.angle > ANGLE_MIN) {
+                state.angle = Math.max(ANGLE_MIN, state.angle - ARM_SPEED * dt);
+            } else {
+                state.excavatorX = Math.max(EXCAV_MIN_X, state.excavatorX - EXCAV_SPEED * dt);
+            }
         }
-        if (state.keys["ArrowRight"] || state.keys["d"] || state.keys["D"]) {
-            state.angle = Math.min(ANGLE_MAX, state.angle + ARM_SPEED * dt);
+        if (rightHeld) {
+            if (state.angle < ANGLE_MAX) {
+                state.angle = Math.min(ANGLE_MAX, state.angle + ARM_SPEED * dt);
+            } else {
+                state.excavatorX = Math.min(EXCAV_MAX_X, state.excavatorX + EXCAV_SPEED * dt);
+            }
         }
 
         // Process queued action
@@ -257,22 +272,17 @@
             state.departSpeed += 180 * dt;   // accelerate off-screen
             state.truckX += state.departSpeed * dt;
             if (state.truckX > W + 60) {
-                state.truckX      = W + 60;   // reset off right edge
                 state.truckLoad   = 0;
                 state.departing   = false;
                 state.departSpeed = 0;
-                // slide in from right
-                state.truckX      = W + 60;
+                state.truckX      = W + 60;  // start arrival from right edge
                 state._arriving   = true;
-                state._arrivalSpd = 260;
             }
         }
         if (state._arriving) {
-            state._arrivalSpd -= 280 * dt;
-            state.truckX -= state._arrivalSpd * dt;
-            const home = W - 145;
-            if (state.truckX <= home) {
-                state.truckX    = home;
+            state.truckX -= 200 * dt;        // constant speed slide in
+            if (state.truckX <= TRUCK_HOME) {
+                state.truckX    = TRUCK_HOME;
                 state._arriving = false;
             }
         }
@@ -352,7 +362,7 @@
     }
 
     function drawExcavator() {
-        const px = PIVOT_X;
+        const px = state.excavatorX;
         const py = PIVOT_Y;
 
         // ── Tracks ──
@@ -654,12 +664,13 @@
         state.score        = 0;
         state.timeLeft     = ROUND_SEC;
         state.angle        = -1.6;
+        state.excavatorX   = 155;
         state.bucket       = 0;
         state.truckLoad    = 0;
         state.departing    = false;
         state.departSpeed  = 0;
         state._arriving    = false;
-        state.truckX       = W - 145;
+        state.truckX       = TRUCK_HOME;
         state.digAnim      = 0;
         state.dumpAnim     = 0;
         state.truckBounce  = 0;
@@ -709,7 +720,7 @@
 
     // Draw idle frame so canvas isn't blank before start
     drawBackground();
-    state.truckX = W - 145;
+    state.truckX = TRUCK_HOME;
     drawTruck();
     drawExcavator();
 })();
