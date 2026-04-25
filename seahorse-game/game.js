@@ -116,14 +116,197 @@
         bestEl.textContent = personalBest(n);
     });
 
-    // ---------- Render placeholder ----------
-    // Game loop, drawing, and input handlers land in follow-up commits.
-    function render() {
-        ctx.clearRect(0, 0, W, H);
+    // ---------- Input ----------
+    function updatePointerFromEvent(e) {
+        const rect = canvas.getBoundingClientRect();
+        let cx, cy;
+        if (e.touches && e.touches.length > 0) {
+            cx = e.touches[0].clientX;
+            cy = e.touches[0].clientY;
+        } else if (e.changedTouches && e.changedTouches.length > 0) {
+            cx = e.changedTouches[0].clientX;
+            cy = e.changedTouches[0].clientY;
+        } else {
+            cx = e.clientX;
+            cy = e.clientY;
+        }
+        if (cx === undefined || cy === undefined) return;
+        state.pointer.x = (cx - rect.left) * (W / rect.width);
+        state.pointer.y = (cy - rect.top) * (H / rect.height);
     }
-    render();
+    function onPointerMove(e) { updatePointerFromEvent(e); }
+    function onTouchMove(e) {
+        if (overlay.contains(e.target)) return;
+        updatePointerFromEvent(e);
+        e.preventDefault();
+    }
+    function onTouchStartOrEnd(e) {
+        if (overlay.contains(e.target)) return;
+        updatePointerFromEvent(e);
+        e.preventDefault();
+    }
+    stage.addEventListener("pointermove", onPointerMove);
+    stage.addEventListener("pointerdown", onPointerMove);
+    stage.addEventListener("touchstart", onTouchStartOrEnd, { passive: false });
+    stage.addEventListener("touchmove", onTouchMove, { passive: false });
+    stage.addEventListener("touchend", (e) => {
+        if (overlay.contains(e.target)) return;
+        e.preventDefault();
+    }, { passive: false });
 
-    // Expose start hook so the overlay button doesn't error before the loop is wired.
+    // ---------- Seahorse drawing ----------
+    // Drawn from primitives — golden body with a coiled tail, snout, dorsal
+    // fin, and a crest of small triangles along the back. Faces left or right
+    // depending on which side of the pointer it is on.
+    function drawSeahorse(s, t) {
+        const flap = reduceMotion() ? 0 : Math.sin(t * 12);
+        const invuln = state.elapsed < s.invulnUntil;
+        // Flicker during invulnerability.
+        if (invuln && Math.floor(state.elapsed / 80) % 2 === 0) return;
+
+        ctx.save();
+        ctx.translate(s.x, s.y);
+        ctx.scale(s.facing, 1);
+
+        // Soft halo behind the seahorse.
+        const halo = ctx.createRadialGradient(0, 0, 6, 0, 0, 30);
+        halo.addColorStop(0, "rgba(255, 230, 150, 0.35)");
+        halo.addColorStop(1, "rgba(255, 230, 150, 0)");
+        ctx.fillStyle = halo;
+        ctx.beginPath();
+        ctx.arc(0, 0, 30, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Body — curved spine made of stacked golden ellipses.
+        const bodyHex = "#f5b341";
+        const bellyHex = "#ffd884";
+        const outline = "rgba(80, 45, 10, 0.85)";
+
+        // Belly (lighter blob behind the main body).
+        ctx.fillStyle = bellyHex;
+        ctx.beginPath();
+        ctx.ellipse(-4, 4, 10, 16, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Main body (a curving stack of segments).
+        const segments = [
+            { x:  0, y: -14, rx: 7,  ry: 8 },   // upper neck
+            { x:  2, y:  -4, rx: 9,  ry: 10 },  // chest
+            { x:  0, y:   8, rx: 9,  ry: 10 },  // belly
+            { x: -4, y:  18, rx: 7,  ry: 8 }    // base of tail
+        ];
+        ctx.fillStyle = bodyHex;
+        ctx.strokeStyle = outline;
+        ctx.lineWidth = 1.2;
+        for (const seg of segments) {
+            ctx.beginPath();
+            ctx.ellipse(seg.x, seg.y, seg.rx, seg.ry, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+        }
+
+        // Coiled tail — quadratic curve spiraling inward.
+        ctx.strokeStyle = bodyHex;
+        ctx.lineWidth = 6;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(-4, 24);
+        ctx.quadraticCurveTo(-16, 30, -12, 40);
+        ctx.quadraticCurveTo(-2, 48, -2, 38);
+        ctx.quadraticCurveTo(-2, 32, -8, 34);
+        ctx.stroke();
+        // Tail outline.
+        ctx.strokeStyle = outline;
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+
+        // Head bump + snout.
+        ctx.fillStyle = bodyHex;
+        ctx.strokeStyle = outline;
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.ellipse(2, -22, 8, 7, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        // Snout (thin triangle pointing forward).
+        ctx.beginPath();
+        ctx.moveTo(8, -22);
+        ctx.quadraticCurveTo(18, -22, 18, -18);
+        ctx.quadraticCurveTo(14, -19, 8, -19);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // Crest of tiny fin spikes along the back of the head.
+        ctx.fillStyle = "#ff8a3d";
+        for (let i = 0; i < 3; i++) {
+            ctx.beginPath();
+            ctx.moveTo(-3 - i * 3, -28);
+            ctx.lineTo(-1 - i * 3, -32);
+            ctx.lineTo(0 - i * 3, -28);
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        // Dorsal fin on the back (flutters with `flap`).
+        ctx.save();
+        ctx.translate(-6, -2);
+        ctx.rotate(flap * 0.18);
+        const finGrad = ctx.createLinearGradient(0, -6, 0, 8);
+        finGrad.addColorStop(0, "rgba(255, 200, 120, 0.95)");
+        finGrad.addColorStop(1, "rgba(240, 130, 60, 0.85)");
+        ctx.fillStyle = finGrad;
+        ctx.strokeStyle = outline;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(0, -8);
+        ctx.quadraticCurveTo(-12, 0, 0, 10);
+        ctx.quadraticCurveTo(-2, 2, 0, -8);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+
+        // Eye.
+        ctx.fillStyle = "#fff";
+        ctx.beginPath();
+        ctx.arc(4, -22, 2.4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#1b2a3b";
+        ctx.beginPath();
+        ctx.arc(4.6, -21.6, 1.3, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+    }
+
+    // ---------- Idle render loop ----------
+    // Runs continuously so the seahorse follows the pointer even on the
+    // overlay screen. The full game loop in a later commit will layer on
+    // bubbles, jellyfish, and scoring.
+    function idleStep(ts) {
+        if (!state.lastTs) state.lastTs = ts;
+        const dt = Math.min(0.05, (ts - state.lastTs) / 1000);
+        state.lastTs = ts;
+        state.elapsed += dt * 1000;
+
+        // Spring toward pointer.
+        const k = 0.14;
+        state.seahorse.x = lerp(state.seahorse.x, state.pointer.x, k);
+        state.seahorse.y = lerp(state.seahorse.y, state.pointer.y, k);
+        // Face the direction of travel.
+        const dx = state.pointer.x - state.seahorse.x;
+        if (Math.abs(dx) > 1) state.seahorse.facing = dx >= 0 ? 1 : -1;
+        state.seahorse.flap += dt;
+
+        ctx.clearRect(0, 0, W, H);
+        drawSeahorse(state.seahorse, state.seahorse.flap);
+
+        requestAnimationFrame(idleStep);
+    }
+    requestAnimationFrame(idleStep);
+
+    // Temporary start handler — full startGame lands with the game loop.
     startBtn.addEventListener("click", () => {
         ensureAudio();
         state.playerName = sanitizeName(nameInput.value);
