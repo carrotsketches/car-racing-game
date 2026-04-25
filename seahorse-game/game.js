@@ -77,6 +77,12 @@
         osc.start(now);
         osc.stop(now + dur + 0.02);
     }
+    function popChime(tier) {
+        // Higher tiers (small bubble = best) get a brighter chime.
+        const base = tier === "small" ? 880 : tier === "medium" ? 660 : 520;
+        tone(base, 0.18, "sine", 0.045);
+        tone(base * 1.5, 0.22, "sine", 0.03);
+    }
 
     // ---------- State ----------
     const state = {
@@ -280,6 +286,139 @@
         ctx.restore();
     }
 
+    // ---------- Bubbles ----------
+    // Three tiers — small bubbles are zippy and worth the most, large bubbles
+    // are slow and worth the least.
+    const BUBBLE_TIERS = [
+        { name: "small",  r: 8,  speed: 110, points: 5, weight: 0.45 },
+        { name: "medium", r: 14, speed: 70,  points: 3, weight: 0.35 },
+        { name: "large",  r: 22, speed: 45,  points: 1, weight: 0.20 }
+    ];
+    const BUBBLE_CAP = 14;
+    const BUBBLE_SPAWN_MS = 450;
+    let nextBubbleAt = 0;
+
+    function pickBubbleTier() {
+        const r = Math.random();
+        let acc = 0;
+        for (const t of BUBBLE_TIERS) {
+            acc += t.weight;
+            if (r <= acc) return t;
+        }
+        return BUBBLE_TIERS[BUBBLE_TIERS.length - 1];
+    }
+
+    function spawnBubble() {
+        if (state.bubbles.length >= BUBBLE_CAP) return;
+        const tier = pickBubbleTier();
+        const margin = tier.r + 6;
+        state.bubbles.push({
+            x: randRange(margin, W - margin),
+            y: H + tier.r + 6,
+            r: tier.r,
+            speed: tier.speed * randRange(0.85, 1.15),
+            wobbleAmp: randRange(8, 18),
+            wobbleFreq: randRange(0.9, 1.6),
+            phase: Math.random() * Math.PI * 2,
+            tier: tier.name,
+            points: tier.points,
+            popped: false
+        });
+    }
+
+    function updateBubbles(dt) {
+        const t = state.elapsed / 1000;
+        const sx = state.seahorse.x;
+        const sy = state.seahorse.y;
+        for (const b of state.bubbles) {
+            if (b.popped) continue;
+            b.y -= b.speed * dt;
+            b.x += Math.sin(t * b.wobbleFreq + b.phase) * b.wobbleAmp * dt;
+            // Touch test against the seahorse body (~radius 20).
+            const dx = b.x - sx;
+            const dy = b.y - sy;
+            const reach = b.r + 18;
+            if (dx * dx + dy * dy <= reach * reach) {
+                popBubble(b);
+            }
+        }
+        // Drop popped or off-screen bubbles.
+        state.bubbles = state.bubbles.filter((b) => !b.popped && b.y + b.r > -4);
+    }
+
+    function popBubble(b) {
+        b.popped = true;
+        spawnSparkles(b.x, b.y, b.tier);
+        if (state.running) {
+            state.score += b.points;
+            scoreEl.textContent = state.score;
+        }
+        popChime(b.tier);
+    }
+
+    function drawBubbles() {
+        for (const b of state.bubbles) {
+            if (b.popped) continue;
+            // Bubble fill — translucent radial gradient.
+            const g = ctx.createRadialGradient(b.x - b.r * 0.35, b.y - b.r * 0.35, 1, b.x, b.y, b.r);
+            g.addColorStop(0, "rgba(255, 255, 255, 0.85)");
+            g.addColorStop(0.4, "rgba(180, 230, 255, 0.55)");
+            g.addColorStop(1, "rgba(120, 200, 240, 0.18)");
+            ctx.fillStyle = g;
+            ctx.beginPath();
+            ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+            ctx.fill();
+            // Rim highlight.
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.7)";
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.arc(b.x, b.y, b.r - 0.6, 0, Math.PI * 2);
+            ctx.stroke();
+            // Glint.
+            ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
+            ctx.beginPath();
+            ctx.arc(b.x - b.r * 0.4, b.y - b.r * 0.5, b.r * 0.22, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    // ---------- Sparkles (bubble pop confetti) ----------
+    function spawnSparkles(x, y, tier) {
+        const n = tier === "small" ? 12 : tier === "medium" ? 9 : 7;
+        for (let i = 0; i < n; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = 60 + Math.random() * 100;
+            state.sparkles.push({
+                x, y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                life: 0.6 + Math.random() * 0.4,
+                max: 1.0,
+                r: 1.6 + Math.random() * 1.6
+            });
+        }
+    }
+    function updateSparkles(dt) {
+        for (const s of state.sparkles) {
+            s.x += s.vx * dt;
+            s.y += s.vy * dt;
+            s.vy += 30 * dt; // bubble pop "spray" drifts down very gently
+            s.life -= dt;
+        }
+        state.sparkles = state.sparkles.filter((s) => s.life > 0);
+    }
+    function drawSparkles() {
+        for (const s of state.sparkles) {
+            const a = Math.max(0, s.life / s.max);
+            ctx.globalAlpha = a;
+            ctx.fillStyle = "#cdeaff";
+            ctx.beginPath();
+            ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+    }
+
     // ---------- Idle render loop ----------
     // Runs continuously so the seahorse follows the pointer even on the
     // overlay screen. The full game loop in a later commit will layer on
@@ -299,7 +438,17 @@
         if (Math.abs(dx) > 1) state.seahorse.facing = dx >= 0 ? 1 : -1;
         state.seahorse.flap += dt;
 
+        // Bubble field — runs even on the overlay so the scene feels alive.
+        if (state.elapsed >= nextBubbleAt) {
+            spawnBubble();
+            nextBubbleAt = state.elapsed + BUBBLE_SPAWN_MS * randRange(0.7, 1.3);
+        }
+        updateBubbles(dt);
+        updateSparkles(dt);
+
         ctx.clearRect(0, 0, W, H);
+        drawBubbles();
+        drawSparkles();
         drawSeahorse(state.seahorse, state.seahorse.flap);
 
         requestAnimationFrame(idleStep);
