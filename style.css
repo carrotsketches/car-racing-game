@@ -197,6 +197,11 @@ h1 {
     border-color: rgba(120, 220, 255, 0.4);
 }
 
+.game-card.excavator-game {
+    background: linear-gradient(135deg, rgba(245, 165, 36, 0.22), rgba(120, 80, 20, 0.22));
+    border-color: rgba(245, 165, 36, 0.45);
+}
+
 .top-menu {
     position: fixed;
     top: 16px;
