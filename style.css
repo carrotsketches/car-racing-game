@@ -202,6 +202,11 @@ h1 {
     border-color: rgba(245, 165, 36, 0.45);
 }
 
+.game-card.hotair-balloon {
+    background: linear-gradient(135deg, rgba(100, 200, 245, 0.22), rgba(26, 107, 176, 0.18));
+    border-color: rgba(100, 200, 245, 0.42);
+}
+
 .top-menu {
     position: fixed;
     top: 16px;

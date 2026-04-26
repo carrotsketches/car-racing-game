@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>Hot Air Balloon</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-wrapper">
+        <div class="nav-row">
+            <a class="home-link" href="../">← Games</a>
+            <button class="help-btn" id="help-btn" aria-label="How to play">?</button>
+        </div>
+        <header>
+            <h1>🎈 Hot Air Balloon</h1>
+            <div class="hud">
+                <div class="stat" id="player-tag">👤 <span id="player-name">—</span></div>
+                <div class="stat">Score: <span id="score">0</span></div>
+                <div class="stat hearts" id="hearts" aria-label="lives">❤️❤️❤️</div>
+                <div class="stat">Best: <span id="best">0</span></div>
+            </div>
+        </header>
+
+        <div class="stage">
+            <canvas id="game" width="480" height="340"></canvas>
+
+            <div id="overlay" class="overlay">
+                <div class="panel">
+                    <h2 id="overlay-title">Ready to Fly?</h2>
+                    <p id="overlay-msg">Hold to heat the balloon and rise. Release to descend. Dodge birds and storm clouds. Collect ⭐ stars!</p>
+                    <label class="name-row" for="name-input">
+                        <span>Name</span>
+                        <input id="name-input" type="text" maxlength="12" autocomplete="off"
+                               spellcheck="false" placeholder="Pilot" />
+                    </label>
+                    <button id="start-btn">Take Off! 🎈</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="heat-bar-wrap">
+            <button id="heat-btn" class="heat-btn" aria-label="Heat balloon">
+                🔥 Hold to Heat
+            </button>
+        </div>
+
+        <footer><p>Hold Space / tap canvas / hold 🔥 button to rise. Dodge birds 🐦 and storm clouds ⛈️. Grab ⭐ for bonus points!</p></footer>
+
+        <div id="help-modal" class="help-modal" hidden>
+            <div class="help-panel">
+                <button class="help-close" id="help-close" aria-label="Close">✕</button>
+                <h3>How to Play</h3>
+                <p><strong>Hold Space</strong>, tap the canvas, or hold the 🔥 button to fire the burner — your balloon rises while you hold.</p>
+                <p>Release to let it drift down naturally.</p>
+                <p>Avoid 🐦 birds and ⛈️ storm clouds — each hit costs a heart. Three hits and it's over!</p>
+                <p>Collect ⭐ stars for +10 bonus points each.</p>
+                <p>Your score is the distance flown plus star bonuses. Speed increases over time!</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="../shared/play-tracker.js" data-slug="hotair-balloon"></script>
+    <script src="game.js"></script>
+</body>
+</html>
