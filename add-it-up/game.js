@@ -645,7 +645,11 @@
         state.locked = true;
         state.active = "done";
         if (correct) {
-            const gained = state.mistakes === 0 ? POINTS_FIRST_TRY : POINTS_RETRY;
+            const gained = window.GameLib.scoreForAttempt({
+                mistakes: state.mistakes,
+                pointsFirstTry: POINTS_FIRST_TRY,
+                pointsRetry: POINTS_RETRY,
+            });
             state.score += gained;
             scoreEl.textContent = state.score;
             hintEl.className = "hint good";

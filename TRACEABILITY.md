@@ -63,28 +63,52 @@ whole suite below auto-applies.
 
 ---
 
-## 4. Known gaps (no automated test yet)
+## 4. Known gaps
 
-These are fair game for Copilot to add tests for, in priority order:
+1. ~~Per-game DOM smoke tests~~ ✅ **Closed.** `tests/smoke/dom-smoke-tests.test.js`
+   loads each game in jsdom with mocked canvas + AudioContext, fires `#start-btn`
+   click (skipped for `clock-it`, which has no overlay), and asserts no
+   `console.error` and no `jsdomError` calls.
+2. ~~Help modal toggle behaviour~~ ✅ **Closed.** `tests/smoke/help-modal.test.js`
+   covers open / close / Escape / backdrop dismiss for every game. Caught two
+   real game bugs in the process (hotair-balloon and excavator-game were
+   missing Escape + backdrop handlers).
+3. ~~`shared/play-tracker.js` IIFE~~ ✅ **Closed.**
+   `tests/lib/play-tracker-iife.test.js` exercises the full
+   `<script src=… data-slug=…>` flow: bootstrap from missing/malformed store,
+   accumulate plays across loads, default to "Anonymous" when no name.
+4. ~~Per-game scoring rules~~ 🟡 **Partially closed (add-it-up).**
+   `tests/lib/score-attempt.test.js` covers the canonical first-try / retry
+   rule via the new `GameLib.scoreForAttempt`. Add-it-up's game.js was
+   refactored to call it. Other games' scoring (whack-a-mole +1/-1, time
+   bonuses, etc.) remain untested — extract into `shared/lib.js` as the
+   pattern recurs.
+5. ~~`getCarFor` (highway-dash)~~ ✅ **Closed.** Extracted as
+   `GameLib.pickConfigFor` and `GameLib.setConfigFor` in `shared/lib.js`,
+   tested in `tests/lib/pick-config.test.js`. Highway-dash's game.js now
+   delegates to it.
+6. ~~Game-specific generator helpers~~ 🟡 **Partially closed.**
+   `pick`, `pickN`, `shuffle`, `findRecipe` extracted to `shared/lib.js` and
+   tested in `tests/lib/utilities.test.js` (deterministic with seeded RNG).
+   The full pattern-party / maze-game generators remain in their game.js
+   files — they're tightly coupled to per-game pools and are now exercised
+   through the smoke test (which actually runs the JS).
+7. ~~`stats/` page~~ ✅ **Closed.** `tests/smoke/stats-page.test.js` covers
+   empty state, malformed JSON, sort order, unknown-slug fallback, and
+   HTML-escaping of player names (XSS).
+8. **CSS regressions** — explicitly out of scope for unit tests; rely on
+   visual review and the per-game smoke test which would surface DOM-related
+   script errors.
 
-1. ~~Per-game DOM smoke tests~~ ✅ **Closed.** See
-   `tests/smoke/dom-smoke-tests.test.js` — loads each game in jsdom with mocked
-   canvas + AudioContext, fires `#start-btn` click (skipped for `clock-it`,
-   which has no overlay), and asserts no `console.error` calls.
-2. **Help modal toggle behaviour** — `#help-btn` opens, `#help-close` closes.
-   Requires DOM-level test (jsdom).
-3. **`shared/play-tracker.js` IIFE itself** — currently only the pure `recordPlay`
-   logic is tested; the IIFE that reads `document.currentScript.dataset.slug` is
-   not. Low value (3 lines of glue), but possible.
-4. **Per-game scoring rules** (e.g. whack-a-mole +1 per mole / -1 per bee) —
-   would require either extracting score logic into `shared/lib.js` or
-   re-implementing in tests as oracles.
-5. **`getCarFor` (highway-dash)** — deterministic per-name car colour pick. Not
-   tested.
-6. **Game-specific generators** — pattern-party pattern gen, maze-game maze
-   gen, color-mixing palette pick. Pure logic, easy to extract & test next.
-7. **`stats/` page** — reads `games-plays-v1`. Untested.
-8. **CSS regressions** — out of scope for unit tests; rely on visual review.
+### Remaining work (deferred)
+
+- Migrate the rest of the games (`whack-a-mole`, `piano`, etc.) to use
+  `GameLib.sanitizeName` / `loadLeaderboard` / `personalBest` so the unit
+  tests in `tests/lib/` transitively cover their leaderboard code.
+- Extract per-game scoring rules into `GameLib` and test them
+  (gap #4 follow-up).
+- Add `pretendToBeVisual` rAF cleanup verification (smoke tests rely on
+  `dom.window.close()` which is wired up but not asserted).
 
 ## 5. How to extend this matrix
 
