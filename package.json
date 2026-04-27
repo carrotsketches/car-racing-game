@@ -8,6 +8,9 @@
     "test:ci": "node --test \"tests/**/*.test.js\"",
     "test:watch": "node --test --watch \"tests/**/*.test.js\""
   },
+  "devDependencies": {
+    "jsdom": "^24.0.0"
+  },
   "engines": {
     "node": ">=20"
   }

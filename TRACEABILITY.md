@@ -67,9 +67,10 @@ whole suite below auto-applies.
 
 These are fair game for Copilot to add tests for, in priority order:
 
-1. **Per-game DOM smoke tests** — load each `game.js` in `jsdom` with mocked
-   canvas + audio, fire `start-btn` click, assert no exception. Would need adding
-   `jsdom` as a dev dep.
+1. ~~Per-game DOM smoke tests~~ ✅ **Closed.** See
+   `tests/smoke/dom-smoke-tests.test.js` — loads each game in jsdom with mocked
+   canvas + AudioContext, fires `#start-btn` click (skipped for `clock-it`,
+   which has no overlay), and asserts no `console.error` calls.
 2. **Help modal toggle behaviour** — `#help-btn` opens, `#help-close` closes.
    Requires DOM-level test (jsdom).
 3. **`shared/play-tracker.js` IIFE itself** — currently only the pure `recordPlay`
