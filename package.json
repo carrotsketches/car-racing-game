@@ -1,0 +1,14 @@
+{
+  "name": "car-racing-game",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Static no-build collection of small browser games. Tests use the Node 20+ built-in test runner — zero npm dependencies.",
+  "scripts": {
+    "test": "node --test --test-reporter=spec \"tests/**/*.test.js\"",
+    "test:ci": "node --test \"tests/**/*.test.js\"",
+    "test:watch": "node --test --watch \"tests/**/*.test.js\""
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
