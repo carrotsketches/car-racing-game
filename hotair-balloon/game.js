@@ -492,8 +492,13 @@
     heatBtn.addEventListener("pointerup", e => { e.preventDefault(); heatBtn.classList.remove("active"); setHeat(false); });
     heatBtn.addEventListener("pointercancel", () => { heatBtn.classList.remove("active"); setHeat(false); });
 
-    document.getElementById("help-btn").addEventListener("click", () => { document.getElementById("help-modal").hidden = false; });
-    document.getElementById("help-close").addEventListener("click", () => { document.getElementById("help-modal").hidden = true; });
+    {
+        const hModal = document.getElementById("help-modal");
+        document.getElementById("help-btn").addEventListener("click", () => { hModal.hidden = false; });
+        document.getElementById("help-close").addEventListener("click", () => { hModal.hidden = true; });
+        hModal.addEventListener("click", (e) => { if (e.target === hModal) hModal.hidden = true; });
+        document.addEventListener("keydown", (e) => { if (e.key === "Escape") hModal.hidden = true; });
+    }
     startBtn.addEventListener("click", startGame);
 
     // ── Game loop ─────────────────────────────────────────────────
