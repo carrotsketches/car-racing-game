@@ -175,6 +175,83 @@
         return next;
     }
 
+    // --- Per-name config picker (e.g. highway-dash car colours) ---
+    // Returns a fresh merged object: defaults overlaid with the per-name entry,
+    // looked up case-insensitively. Never returns the stored object directly,
+    // so callers can mutate the result without affecting the store.
+    function pickConfigFor({ name, configs, defaults }) {
+        if (!defaults || typeof defaults !== "object") {
+            throw new TypeError("pickConfigFor: defaults required");
+        }
+        const safeConfigs = configs && typeof configs === "object" ? configs : {};
+        const key = (name == null ? "" : String(name)).trim().toLowerCase();
+        if (key && safeConfigs[key] && typeof safeConfigs[key] === "object") {
+            return { ...defaults, ...safeConfigs[key] };
+        }
+        return { ...defaults };
+    }
+
+    // --- Tiny RNG-aware utilities used by several game generators ---
+    function pick(arr, rng = Math.random) {
+        if (!Array.isArray(arr) || arr.length === 0) return undefined;
+        return arr[Math.floor(rng() * arr.length)];
+    }
+
+    function pickN(arr, n, rng = Math.random) {
+        if (!Array.isArray(arr)) return [];
+        if (n < 0) throw new RangeError("pickN: n must be >= 0");
+        const pool = arr.slice();
+        const out = [];
+        const take = Math.min(n, pool.length);
+        for (let i = 0; i < take; i++) {
+            const idx = Math.floor(rng() * pool.length);
+            out.push(pool.splice(idx, 1)[0]);
+        }
+        return out;
+    }
+
+    function shuffle(arr, rng = Math.random) {
+        if (!Array.isArray(arr)) return [];
+        const a = arr.slice();
+        for (let i = a.length - 1; i > 0; i--) {
+            const j = Math.floor(rng() * (i + 1));
+            const t = a[i]; a[i] = a[j]; a[j] = t;
+        }
+        return a;
+    }
+
+    // --- First-try / retry scoring (used by add-it-up; pattern is reusable) ---
+    function scoreForAttempt({ mistakes, pointsFirstTry, pointsRetry }) {
+        if (!Number.isInteger(mistakes) || mistakes < 0) {
+            throw new RangeError("scoreForAttempt: mistakes must be a non-negative integer");
+        }
+        if (!Number.isFinite(pointsFirstTry) || !Number.isFinite(pointsRetry)) {
+            throw new TypeError("scoreForAttempt: point values must be finite numbers");
+        }
+        return mistakes === 0 ? pointsFirstTry : pointsRetry;
+    }
+
+    // --- Commutative pair lookup (color-mixing recipe table) ---
+    // recipes is an array of objects with a `pair: [idA, idB]` field. Returns
+    // the matching recipe regardless of pair order, or undefined.
+    function findRecipe(recipes, aId, bId) {
+        if (!Array.isArray(recipes)) return undefined;
+        return recipes.find(
+            (r) =>
+                r && Array.isArray(r.pair) &&
+                ((r.pair[0] === aId && r.pair[1] === bId) ||
+                    (r.pair[0] === bId && r.pair[1] === aId))
+        );
+    }
+
+    function setConfigFor({ name, value, configs }) {
+        const key = (name == null ? "" : String(name)).trim().toLowerCase();
+        if (!key) return configs && typeof configs === "object" ? configs : {};
+        const next = configs && typeof configs === "object" ? { ...configs } : {};
+        next[key] = { ...value };
+        return next;
+    }
+
     return {
         NAME_KEY,
         NAME_MAX,
@@ -190,5 +267,12 @@
         isValidEntry,
         makeProblem,
         recordPlay,
+        pickConfigFor,
+        setConfigFor,
+        pick,
+        pickN,
+        shuffle,
+        findRecipe,
+        scoreForAttempt,
     };
 });

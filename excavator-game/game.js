@@ -713,6 +713,8 @@
     const helpClose = document.getElementById("help-close");
     helpBtn.addEventListener("click",  () => helpModal.removeAttribute("hidden"));
     helpClose.addEventListener("click", () => helpModal.setAttribute("hidden", ""));
+    helpModal.addEventListener("click", (e) => { if (e.target === helpModal) helpModal.setAttribute("hidden", ""); });
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape") helpModal.setAttribute("hidden", ""); });
 
     // Prevent stray touch on canvas
     canvas.addEventListener("touchstart", e => e.preventDefault(), { passive: false });

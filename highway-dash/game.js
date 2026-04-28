@@ -193,10 +193,11 @@
     }
 
     function getCarFor(name) {
-        const configs = loadCarConfigs();
-        const key = configKey(name);
-        if (key && configs[key]) return { ...DEFAULT_CAR, ...configs[key] };
-        return { ...DEFAULT_CAR };
+        return window.GameLib.pickConfigFor({
+            name,
+            configs: loadCarConfigs(),
+            defaults: DEFAULT_CAR,
+        });
     }
 
     function saveCarFor(name, colors) {
