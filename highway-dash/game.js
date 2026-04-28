@@ -46,7 +46,7 @@
     const CAR_W = 44;
     const CAR_H = 72;
     const COIN_SIZE = 26;
-    const MAX_HEARTS = 3;
+    const MAX_HEARTS = 10;
     const INVINCIBLE_MS = 1500;
 
     const OBSTACLE_COLORS = ["#e67e22", "#1abc9c", "#ecf0f1", "#34495e", "#e84393"];
