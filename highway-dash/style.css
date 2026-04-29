@@ -455,6 +455,11 @@ footer {
         gap: 4px;
     }
 
+    .hearts {
+        font-size: 0.6rem;
+        letter-spacing: 1px;
+    }
+
     .touch-btn {
         height: 64px;
         font-size: 1.6rem;
@@ -471,7 +476,7 @@ footer {
     }
 
     .game-wrapper {
-        max-width: min(400px, calc((100dvh - 240px) * 2 / 3));
+        max-width: min(400px, calc((100dvh - 270px) * 2 / 3));
     }
 }
 
