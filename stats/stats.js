@@ -20,6 +20,7 @@
         { slug: "unicorn-storyteller", name: "Unicorn Storyteller", emoji: "🦄" },
         { slug: "flappy-bird", name: "Flying Bird", emoji: "🐤" },
         { slug: "seahorse-game", name: "Seahorse Splash", emoji: "🐚" },
+        { slug: "excavator-game", name: "Excavator Dig", emoji: "⛏️" },
     ];
     const BY_SLUG = Object.fromEntries(GAMES.map((g) => [g.slug, g]));
     function gameMeta(slug) {
