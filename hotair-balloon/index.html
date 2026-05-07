@@ -20,6 +20,7 @@
                 <div class="stat" id="player-tag">👤 <span id="player-name">—</span></div>
                 <div class="stat">Score: <span id="score">0</span></div>
                 <div class="stat hearts" id="hearts" aria-label="lives">❤️❤️❤️</div>
+                <div class="stat">Letter: <span id="target-letter">A</span></div>
                 <div class="stat">Best: <span id="best">0</span></div>
             </div>
         </header>
@@ -30,7 +31,7 @@
             <div id="overlay" class="overlay">
                 <div class="panel">
                     <h2 id="overlay-title">Ready to Fly?</h2>
-                    <p id="overlay-msg">Hold to heat the balloon and rise. Release to descend. Dodge birds and storm clouds. Collect ⭐ stars!</p>
+                    <p id="overlay-msg">Hold to heat the balloon and rise. Release to descend. Collect letter stars and match the target letter!</p>
                     <label class="name-row" for="name-input">
                         <span>Name</span>
                         <input id="name-input" type="text" maxlength="12" autocomplete="off"
@@ -47,7 +48,7 @@
             </button>
         </div>
 
-        <footer><p>Hold Space / tap canvas / hold 🔥 button to rise. Dodge birds 🐦 and storm clouds ⛈️. Grab ⭐ for bonus points!</p></footer>
+        <footer><p>Hold Space / tap canvas / hold 🔥 button to rise. Collect letter ⭐ stars and match the target letter for extra points!</p></footer>
 
         <div id="help-modal" class="help-modal" hidden>
             <div class="help-panel">
@@ -55,8 +56,8 @@
                 <h3>How to Play</h3>
                 <p><strong>Hold Space</strong>, tap the canvas, or hold the 🔥 button to fire the burner — your balloon rises while you hold.</p>
                 <p>Release to let it drift down naturally.</p>
-                <p>Avoid 🐦 birds and ⛈️ storm clouds — each hit costs a heart. Three hits and it's over!</p>
-                <p>Collect ⭐ stars for +10 bonus points each.</p>
+                <p>Birds 🐦 and storm clouds ⛈️ now give gentle bumps instead of taking hearts.</p>
+                <p>Collect ⭐ stars and try to match the target letter shown in the HUD.</p>
                 <p>Your score is the distance flown plus star bonuses. Speed increases over time!</p>
             </div>
         </div>

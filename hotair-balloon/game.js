@@ -4,6 +4,7 @@
     const scoreEl = document.getElementById("score");
     const bestEl = document.getElementById("best");
     const heartsEl = document.getElementById("hearts");
+    const targetLetterEl = document.getElementById("target-letter");
     const overlay = document.getElementById("overlay");
     const overlayTitle = document.getElementById("overlay-title");
     const overlayMsg = document.getElementById("overlay-msg");
@@ -34,11 +35,12 @@
     const MAX_DOWN = 420;
 
     const BASE_SPEED = 140;
-    const MAX_SPEED = 310;
-    const SPEED_RAMP = 4.5;
+    const MAX_SPEED = 265;
+    const SPEED_RAMP = 3.2;
 
     const MAX_HEARTS = 3;
     const INVINCIBLE_MS = 1600;
+    const LETTERS = "ABCDEF";
 
     function mountainY(wx) {
         return H - 28
@@ -75,7 +77,13 @@
         nextObstX: W + 280,
         nextCollX: W + 140,
         shakeUntil: 0,
+        targetLetter: "A",
     };
+
+    function pickTargetLetter() {
+        state.targetLetter = LETTERS[Math.floor(Math.random() * LETTERS.length)];
+        targetLetterEl.textContent = state.targetLetter;
+    }
 
     // ── Prefill name ─────────────────────────────────────────────
     const saved = localStorage.getItem(NAME_KEY) || "";
@@ -124,7 +132,7 @@
 
     function spawnObstacle() {
         const x = W + 60;
-        if (Math.random() < 0.62) {
+        if (Math.random() < 0.55) {
             state.obstacles.push({
                 type: "bird", x, phase: Math.random() * Math.PI * 2,
                 y: CEILING_Y + 35 + Math.random() * (H - 180),
@@ -135,7 +143,7 @@
                 y: CEILING_Y + 25 + Math.random() * (H - 190),
             });
         }
-        state.nextObstX = x + 180 + Math.random() * 200;
+        state.nextObstX = x + 260 + Math.random() * 220;
     }
 
     function spawnCollectible() {
@@ -143,6 +151,7 @@
         state.collectibles.push({
             x, y: CEILING_Y + 40 + Math.random() * (H - 165),
             bob: Math.random() * Math.PI * 2, collected: false,
+            letter: LETTERS[Math.floor(Math.random() * LETTERS.length)],
         });
         state.nextCollX = x + 110 + Math.random() * 140;
     }
@@ -171,6 +180,7 @@
             obstacles: [], collectibles: [], particles: [],
             nextObstX: W + 280, nextCollX: W + 140, shakeUntil: 0,
         });
+        pickTargetLetter();
         initBgClouds();
         updateHearts();
         scoreEl.textContent = "0";
@@ -257,7 +267,9 @@
                 const [ow, oh] = o.type === "bird" ? [30, 22] : [68, 42];
                 if (overlaps(hx, hy, 40, 52, o.x - ow / 2, o.y - oh / 2, ow, oh)) {
                     addParticles(BALLOON_X + BALLOON_W / 2, b.y + 30, o.type === "bird" ? "#c8a060" : "#8090b0");
-                    if (takeDamage()) return;
+                    state.shakeUntil = Date.now() + 180;
+                    b.vy = Math.max(-MAX_UP, b.vy - 120);
+                    state.obstacles.splice(i, 1);
                 }
             }
         }
@@ -270,7 +282,12 @@
             if (c.x < -40) { state.collectibles.splice(i, 1); continue; }
             if (!c.collected && overlaps(hx, hy, 40, 52, c.x - 14, c.y - 14, 28, 28)) {
                 c.collected = true;
-                state.starBonus += 10;
+                if (c.letter === state.targetLetter) {
+                    state.starBonus += 12;
+                    pickTargetLetter();
+                } else {
+                    state.starBonus += 4;
+                }
                 playCollect();
                 addParticles(c.x, c.y, "#f5d020", 10);
             }
@@ -329,7 +346,7 @@
         ctx.restore();
     }
 
-    function drawStar(x, y, bob) {
+    function drawStar(x, y, bob, letter) {
         const s = 12 * (1 + Math.sin(bob) * 0.14);
         ctx.save(); ctx.translate(x, y + Math.sin(bob) * 3.5);
         ctx.fillStyle = "#f5d020"; ctx.strokeStyle = "#d4900a"; ctx.lineWidth = 1;
@@ -342,6 +359,11 @@
             ctx.lineTo(Math.cos(ai) * s * 0.4, Math.sin(ai) * s * 0.4);
         }
         ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = "#5a3a00";
+        ctx.font = "bold 12px sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(letter, 0, 0);
         ctx.restore();
     }
 
@@ -452,7 +474,7 @@
         for (const c of state.bgClouds) drawCloud(c.x, c.y, c.w, c.alpha);
         drawMountains(state.distance);
 
-        for (const c of state.collectibles) if (!c.collected) drawStar(c.x, c.y, c.bob);
+        for (const c of state.collectibles) if (!c.collected) drawStar(c.x, c.y, c.bob, c.letter);
 
         for (const o of state.obstacles) {
             if (o.type === "bird") drawBird(o.x, o.y, now, o.phase);
@@ -512,5 +534,6 @@
         requestAnimationFrame(loop);
     }
     initBgClouds();
+    pickTargetLetter();
     requestAnimationFrame(loop);
 })();
