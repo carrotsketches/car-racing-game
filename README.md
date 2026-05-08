@@ -37,7 +37,7 @@ A small collection of browser-based mini-games built with vanilla HTML5 Canvas a
 - **Unicorn Storyteller** 🦄 — pick word tiles to build magical sentences and watch the unicorn act them out
 
 ### Bonus (Hidden)
-- **Hot Air Balloon** 🎈 — hold to rise, dodge birds and storm clouds (not recommended)
+- **Hot Air Balloon** 🎈 — hold to rise and tap letter balloons in order to spell sight words (hidden from home page)
 
 ## Layout
 
