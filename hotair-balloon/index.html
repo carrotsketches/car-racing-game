@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <title>Hot Air Balloon</title>
+    <title>Hot Air Balloon Sight Word Spelling</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -15,12 +15,11 @@
             <button class="help-btn" id="help-btn" aria-label="How to play">?</button>
         </div>
         <header>
-            <h1>🎈 Hot Air Balloon</h1>
+            <h1>🎈 Sight Word Balloon Spelling</h1>
             <div class="hud">
                 <div class="stat" id="player-tag">👤 <span id="player-name">—</span></div>
                 <div class="stat">Score: <span id="score">0</span></div>
-                <div class="stat hearts" id="hearts" aria-label="lives">❤️❤️❤️</div>
-                <div class="stat">Letter: <span id="target-letter">A</span></div>
+                <div class="stat spell-word">Spell: <span id="target-letter">CAT</span></div>
                 <div class="stat">Best: <span id="best">0</span></div>
             </div>
         </header>
@@ -31,7 +30,7 @@
             <div id="overlay" class="overlay">
                 <div class="panel">
                     <h2 id="overlay-title">Ready to Fly?</h2>
-                    <p id="overlay-msg">Hold to heat the balloon and rise. Release to descend. Collect letter stars and match the target letter!</p>
+                    <p id="overlay-msg">Hold to heat the balloon and rise. Release to descend. Tap the letter balloons to spell each sight word!</p>
                     <label class="name-row" for="name-input">
                         <span>Name</span>
                         <input id="name-input" type="text" maxlength="12" autocomplete="off"
@@ -48,7 +47,7 @@
             </button>
         </div>
 
-        <footer><p>Hold Space / tap canvas / hold 🔥 button to rise. Collect letter ⭐ stars and match the target letter for extra points!</p></footer>
+        <footer><p>Hold Space / tap canvas / hold 🔥 button to rise. Tap floating letter balloons in order to spell each sight word.</p></footer>
 
         <div id="help-modal" class="help-modal" hidden>
             <div class="help-panel">
@@ -56,9 +55,9 @@
                 <h3>How to Play</h3>
                 <p><strong>Hold Space</strong>, tap the canvas, or hold the 🔥 button to fire the burner — your balloon rises while you hold.</p>
                 <p>Release to let it drift down naturally.</p>
-                <p>Birds 🐦 and storm clouds ⛈️ now give gentle bumps instead of taking hearts.</p>
-                <p>Collect ⭐ stars and try to match the target letter shown in the HUD.</p>
-                <p>Your score is the distance flown plus star bonuses. Speed increases over time!</p>
+                <p>There are no enemies — just peaceful flying and letter collecting.</p>
+                <p>Tap letter balloons in order to spell the word shown at the top.</p>
+                <p>Your score goes up as you fly and spell more words!</p>
             </div>
         </div>
     </div>
