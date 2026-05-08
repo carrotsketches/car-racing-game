@@ -46,7 +46,7 @@
     function ensureAudio() { return null; }
 
     function updateWordHud() {
-        targetLetterEl.textContent = `${state.currentWord} (${state.nextLetterIndex + 1}/${state.currentWord.length}: ${state.targetLetter})`;
+        targetLetterEl.textContent = state.currentWord;
     }
 
     function pickWord() {
@@ -74,8 +74,9 @@
             bob: Math.random() * Math.PI * 2,
             letter: LETTERS[Math.floor(Math.random() * LETTERS.length)],
             collected: false,
+            r: 24,
         });
-        state.nextSpawn = W + 90 + Math.random() * 120;
+        state.nextSpawn = W + 170 + Math.random() * 170;
     }
 
     function overlaps(a, b) {
@@ -131,7 +132,7 @@
             c.x -= 110 * dt;
             c.bob += 2 * dt;
             if (c.x < -30) { state.collectibles.splice(i, 1); continue; }
-            const s = { x: c.x - 14, y: c.y - 14, w: 28, h: 28 };
+            const s = { x: c.x - c.r, y: c.y - c.r, w: c.r * 2, h: c.r * 2 };
             if (!c.collected && overlaps(hitbox, s)) {
                 c.collected = true;
                 if (c.letter === state.targetLetter) {
@@ -145,25 +146,28 @@
         }
     }
 
-    function drawStar(x, y, bob, letter) {
-        const s = 12 * (1 + Math.sin(bob) * 0.14);
+    function drawLetterBalloon(x, y, bob, letter, r = 24) {
+        const ry = y + Math.sin(bob) * 3;
         ctx.save();
-        ctx.translate(x, y + Math.sin(bob) * 3);
-        ctx.fillStyle = "#f5d020";
+        ctx.translate(x, ry);
+        ctx.fillStyle = "#ffd166";
         ctx.beginPath();
-        for (let i = 0; i < 5; i++) {
-            const a = (i * 4 * Math.PI) / 5 - Math.PI / 2;
-            const ai = a + Math.PI / 5;
-            if (i === 0) ctx.moveTo(Math.cos(a) * s, Math.sin(a) * s);
-            else ctx.lineTo(Math.cos(a) * s, Math.sin(a) * s);
-            ctx.lineTo(Math.cos(ai) * s * 0.4, Math.sin(ai) * s * 0.4);
-        }
-        ctx.closePath(); ctx.fill();
+        ctx.ellipse(0, 0, r, r * 0.9, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "#f4a261";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(0, r * 0.9);
+        ctx.lineTo(0, r * 1.45);
+        ctx.strokeStyle = "#8b7355";
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
         ctx.fillStyle = "#5a3a00";
-        ctx.font = "bold 12px sans-serif";
+        ctx.font = "bold 24px sans-serif";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.fillText(letter, 0, 0);
+        ctx.fillText(letter, 0, 2);
         ctx.restore();
     }
 
@@ -187,7 +191,7 @@
         ctx.fillStyle = "#23415f";
         ctx.fillRect(0, H - 20, W, 20);
 
-        for (const c of state.collectibles) drawStar(c.x, c.y, c.bob, c.letter);
+        for (const c of state.collectibles) drawLetterBalloon(c.x, c.y, c.bob, c.letter, c.r);
         drawBalloon();
     }
 
@@ -198,6 +202,29 @@
     canvas.addEventListener("pointerdown", (e) => { e.preventDefault(); setHeat(true); });
     canvas.addEventListener("pointerup", (e) => { e.preventDefault(); setHeat(false); });
     canvas.addEventListener("pointercancel", () => setHeat(false));
+    canvas.addEventListener("click", (e) => {
+        if (!state.running) return;
+        const rect = canvas.getBoundingClientRect();
+        const sx = canvas.width / rect.width;
+        const sy = canvas.height / rect.height;
+        const x = (e.clientX - rect.left) * sx;
+        const y = (e.clientY - rect.top) * sy;
+        for (let i = state.collectibles.length - 1; i >= 0; i--) {
+            const c = state.collectibles[i];
+            const dy = y - (c.y + Math.sin(c.bob) * 3);
+            const dx = x - c.x;
+            if ((dx * dx) / (c.r * c.r) + (dy * dy) / ((c.r * 0.9) * (c.r * 0.9)) <= 1) {
+                if (c.letter === state.targetLetter) {
+                    state.starBonus += 12;
+                    advanceWord();
+                } else {
+                    state.starBonus += 1;
+                }
+                state.collectibles.splice(i, 1);
+                break;
+            }
+        }
+    });
 
     heatBtn.addEventListener("pointerdown", (e) => { e.preventDefault(); heatBtn.classList.add("active"); setHeat(true); });
     heatBtn.addEventListener("pointerup", (e) => { e.preventDefault(); heatBtn.classList.remove("active"); setHeat(false); });
@@ -224,7 +251,6 @@
         last = ts;
         update(dt);
         draw();
-        if (state.running && state.score >= 150) endGame();
         requestAnimationFrame(loop);
     }
 
