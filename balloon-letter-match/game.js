@@ -8,7 +8,6 @@
     const leftLetters = document.getElementById("left-letters");
     const rightLetters = document.getElementById("right-letters");
     const scoreEl = document.getElementById("score");
-    const livesEl = document.getElementById("lives");
     const overlay = document.getElementById("overlay");
     const overlayTitle = document.getElementById("overlay-title");
     const overlayMsg = document.getElementById("overlay-msg");
@@ -19,7 +18,7 @@
     const helpClose = document.getElementById("help-close");
     const helpModal = document.getElementById("help-modal");
 
-    const state = { running:false, score:0, lives:3, x:0.5, y:0, speed:65, current:"A", leftHit:false, rightHit:false };
+    const state = { running:false, score:0, x:0.5, y:0, speed:65, current:"A", leftHit:false, rightHit:false, pointerActive:false };
 
     let audio = null;
     function ensureAudio() {
@@ -103,12 +102,7 @@
         const dt = (ts - loop.last) / 1000;
         loop.last = ts;
         state.y -= state.speed * dt;
-        if (state.y < -12) {
-            state.lives -= 1;
-            livesEl.textContent = String(state.lives);
-            if (state.lives <= 0) return endGame();
-            spawn();
-        }
+        if (state.y < -12) spawn();
         positionBalloon();
         checkHits();
         requestAnimationFrame(loop);
@@ -118,11 +112,9 @@
         ensureAudio();
         state.running = true;
         state.score = 0;
-        state.lives = 3;
         state.x = 0.5;
         loop.last = 0;
         scoreEl.textContent = "0";
-        livesEl.textContent = "3";
         const playerName = (nameInput.value || "").trim().slice(0, 12) || "Player";
         localStorage.setItem(NAME_KEY, playerName);
         playerNameEl.textContent = playerName;
@@ -131,21 +123,21 @@
         requestAnimationFrame(loop);
     }
 
-    function endGame() {
-        state.running = false;
-        overlayTitle.textContent = "Game Over";
-        overlayMsg.textContent = `Nice try! You matched ${state.score} letter${state.score === 1 ? "" : "s"}. Tap Start to play again.`;
-        overlay.classList.remove("hidden");
-    }
 
-    function setPointer(clientX) {
+    function setPointer(clientX, clientY) {
         const rect = stage.getBoundingClientRect();
         state.x = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+        state.y = Math.max(20, Math.min(stage.clientHeight - 90, clientY - rect.top));
         if (state.running) positionBalloon();
     }
 
-    stage.addEventListener("pointerdown", (e) => setPointer(e.clientX));
-    stage.addEventListener("pointermove", (e) => { if (e.buttons) setPointer(e.clientX); });
+    stage.addEventListener("pointerdown", (e) => {
+        state.pointerActive = true;
+        setPointer(e.clientX, e.clientY);
+    });
+    stage.addEventListener("pointermove", (e) => { if (state.pointerActive) setPointer(e.clientX, e.clientY); });
+    stage.addEventListener("pointerup", () => { state.pointerActive = false; });
+    stage.addEventListener("pointercancel", () => { state.pointerActive = false; });
     ["touchstart", "touchmove", "touchend"].forEach((ev) => stage.addEventListener(ev, (e) => e.preventDefault(), { passive: false }));
 
     startBtn.addEventListener("click", startGame);
