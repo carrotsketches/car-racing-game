@@ -1,11 +1,12 @@
 (() => {
     const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const SIDE_COUNT = 4;
     const NAME_KEY = "highway-dash-last-name";
 
     const stage = document.getElementById("stage");
     const balloon = document.getElementById("balloon");
-    const leftLetterEl = document.getElementById("left-letter");
-    const rightLetterEl = document.getElementById("right-letter");
+    const leftLetters = document.getElementById("left-letters");
+    const rightLetters = document.getElementById("right-letters");
     const scoreEl = document.getElementById("score");
     const livesEl = document.getElementById("lives");
     const overlay = document.getElementById("overlay");
@@ -33,8 +34,27 @@
     const saved = localStorage.getItem(NAME_KEY) || "";
     if (saved) { nameInput.value = saved; playerNameEl.textContent = saved; }
 
-    function pickLetter() {
-        return LETTERS[Math.floor(Math.random() * LETTERS.length)];
+    function pickLetter() { return LETTERS[Math.floor(Math.random() * LETTERS.length)]; }
+    function pickUniqueLetter(excluded) {
+        let letter = pickLetter();
+        while (excluded.has(letter)) letter = pickLetter();
+        return letter;
+    }
+
+    function buildSide(container, isLeft) {
+        container.innerHTML = "";
+        const matchIndex = Math.floor(Math.random() * SIDE_COUNT);
+        const used = new Set([state.current]);
+        for (let i = 0; i < SIDE_COUNT; i += 1) {
+            const el = document.createElement("div");
+            el.className = "target";
+            const letter = i === matchIndex ? state.current : pickUniqueLetter(used);
+            used.add(letter);
+            el.textContent = letter;
+            el.dataset.match = String(letter === state.current);
+            el.dataset.side = isLeft ? "left" : "right";
+            container.appendChild(el);
+        }
     }
 
     function spawn() {
@@ -42,11 +62,9 @@
         state.leftHit = false;
         state.rightHit = false;
         state.y = stage.clientHeight - 120;
-        leftLetterEl.textContent = state.current;
-        rightLetterEl.textContent = state.current;
         balloon.textContent = state.current;
-        leftLetterEl.classList.remove("hit");
-        rightLetterEl.classList.remove("hit");
+        buildSide(leftLetters, true);
+        buildSide(rightLetters, false);
         positionBalloon();
     }
 
@@ -59,9 +77,19 @@
     }
 
     function checkHits() {
-        const x = parseFloat(balloon.style.left);
-        if (!state.leftHit && x < 92) { state.leftHit = true; leftLetterEl.classList.add("hit"); }
-        if (!state.rightHit && x > stage.clientWidth - 92) { state.rightHit = true; rightLetterEl.classList.add("hit"); }
+        const bRect = balloon.getBoundingClientRect();
+        const targets = stage.querySelectorAll(".target");
+        for (const target of targets) {
+            if (target.dataset.match !== "true" || target.classList.contains("hit")) continue;
+            const tRect = target.getBoundingClientRect();
+            const overlap = !(bRect.right < tRect.left || bRect.left > tRect.right || bRect.bottom < tRect.top || bRect.top > tRect.bottom);
+            if (!overlap) continue;
+
+            if (target.dataset.side === "left") state.leftHit = true;
+            if (target.dataset.side === "right") state.rightHit = true;
+            target.classList.add("hit");
+        }
+
         if (state.leftHit && state.rightHit) {
             state.score += 1;
             scoreEl.textContent = String(state.score);

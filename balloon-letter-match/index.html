@@ -24,14 +24,14 @@
         </header>
 
         <div class="stage" id="stage">
-            <div class="target left" id="left-letter">A</div>
-            <div class="target right" id="right-letter">A</div>
+            <div class="targets left" id="left-letters"></div>
+            <div class="targets right" id="right-letters"></div>
             <div class="balloon" id="balloon">A</div>
 
             <div id="overlay" class="overlay">
                 <div class="panel">
                     <h2 id="overlay-title">Ready?</h2>
-                    <p id="overlay-msg">Move your finger left or right to guide the balloon. Match the same letter on both sides before it floats away.</p>
+                    <p id="overlay-msg">Move your finger left or right to guide the balloon. Find and touch the same letter on both left and right sides before it floats away.</p>
                     <label class="name-row" for="name-input">
                         <span>Name</span>
                         <input id="name-input" type="text" maxlength="12" autocomplete="off" spellcheck="false" placeholder="Player" />
@@ -41,15 +41,15 @@
             </div>
         </div>
 
-        <footer><p>Tip: Keep moving — don't miss any letters!</p></footer>
+        <footer><p>Tip: match both sides quickly — don't miss any letters!</p></footer>
 
         <div id="help-modal" class="help-modal" hidden>
             <div class="help-panel">
                 <button class="help-close" id="help-close" aria-label="Close">✕</button>
                 <h3>How to Play</h3>
-                <p>Letters appear on the left and right sides.</p>
-                <p>A balloon with a letter floats up in the middle.</p>
-                <p>Move your finger to steer the balloon and touch both matching side letters.</p>
+                <p>Several letters appear on both the left and right sides.</p>
+                <p>A balloon with one letter floats up in the middle.</p>
+                <p>Move your finger to steer the balloon and touch the matching letter on the left and right sides.</p>
                 <p>Don't miss a balloon — if it escapes, you lose a life.</p>
             </div>
         </div>
