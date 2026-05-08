@@ -32,7 +32,7 @@
         balloon: { x: 110, y: 110, vy: 0 },
         collectibles: [],
         particles: [],
-        nextSpawn: W + 120,
+        spawnTimer: 0,
         currentWord: "CAT",
         nextLetterIndex: 0,
         targetLetter: "C",
@@ -67,16 +67,15 @@
         updateWordHud();
     }
 
-    function spawnCollectible() {
+    function spawnCollectible(forceLetter = null) {
         state.collectibles.push({
             x: W + 40,
             y: 35 + Math.random() * (H - 95),
             bob: Math.random() * Math.PI * 2,
-            letter: LETTERS[Math.floor(Math.random() * LETTERS.length)],
+            letter: forceLetter || LETTERS[Math.floor(Math.random() * LETTERS.length)],
             collected: false,
             r: 24,
         });
-        state.nextSpawn = W + 170 + Math.random() * 170;
     }
 
     function overlaps(a, b) {
@@ -90,9 +89,12 @@
         playerNameEl.textContent = state.playerName;
         Object.assign(state, {
             running: true, score: 0, distance: 0, starBonus: 0, heating: false,
-            balloon: { x: 110, y: 110, vy: 0 }, collectibles: [], particles: [], nextSpawn: W + 120,
+            balloon: { x: 110, y: 110, vy: 0 }, collectibles: [], particles: [], spawnTimer: 0,
         });
         pickWord();
+        spawnCollectible(state.targetLetter);
+        spawnCollectible();
+        spawnCollectible();
         scoreEl.textContent = "0";
         overlay.classList.add("hidden");
         startBtn.textContent = "Play Again! 🎈";
@@ -124,12 +126,19 @@
         state.score = Math.floor(state.distance / 10) + state.starBonus;
         scoreEl.textContent = String(state.score);
 
-        if (state.distance + W > state.nextSpawn) spawnCollectible();
+        state.spawnTimer += dt;
+        const needsTarget = !state.collectibles.some((c) => c.letter === state.targetLetter);
+        if (needsTarget && state.collectibles.length < 8) {
+            spawnCollectible(state.targetLetter);
+        } else if (state.spawnTimer > 1.2 && state.collectibles.length < 8) {
+            state.spawnTimer = 0;
+            spawnCollectible(Math.random() < 0.35 ? state.targetLetter : null);
+        }
 
         const hitbox = { x: b.x + 10, y: b.y + 8, w: 40, h: 52 };
         for (let i = state.collectibles.length - 1; i >= 0; i--) {
             const c = state.collectibles[i];
-            c.x -= 110 * dt;
+            c.x -= 70 * dt;
             c.bob += 2 * dt;
             if (c.x < -30) { state.collectibles.splice(i, 1); continue; }
             const s = { x: c.x - c.r, y: c.y - c.r, w: c.r * 2, h: c.r * 2 };
@@ -138,6 +147,9 @@
                 if (c.letter === state.targetLetter) {
                     state.starBonus += 12;
                     advanceWord();
+                    if (!state.collectibles.some((d, j) => j !== i && d.letter === state.targetLetter)) {
+                        spawnCollectible(state.targetLetter);
+                    }
                 } else {
                     state.starBonus += 1;
                 }
