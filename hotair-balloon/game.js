@@ -40,7 +40,8 @@
 
     const MAX_HEARTS = 3;
     const INVINCIBLE_MS = 1600;
-    const LETTERS = "ABCDEF";
+    const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const SIGHT_WORDS = ["CAT", "DOG", "SUN", "HAT", "MAP", "RED", "BLUE", "JUMP", "LOOK", "PLAY"];
 
     function mountainY(wx) {
         return H - 28
@@ -77,12 +78,28 @@
         nextObstX: W + 280,
         nextCollX: W + 140,
         shakeUntil: 0,
-        targetLetter: "A",
+        targetLetter: "C",
+        currentWord: "CAT",
+        nextLetterIndex: 0,
     };
 
     function pickTargetLetter() {
-        state.targetLetter = LETTERS[Math.floor(Math.random() * LETTERS.length)];
-        targetLetterEl.textContent = state.targetLetter;
+        state.currentWord = SIGHT_WORDS[Math.floor(Math.random() * SIGHT_WORDS.length)];
+        state.nextLetterIndex = 0;
+        state.targetLetter = state.currentWord[state.nextLetterIndex];
+        targetLetterEl.textContent = `${state.currentWord} (${state.nextLetterIndex + 1}/${state.currentWord.length}: ${state.targetLetter})`;
+    }
+
+    function advanceWordProgress() {
+        state.nextLetterIndex++;
+        if (state.nextLetterIndex >= state.currentWord.length) {
+            state.starBonus += 18;
+            pickTargetLetter();
+            return true;
+        }
+        state.targetLetter = state.currentWord[state.nextLetterIndex];
+        targetLetterEl.textContent = `${state.currentWord} (${state.nextLetterIndex + 1}/${state.currentWord.length}: ${state.targetLetter})`;
+        return false;
     }
 
     // ── Prefill name ─────────────────────────────────────────────
@@ -283,10 +300,11 @@
             if (!c.collected && overlaps(hx, hy, 40, 52, c.x - 14, c.y - 14, 28, 28)) {
                 c.collected = true;
                 if (c.letter === state.targetLetter) {
-                    state.starBonus += 12;
-                    pickTargetLetter();
+                    state.starBonus += 10;
+                    const completedWord = advanceWordProgress();
+                    if (completedWord) state.starBonus += 6;
                 } else {
-                    state.starBonus += 4;
+                    state.starBonus += 2;
                 }
                 playCollect();
                 addParticles(c.x, c.y, "#f5d020", 10);
