@@ -27,7 +27,7 @@ A static, no-build collection of small browser games. The root is a game launche
 ├── earth-day/               # Falling items sorted into recycling vs. trash
 ├── cuckoo-clock/            # Reaction-time tap when cuckoo pops out
 ├── unicorn-storyteller/     # Build magical sentences; unicorn acts them out
-├── hotair-balloon/          # Hold-to-rise balloon, dodge birds/storm clouds (HIDDEN from home page — kids didn't enjoy it)
+├── hotair-balloon/          # Hold-to-rise balloon + sight-word spelling (HIDDEN from home page)
 └── hard/                    # Sub-gateway for harder games (e.g. flappy-bird)
     └── flappy-bird/         # Tap-to-flap, dodge pipes (kids don't enjoy this style either)
 ```
@@ -57,7 +57,7 @@ Use this table instead of re-scanning each folder.
 | cuckoo-clock | Reaction | Wait for cuckoo 🐦, tap fast, penalize early taps | tap | DOM + CSS |
 | unicorn-storyteller | Story | Pick word tiles to build sentences; unicorn acts | tap | DOM |
 | hard/flappy-bird | Flappy | Tap to flap, dodge pipes | tap | canvas 2D |
-| hotair-balloon | Sky | Hold to rise, dodge birds/storm clouds, collect stars | hold/tap | canvas 2D | **hidden from home page** |
+| hotair-balloon | Literacy | Hold to rise and tap letter balloons in order to spell sight words | hold/tap | canvas 2D | **hidden from home page** |
 
 Each `.game-card` on the home page carries a `data-lb="<slug>-leaderboard"` attribute; the home-page script reads it to render the card's top-3 entries inline.
 
