@@ -18,6 +18,10 @@
 
     const W = canvas.width;
     const H = canvas.height;
+    const IS_TOUCH_LAYOUT = window.matchMedia("(max-width: 820px)").matches;
+    const LETTER_RADIUS = IS_TOUCH_LAYOUT ? 30 : 24;
+    const LETTER_SPEED = IS_TOUCH_LAYOUT ? 52 : 70;
+    const MAX_BALLOONS = IS_TOUCH_LAYOUT ? 6 : 8;
     const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     const SIGHT_WORDS = ["CAT", "DOG", "SUN", "HAT", "MAP", "RED", "BLUE", "JUMP", "LOOK", "PLAY"];
 
@@ -79,7 +83,7 @@
             bob: Math.random() * Math.PI * 2,
             letter: forceLetter || LETTERS[Math.floor(Math.random() * LETTERS.length)],
             collected: false,
-            r: 24,
+            r: LETTER_RADIUS,
         });
     }
 
@@ -133,9 +137,9 @@
 
         state.spawnTimer += dt;
         const needsTarget = !state.collectibles.some((c) => c.letter === state.targetLetter);
-        if (needsTarget && state.collectibles.length < 8) {
+        if (needsTarget && state.collectibles.length < MAX_BALLOONS) {
             spawnCollectible(state.targetLetter);
-        } else if (state.spawnTimer > 1.2 && state.collectibles.length < 8) {
+        } else if (state.spawnTimer > (IS_TOUCH_LAYOUT ? 1.45 : 1.2) && state.collectibles.length < MAX_BALLOONS) {
             state.spawnTimer = 0;
             spawnCollectible(Math.random() < 0.35 ? state.targetLetter : null);
         }
@@ -143,7 +147,7 @@
         const hitbox = { x: b.x + 10, y: b.y + 8, w: 40, h: 52 };
         for (let i = state.collectibles.length - 1; i >= 0; i--) {
             const c = state.collectibles[i];
-            c.x -= 70 * dt;
+            c.x -= LETTER_SPEED * dt;
             c.bob += 2 * dt;
             if (c.x < -30) { state.collectibles.splice(i, 1); continue; }
             const s = { x: c.x - c.r, y: c.y - c.r, w: c.r * 2, h: c.r * 2 };
