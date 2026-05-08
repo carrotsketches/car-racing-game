@@ -36,6 +36,7 @@
         currentWord: "CAT",
         nextLetterIndex: 0,
         targetLetter: "C",
+        pointerDown: false,
     };
 
     function loadLeaderboard() { try { return JSON.parse(localStorage.getItem(LB_KEY)) || []; } catch (_) { return []; } }
@@ -46,7 +47,11 @@
     function ensureAudio() { return null; }
 
     function updateWordHud() {
-        targetLetterEl.textContent = state.currentWord;
+        targetLetterEl.innerHTML = state.currentWord.split("").map((ch, idx) => {
+            if (idx < state.nextLetterIndex) return `<span class="done-letter">${ch}</span>`;
+            if (idx === state.nextLetterIndex) return `<span class="next-letter">${ch}</span>`;
+            return `<span class="todo-letter">${ch}</span>`;
+        }).join("");
     }
 
     function pickWord() {
@@ -209,18 +214,8 @@
 
     function setHeat(on) { if (state.running) state.heating = on; }
 
-    document.addEventListener("keydown", (e) => { if (e.code === "Space" || e.code === "ArrowUp") { e.preventDefault(); setHeat(true); } });
-    document.addEventListener("keyup", (e) => { if (e.code === "Space" || e.code === "ArrowUp") setHeat(false); });
-    canvas.addEventListener("pointerdown", (e) => { e.preventDefault(); setHeat(true); });
-    canvas.addEventListener("pointerup", (e) => { e.preventDefault(); setHeat(false); });
-    canvas.addEventListener("pointercancel", () => setHeat(false));
-    canvas.addEventListener("click", (e) => {
+    function tryCollectAt(x, y) {
         if (!state.running) return;
-        const rect = canvas.getBoundingClientRect();
-        const sx = canvas.width / rect.width;
-        const sy = canvas.height / rect.height;
-        const x = (e.clientX - rect.left) * sx;
-        const y = (e.clientY - rect.top) * sy;
         for (let i = state.collectibles.length - 1; i >= 0; i--) {
             const c = state.collectibles[i];
             const dy = y - (c.y + Math.sin(c.bob) * 3);
@@ -236,7 +231,31 @@
                 break;
             }
         }
+    }
+
+    function getCanvasPoint(e) {
+        const rect = canvas.getBoundingClientRect();
+        const sx = canvas.width / rect.width;
+        const sy = canvas.height / rect.height;
+        return { x: (e.clientX - rect.left) * sx, y: (e.clientY - rect.top) * sy };
+    }
+
+    document.addEventListener("keydown", (e) => { if (e.code === "Space" || e.code === "ArrowUp") { e.preventDefault(); setHeat(true); } });
+    document.addEventListener("keyup", (e) => { if (e.code === "Space" || e.code === "ArrowUp") setHeat(false); });
+    canvas.addEventListener("pointerdown", (e) => {
+        e.preventDefault();
+        state.pointerDown = true;
+        setHeat(true);
+        const p = getCanvasPoint(e);
+        tryCollectAt(p.x, p.y);
     });
+    canvas.addEventListener("pointermove", (e) => {
+        if (!state.pointerDown) return;
+        const p = getCanvasPoint(e);
+        tryCollectAt(p.x, p.y);
+    });
+    canvas.addEventListener("pointerup", (e) => { e.preventDefault(); state.pointerDown = false; setHeat(false); });
+    canvas.addEventListener("pointercancel", () => { state.pointerDown = false; setHeat(false); });
 
     heatBtn.addEventListener("pointerdown", (e) => { e.preventDefault(); heatBtn.classList.add("active"); setHeat(true); });
     heatBtn.addEventListener("pointerup", (e) => { e.preventDefault(); heatBtn.classList.remove("active"); setHeat(false); });

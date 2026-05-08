@@ -102,6 +102,20 @@ h1 {
     text-shadow: 0 2px 10px rgba(255, 196, 72, 0.7);
 }
 
+#target-letter .done-letter {
+    color: #7dff98;
+}
+
+#target-letter .next-letter {
+    color: #ffffff;
+    text-decoration: underline;
+}
+
+#target-letter .todo-letter {
+    color: #ffd08e;
+    opacity: 0.55;
+}
+
 .stage {
     position: relative;
     width: 100%;
