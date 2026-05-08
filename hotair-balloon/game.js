@@ -23,7 +23,16 @@
     const LETTER_SPEED = IS_TOUCH_LAYOUT ? 52 : 70;
     const MAX_BALLOONS = IS_TOUCH_LAYOUT ? 6 : 8;
     const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    const SIGHT_WORDS = ["CAT", "DOG", "SUN", "HAT", "MAP", "RED", "BLUE", "JUMP", "LOOK", "PLAY"];
+    const SIGHT_WORDS = [
+        "A", "AM", "AN", "AND", "ARE", "AT", "AWAY", "BIG", "BLUE", "CAN", "COME", "DAY", "DO", "DOWN",
+        "FIND", "FOR", "FUN", "GO", "GOOD", "HELP", "HERE", "I", "IN", "IS", "IT", "JUMP", "LITTLE",
+        "LOOK", "MAKE", "ME", "MY", "NO", "NOT", "ON", "ONE", "PLAY", "RED", "RUN", "SAID", "SEE",
+        "SHE", "SMALL", "THE", "THREE", "TO", "TWO", "UP", "WE", "WHERE", "YELLOW", "YOU",
+        "BALL", "BOOK", "BOY", "CAR", "CAT", "COLD", "DOG", "FAST", "FIVE", "FOUR", "GIRL", "GREEN",
+        "HAPPY", "HAT", "HOME", "HOT", "HOUSE", "LIKE", "LOVE", "MAP", "MOON", "MORE", "NICE", "OPEN",
+        "ORANGE", "PINK", "RAIN", "RIDE", "SCHOOL", "SING", "SIX", "SLOW", "SMILE", "STAR", "STOP",
+        "SUN", "SWIM", "TEN", "THANK", "THIS", "TREE", "WALK", "WANT", "WATER", "WHITE", "YES"
+    ];
 
     const state = {
         running: false,
@@ -41,6 +50,7 @@
         nextLetterIndex: 0,
         targetLetter: "C",
         pointerDown: false,
+        wordBag: [],
     };
 
     function loadLeaderboard() { try { return JSON.parse(localStorage.getItem(LB_KEY)) || []; } catch (_) { return []; } }
@@ -58,8 +68,17 @@
         }).join("");
     }
 
+    function refillWordBag() {
+        state.wordBag = [...SIGHT_WORDS];
+        for (let i = state.wordBag.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [state.wordBag[i], state.wordBag[j]] = [state.wordBag[j], state.wordBag[i]];
+        }
+    }
+
     function pickWord() {
-        state.currentWord = SIGHT_WORDS[Math.floor(Math.random() * SIGHT_WORDS.length)];
+        if (!state.wordBag.length) refillWordBag();
+        state.currentWord = state.wordBag.pop();
         state.nextLetterIndex = 0;
         state.targetLetter = state.currentWord[0];
         updateWordHud();
