@@ -18,7 +18,7 @@
     const helpClose = document.getElementById("help-close");
     const helpModal = document.getElementById("help-modal");
 
-    const state = { running:false, score:0, x:0.5, y:0, speed:65, current:"A", leftHit:false, rightHit:false, pointerActive:false, roundClearing:false };
+    const state = { running:false, score:0, x:0.5, y:0, speed:65, current:"A", leftHit:false, rightHit:false, pointerActive:false };
 
     let audio = null;
     function ensureAudio() {
@@ -61,9 +61,6 @@
         state.leftHit = false;
         state.rightHit = false;
         state.y = stage.clientHeight - 120;
-        balloon.classList.remove("gone");
-        leftLetters.classList.remove("gone");
-        rightLetters.classList.remove("gone");
         balloon.textContent = state.current;
         buildSide(leftLetters, true);
         buildSide(rightLetters, false);
@@ -92,18 +89,10 @@
             target.classList.add("hit");
         }
 
-        if (state.leftHit && state.rightHit && !state.roundClearing) {
-            state.roundClearing = true;
+        if (state.leftHit && state.rightHit) {
             state.score += 1;
             scoreEl.textContent = String(state.score);
-            balloon.classList.add("gone");
-            leftLetters.classList.add("gone");
-            rightLetters.classList.add("gone");
-            setTimeout(() => {
-                if (!state.running) return;
-                state.roundClearing = false;
-                spawn();
-            }, 180);
+            spawn();
         }
     }
 
@@ -113,7 +102,7 @@
         const dt = (ts - loop.last) / 1000;
         loop.last = ts;
         state.y -= state.speed * dt;
-        if (state.y < -12 && !state.roundClearing) spawn();
+        if (state.y < -12) spawn();
         positionBalloon();
         checkHits();
         requestAnimationFrame(loop);
