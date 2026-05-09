@@ -33,7 +33,6 @@
     const TRUCK_Y = H - 70;
 
     // "Build a house" feature
-    const HOUSE_GOAL = 6;            // bricks needed to finish a house
     const HOUSE_BRICK_W = 20;
     const HOUSE_BRICK_H = 14;
     const HOUSE_COLS = 3;            // bricks per row in the house silhouette
@@ -89,7 +88,7 @@
     const savedName = localStorage.getItem(NAME_KEY) || "";
     if (savedName) { nameInput.value = savedName; playerNameEl.textContent = savedName; }
     updateBestDisplay();
-    if (houseEl) houseEl.textContent = `0/${HOUSE_GOAL}`;
+    if (houseEl) houseEl.textContent = "0";
     nameInput.addEventListener("input", () => {
         const n = nameInput.value.trim().slice(0, 12);
         playerNameEl.textContent = n || "—";
@@ -253,7 +252,7 @@
         const { x, y } = houseBrickPos(idx);
         state.house.bricks.push({ x, y, color });
         updateHouseHud();
-        if (state.house.bricks.length >= HOUSE_GOAL) finishHouse();
+        if (state.house.bricks.length % 6 === 0) finishHouse();
     }
 
     function finishHouse() {
@@ -266,15 +265,12 @@
         burstConfetti(HOUSE_CENTER_X, HOUSE_BASE_Y - 80, "#f5a524");
         playCorrect();
         setTimeout(() => tone({ freq: 880, type: "triangle", duration: 0.2, volume: 0.24 }), 220);
-        // clear for the next house
-        state.house.bricks = [];
         updateHouseHud();
     }
 
     function updateHouseHud() {
         if (!houseEl) return;
-        houseEl.textContent = `${state.house.bricks.length}/${HOUSE_GOAL}` +
-            (state.house.built ? ` (×${state.house.built})` : "");
+        houseEl.textContent = `${state.house.bricks.length}`;
     }
 
     function reset() {
@@ -503,36 +499,6 @@
         ctx.fillRect(zoneX, GROUND_Y, zoneW, H - GROUND_Y);
         ctx.restore();
 
-        // Ghost outline of the target house — visible enough to guide the player
-        ctx.save();
-        ctx.globalAlpha = 0.42;
-        ctx.strokeStyle = "#ffffff";
-        ctx.lineWidth = 1;
-        for (let i = 0; i < HOUSE_GOAL; i++) {
-            const { x, y } = houseBrickPos(i);
-            ctx.strokeRect(x - HOUSE_BRICK_W / 2, y - HOUSE_BRICK_H / 2,
-                           HOUSE_BRICK_W, HOUSE_BRICK_H);
-        }
-        // Ghost roof outline
-        const rowW = HOUSE_COLS * HOUSE_BRICK_W;
-        const ghostRoofBaseY = HOUSE_BASE_Y - Math.ceil(HOUSE_GOAL / HOUSE_COLS) * HOUSE_BRICK_H;
-        ctx.beginPath();
-        ctx.moveTo(HOUSE_CENTER_X - rowW / 2 - 4, ghostRoofBaseY);
-        ctx.lineTo(HOUSE_CENTER_X + rowW / 2 + 4, ghostRoofBaseY);
-        ctx.lineTo(HOUSE_CENTER_X, ghostRoofBaseY - 28);
-        ctx.closePath();
-        ctx.stroke();
-        ctx.restore();
-
-        // "🏠 HOUSE" label above the ghost
-        ctx.save();
-        ctx.globalAlpha = 0.75;
-        ctx.fillStyle = "#f5e6a3";
-        ctx.font = "bold 10px 'Segoe UI', sans-serif";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "bottom";
-        ctx.fillText("🏠 BUILD", HOUSE_CENTER_X, ghostRoofBaseY - 32);
-        ctx.restore();
 
         // Delivered bricks
         for (const b of state.house.bricks) {
@@ -544,7 +510,7 @@
                            HOUSE_BRICK_W, HOUSE_BRICK_H);
         }
 
-        // Roof peak once the first full row is down, and fully on completion.
+        // Roof peak follows the top of the current tower.
         const done = state.house.bricks.length;
         if (done >= HOUSE_COLS) {
             const rows = Math.ceil(done / HOUSE_COLS);
