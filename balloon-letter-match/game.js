@@ -186,8 +186,6 @@
     stage.addEventListener("pointermove", (e) => { if (state.pointerActive) setPointer(e.clientX, e.clientY); });
     stage.addEventListener("pointerup", () => { state.pointerActive = false; });
     stage.addEventListener("pointercancel", () => { state.pointerActive = false; });
-    ["touchstart", "touchmove", "touchend"].forEach((ev) => stage.addEventListener(ev, (e) => e.preventDefault(), { passive: false }));
-
     startBtn.addEventListener("click", startGame);
     helpBtn.addEventListener("click", () => { helpModal.hidden = false; });
     helpClose.addEventListener("click", () => { helpModal.hidden = true; });
