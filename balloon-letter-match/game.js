@@ -2,12 +2,15 @@
     const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     const SIDE_COUNT = 4;
     const NAME_KEY = "highway-dash-last-name";
+    const LB_KEY = "balloon-letter-match-leaderboard";
+    const LB_MAX = 20;
 
     const stage = document.getElementById("stage");
     const balloon = document.getElementById("balloon");
     const leftLetters = document.getElementById("left-letters");
     const rightLetters = document.getElementById("right-letters");
     const scoreEl = document.getElementById("score");
+    const bestEl = document.getElementById("best");
     const overlay = document.getElementById("overlay");
     const overlayTitle = document.getElementById("overlay-title");
     const overlayMsg = document.getElementById("overlay-msg");
@@ -18,7 +21,7 @@
     const helpClose = document.getElementById("help-close");
     const helpModal = document.getElementById("help-modal");
 
-    const state = { running:false, score:0, x:0.5, y:0, speed:65, current:"A", leftHit:false, rightHit:false, pointerActive:false };
+    const state = { running:false, score:0, x:0.5, y:0, speed:65, current:"A", leftHit:false, rightHit:false, pointerActive:false, roundClearing:false, leaderboard:[] };
 
     let audio = null;
     function ensureAudio() {
@@ -30,8 +33,39 @@
         return audio;
     }
 
+
+    function loadLeaderboard() {
+        try {
+            const raw = localStorage.getItem(LB_KEY);
+            const arr = raw ? JSON.parse(raw) : [];
+            return Array.isArray(arr) ? arr : [];
+        } catch (_) { return []; }
+    }
+    function saveLeaderboard() {
+        try { localStorage.setItem(LB_KEY, JSON.stringify(state.leaderboard)); } catch (_) {}
+    }
+    function personalBest(name) {
+        let best = 0;
+        for (const e of state.leaderboard) if (e.name === name && e.score > best) best = e.score;
+        return best;
+    }
+    function upsertBest(name, score) {
+        if (!name) return;
+        const existing = state.leaderboard.find((e) => e.name === name);
+        if (existing) {
+            if (score > existing.score) { existing.score = score; existing.at = Date.now(); }
+        } else {
+            state.leaderboard.push({ name, score, at: Date.now() });
+        }
+        state.leaderboard.sort((a, b) => b.score - a.score);
+        state.leaderboard = state.leaderboard.slice(0, LB_MAX);
+        saveLeaderboard();
+    }
+
+    state.leaderboard = loadLeaderboard();
     const saved = localStorage.getItem(NAME_KEY) || "";
     if (saved) { nameInput.value = saved; playerNameEl.textContent = saved; }
+    bestEl.textContent = String(personalBest(saved));
 
     function pickLetter() { return LETTERS[Math.floor(Math.random() * LETTERS.length)]; }
     function pickUniqueLetter(excluded) {
@@ -61,6 +95,9 @@
         state.leftHit = false;
         state.rightHit = false;
         state.y = stage.clientHeight - 120;
+        balloon.classList.remove("gone");
+        leftLetters.classList.remove("gone");
+        rightLetters.classList.remove("gone");
         balloon.textContent = state.current;
         buildSide(leftLetters, true);
         buildSide(rightLetters, false);
@@ -89,10 +126,20 @@
             target.classList.add("hit");
         }
 
-        if (state.leftHit && state.rightHit) {
+        if (state.leftHit && state.rightHit && !state.roundClearing) {
+            state.roundClearing = true;
             state.score += 1;
             scoreEl.textContent = String(state.score);
-            spawn();
+            upsertBest(playerNameEl.textContent.trim(), state.score);
+            bestEl.textContent = String(personalBest(playerNameEl.textContent.trim()));
+            balloon.classList.add("gone");
+            leftLetters.classList.add("gone");
+            rightLetters.classList.add("gone");
+            setTimeout(() => {
+                if (!state.running) return;
+                state.roundClearing = false;
+                spawn();
+            }, 180);
         }
     }
 
@@ -102,7 +149,7 @@
         const dt = (ts - loop.last) / 1000;
         loop.last = ts;
         state.y -= state.speed * dt;
-        if (state.y < -12) spawn();
+        if (state.y < -12 && !state.roundClearing) spawn();
         positionBalloon();
         checkHits();
         requestAnimationFrame(loop);
@@ -118,6 +165,7 @@
         const playerName = (nameInput.value || "").trim().slice(0, 12) || "Player";
         localStorage.setItem(NAME_KEY, playerName);
         playerNameEl.textContent = playerName;
+        bestEl.textContent = String(personalBest(playerName));
         overlay.classList.add("hidden");
         spawn();
         requestAnimationFrame(loop);

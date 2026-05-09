@@ -5,7 +5,7 @@
 // of "must be linked from index.html" checks.
 
 const games = [
-    { slug: "balloon-letter-match",                                         hasLeaderboard: false, hidden: true },
+    { slug: "balloon-letter-match",  lbKey: "balloon-letter-match-leaderboard", hasLeaderboard: true, hidden: true },
     { slug: "highway-dash",          lbKey: "highway-dash-leaderboard",       hasLeaderboard: true  },
     { slug: "whack-a-mole",          lbKey: "whack-a-mole-leaderboard",       hasLeaderboard: true  },
     { slug: "add-it-up",             lbKey: "add-it-up-leaderboard",          hasLeaderboard: true  },
