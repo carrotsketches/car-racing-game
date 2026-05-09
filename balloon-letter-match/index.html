@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>Balloon Letter Match</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-wrapper">
+        <div class="nav-row">
+            <a class="home-link" href="../">← Beta Games</a>
+            <button class="help-btn" id="help-btn" aria-label="How to play">?</button>
+        </div>
+        <header>
+            <h1>🎈 Balloon Letter Match</h1>
+            <div class="hud">
+                <div class="stat" id="player-tag">👤 <span id="player-name">—</span></div>
+                <div class="stat">Score: <span id="score">0</span></div>
+                <div class="stat">Best: <span id="best">0</span></div>
+                            </div>
+        </header>
+
+        <div class="stage" id="stage">
+            <div class="targets left" id="left-letters"></div>
+            <div class="targets right" id="right-letters"></div>
+            <div class="balloon" id="balloon">A</div>
+
+            <div id="overlay" class="overlay">
+                <div class="panel">
+                    <h2 id="overlay-title">Ready?</h2>
+                    <p id="overlay-msg">Move your finger left or right to guide the balloon. Find and touch the same letter on both left and right sides before it floats away.</p>
+                    <label class="name-row" for="name-input">
+                        <span>Name</span>
+                        <input id="name-input" type="text" maxlength="12" autocomplete="off" spellcheck="false" placeholder="Player" />
+                    </label>
+                    <button id="start-btn">Start</button>
+                </div>
+            </div>
+        </div>
+
+        <footer><p>Tip: match both sides quickly — don't miss any letters!</p></footer>
+
+        <div id="help-modal" class="help-modal" hidden>
+            <div class="help-panel">
+                <button class="help-close" id="help-close" aria-label="Close">✕</button>
+                <h3>How to Play</h3>
+                <p>Several letters appear on both the left and right sides.</p>
+                <p>A balloon with one letter floats up in the middle.</p>
+                <p>Move your finger to steer the balloon and touch the matching letter on the left and right sides.</p>
+                <p>There is no life limit — keep going and match as many as you can.</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="../shared/play-tracker.js" data-slug="balloon-letter-match"></script>
+    <script src="game.js"></script>
+</body>
+</html>
