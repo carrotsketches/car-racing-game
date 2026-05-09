@@ -18,7 +18,6 @@
     const NAME_KEY = "highway-dash-last-name";
     const LB_KEY = "crane-truck-leaderboard";
     const LB_MAX = 20;
-    const ROUND_MS = 60000;
 
     const COLORS = ["#ef4444", "#3b82f6", "#22c55e", "#a855f7"];
     const TRUCK_COLORS = ["#ef4444", "#3b82f6"];
@@ -69,7 +68,6 @@
         score: 0,
         streak: 0,
         leaderboard: loadLeaderboard(),
-        timeLeft: ROUND_MS,
         t: 0,
         omega: 1.2,
         carrying: null,
@@ -127,7 +125,6 @@
         setTimeout(() => tone({ freq: 990, type: "triangle", duration: 0.18, volume: 0.24 }), 110);
     }
     function playWrong() { tone({ freq: 180, type: "sine", duration: 0.22, volume: 0.2 }); }
-    function playTick() { tone({ freq: 540, type: "triangle", duration: 0.05, volume: 0.12 }); }
     function playEnd() {
         tone({ freq: 523, type: "triangle", duration: 0.15, volume: 0.22 });
         setTimeout(() => tone({ freq: 659, type: "triangle", duration: 0.15, volume: 0.22 }), 130);
@@ -283,7 +280,6 @@
     function reset() {
         state.score = 0;
         state.streak = 0;
-        state.timeLeft = ROUND_MS;
         state.t = 0;
         state.omega = 1.2;
         state.carrying = null;
@@ -293,7 +289,7 @@
         state.house = { bricks: [], built: 0, flashT: 0 };
         timeStatEl.classList.remove("low");
         scoreEl.textContent = 0;
-        timeEl.textContent = Math.ceil(ROUND_MS / 1000);
+        timeEl.textContent = "∞";
         updateHouseHud();
         spawnBlocks();
         spawnTrucks();
@@ -327,7 +323,7 @@
         let msg = `${state.playerName} delivered ${state.score} blocks!`;
         if (rank === 0) msg += " 🏆 New top score!";
         else if (rank >= 0 && rank < 10) msg += ` Rank #${rank + 1}.`;
-        overlayTitle.textContent = "Time's up!";
+        overlayTitle.textContent = "Round complete!";
         overlayMsg.textContent = msg;
         startBtn.textContent = "Play Again";
         overlay.classList.remove("hidden");
@@ -627,52 +623,36 @@
         drawBackground();
 
         if (state.running) {
-            state.timeLeft -= dtMs;
-            if (state.timeLeft <= 0) {
-                timeEl.textContent = 0;
-                endGame();
-            } else {
-                const curr = Math.ceil(state.timeLeft / 1000);
-                if (curr !== Number(timeEl.textContent)) {
-                    timeEl.textContent = curr;
-                    if (curr <= 5) playTick();
-                }
-                const low = curr <= 10;
-                if (low !== state.timeLow) {
-                    state.timeLow = low;
-                    timeStatEl.classList.toggle("low", low);
-                }
-                state.t += dt;
+            state.t += dt;
 
-                // rope animation
-                const SPEED = 520;
-                if (state.rope.dropping) {
-                    state.rope.len = Math.min(state.rope.target, state.rope.len + SPEED * dt);
-                    // Stop (and try pickup) as soon as the hook reaches the
-                    // block's vertical level -- not at some fixed rope length
-                    // -- so the swinging arm angle doesn't overshoot the
-                    // blocks off the bottom of the canvas.
-                    const hp = hookPos();
-                    const blockY = GROUND_Y - BLOCK_SIZE / 2;
-                    if (hp.y >= blockY || state.rope.len >= state.rope.target) {
-                        state.rope.dropping = false;
-                        // try pickup
-                        const b = nearestBlock(hp.x);
-                        if (b) {
-                            state.carrying = { color: b.color };
-                            b.taken = true;
-                            respawnBlock();
-                            playPickup();
-                        } else {
-                            playWrong();
-                        }
-                        state.rope.raising = true;
-                        state.rope.target = ROPE_MIN;
+            // rope animation
+            const SPEED = 520;
+            if (state.rope.dropping) {
+                state.rope.len = Math.min(state.rope.target, state.rope.len + SPEED * dt);
+                // Stop (and try pickup) as soon as the hook reaches the
+                // block's vertical level -- not at some fixed rope length
+                // -- so the swinging arm angle doesn't overshoot the
+                // blocks off the bottom of the canvas.
+                const hp = hookPos();
+                const blockY = GROUND_Y - BLOCK_SIZE / 2;
+                if (hp.y >= blockY || state.rope.len >= state.rope.target) {
+                    state.rope.dropping = false;
+                    // try pickup
+                    const b = nearestBlock(hp.x);
+                    if (b) {
+                        state.carrying = { color: b.color };
+                        b.taken = true;
+                        respawnBlock();
+                        playPickup();
+                    } else {
+                        playWrong();
                     }
-                } else if (state.rope.raising) {
-                    state.rope.len = Math.max(state.rope.target, state.rope.len - SPEED * dt);
-                    if (state.rope.len <= state.rope.target) state.rope.raising = false;
+                    state.rope.raising = true;
+                    state.rope.target = ROPE_MIN;
                 }
+            } else if (state.rope.raising) {
+                state.rope.len = Math.max(state.rope.target, state.rope.len - SPEED * dt);
+                if (state.rope.len <= state.rope.target) state.rope.raising = false;
             }
         }
 
