@@ -17,7 +17,7 @@
     const Lib = window.GameLib || {};
     const NAME_KEY = Lib.NAME_KEY || "highway-dash-last-name";
     const LB_KEY = "letter-chef-leaderboard";
-    const LB_MAX = Lib.LB_MAX || 20;
+    const LB_MAX = 20;
     const WORDS = [
         "CAT", "DOG", "BUS", "PIG", "HEN", "SUN", "CUP", "HAT", "LOG", "FAN",
         "BED", "MAP", "JAR", "RUG", "MOP", "BOX", "LEG", "FIG", "CAN", "WEB",
