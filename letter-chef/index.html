@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>Letter Chef</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-wrapper">
+        <div class="nav-row">
+            <a class="home-link" href="../">← Games</a>
+            <button class="help-btn" id="help-btn" aria-label="How to play">?</button>
+        </div>
+        <header>
+            <h1>🍲 Letter Chef</h1>
+            <div class="hud">
+                <div class="stat" id="player-tag">👤 <span id="player-name">—</span></div>
+                <div class="stat">Score: <span id="score">0</span></div>
+                <div class="stat">Best: <span id="best">0</span></div>
+                <div class="stat dishes">🍽 Words: <span id="words-cooked">0</span></div>
+            </div>
+            <div class="word-board" aria-label="Target word">
+                <div id="target-word" class="target-word">CAT</div>
+                <div id="word-tiles" class="word-tiles"></div>
+            </div>
+        </header>
+
+        <div class="stage">
+            <canvas id="game-canvas" width="760" height="520" aria-label="Letter Chef game area"></canvas>
+
+            <div id="overlay" class="overlay">
+                <div class="panel">
+                    <h2 id="overlay-title">Ready to cook?</h2>
+                    <p id="overlay-msg">Tap the jar with the next letter. Spell the word to fill the pot!</p>
+                    <label class="name-row" for="name-input">
+                        <span>Name</span>
+                        <input id="name-input" type="text" maxlength="12" autocomplete="off"
+                               spellcheck="false" placeholder="Player" />
+                    </label>
+                    <button id="start-btn">Start Cooking</button>
+                </div>
+            </div>
+        </div>
+
+        <footer><p>Tap the correct letter jar to cook each word.</p></footer>
+
+        <div id="help-modal" class="help-modal" hidden>
+            <div class="help-panel">
+                <button class="help-close" id="help-close" type="button" aria-label="Close">✕</button>
+                <h3>How to Play</h3>
+                <p>A word appears at the top. Watch the jars on the conveyor belt — tap the jar with the right letter to drop it into the pot! Spell the whole word to cook a dish. How many dishes can you cook?</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="../shared/lib.js"></script>
+    <script src="game.js"></script>
+</body>
+</html>
