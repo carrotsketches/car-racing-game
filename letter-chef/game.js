@@ -115,10 +115,21 @@
         canvas.addEventListener(type, (event) => event.preventDefault(), { passive: false });
     });
 
-    helpBtn.addEventListener("click", () => { helpModal.hidden = false; });
-    helpClose.addEventListener("click", () => { helpModal.hidden = true; });
+    function openHelp() {
+        helpModal.hidden = false;
+    }
+
+    function closeHelp() {
+        helpModal.hidden = true;
+    }
+
+    helpBtn.addEventListener("click", openHelp);
+    helpClose.addEventListener("click", closeHelp);
     helpModal.addEventListener("click", (event) => {
-        if (event.target === helpModal) helpModal.hidden = true;
+        if (event.target === helpModal) closeHelp();
+    });
+    document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && !helpModal.hidden) closeHelp();
     });
 
     function ensureAudio() {
