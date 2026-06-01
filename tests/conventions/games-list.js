@@ -27,6 +27,7 @@ const games = [
     { slug: "seahorse-game",         lbKey: "seahorse-game-leaderboard",      hasLeaderboard: true  },
     { slug: "excavator-game",        lbKey: "excavator-game-leaderboard",     hasLeaderboard: true  },
     { slug: "letter-chef",           lbKey: "letter-chef-leaderboard",        hasLeaderboard: true  },
+    { slug: "airplane-sight-word",   lbKey: "airplane-sight-word-leaderboard", hasLeaderboard: true  },
     { slug: "flappy-bird",           lbKey: "flappy-bird-leaderboard",        hasLeaderboard: true,  hardOnly: true },
 ];
 

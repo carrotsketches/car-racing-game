@@ -38,7 +38,7 @@
     function resize() {
         const stage = canvas.parentElement;
         canvas.width = stage.clientWidth;
-        canvas.height = Math.min(window.innerHeight - 160, 520);
+        canvas.height = Math.max(380, Math.min(window.innerHeight - 160, 520));
     }
     resize();
     window.addEventListener("resize", () => { resize(); });
@@ -430,7 +430,13 @@
         // Update planes
         for (let i = state.planes.length - 1; i >= 0; i--) {
             const p = state.planes[i];
-            if (p.delay > 0) { p.delay -= dt * 1000; continue; }
+            if (p.delay > 0) {
+                // A still-delayed plane already marked hit (its wave was cleared)
+                // should vanish quietly rather than pop in flashing red.
+                if (p.hit) { state.planes.splice(i, 1); }
+                else { p.delay -= dt * 1000; }
+                continue;
+            }
             p.active = true;
 
             // Skywriting victory loop — the caught plane loops and trails smoke
@@ -471,7 +477,9 @@
         }
 
         // If no planes with target word remain (all correct ones removed), pick new target
-        const targetPlaneExists = state.planes.some(p => p.word === state.targetWord && p.active && !p.hit);
+        // Count queued (still-delayed) target planes too, or a staggered correct
+        // plane gets ignored and waves spawn far too fast.
+        const targetPlaneExists = state.planes.some(p => p.word === state.targetWord && !p.hit);
         if (!targetPlaneExists && state.spawnTimer > 400) {
             // spawn sooner
             state.spawnTimer = Math.min(state.spawnTimer, 400);
