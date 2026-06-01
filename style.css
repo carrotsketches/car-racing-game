@@ -207,6 +207,11 @@ h1 {
     border-color: rgba(220, 80, 50, 0.45);
 }
 
+.game-card.airplane-sight-word {
+    background: linear-gradient(135deg, rgba(60, 130, 220, 0.24), rgba(120, 200, 255, 0.18));
+    border-color: rgba(60, 130, 220, 0.45);
+}
+
 .game-card.hotair-balloon {
     background: linear-gradient(135deg, rgba(100, 200, 245, 0.22), rgba(26, 107, 176, 0.18));
     border-color: rgba(100, 200, 245, 0.42);
