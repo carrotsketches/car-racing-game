@@ -45,6 +45,8 @@
 
     const state = {
         running: false,
+        mode: "flying",      // "flying" | "repair"
+        repair: null,         // active repair-shop mini-break
         score: 0,
         playerName: "",
         leaderboard: loadLeaderboard(),
@@ -329,10 +331,10 @@
     function drawSmoke() {
         state.smoke.forEach(s => {
             ctx.save();
-            ctx.globalAlpha = Math.max(0, s.life / s.max) * 0.55;
+            ctx.globalAlpha = Math.max(0, s.life / s.max) * (s.dark ? 0.5 : 0.55);
             ctx.beginPath();
             ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-            ctx.fillStyle = "#ffffff";
+            ctx.fillStyle = s.dark ? "#444" : "#ffffff";
             ctx.fill();
             ctx.restore();
         });
@@ -419,6 +421,14 @@
 
         const W = canvas.width;
         const H = canvas.height;
+
+        // Repair-shop mini-break takes over the whole screen
+        if (state.mode === "repair") {
+            updateRepair(dt);
+            drawRepair();
+            requestAnimationFrame(loop);
+            return;
+        }
 
         // Spawn
         state.spawnTimer -= dt * 1000;
@@ -544,6 +554,8 @@
         playerNameEl.textContent = state.playerName;
 
         state.score = 0;
+        state.mode = "flying";
+        state.repair = null;
         state.planes = [];
         state.particles = [];
         state.smoke = [];
@@ -582,6 +594,8 @@
         const scaleY = canvas.height / rect.height;
         const x = (clientX - rect.left) * scaleX;
         const y = (clientY - rect.top) * scaleY;
+
+        if (state.mode === "repair") return; // repair uses drag (pointer events)
 
         for (let i = state.planes.length - 1; i >= 0; i--) {
             const p = state.planes[i];
@@ -623,6 +637,10 @@
                     });
                     pickTarget();
                     updateHUD();
+
+                    // Every 10 words, the hard-working plane breaks down and
+                    // needs a trip to the repair shop before flying again.
+                    if (state.score % 10 === 0) enterRepair(p.color);
                 } else {
                     p.correct = false;
                     state.flashColor = "#ff3333";
@@ -634,6 +652,245 @@
         }
     }
 
+    // ── Repair shop puzzle (every 10 words) ──
+    // The plane breaks apart; drag its wing, tail and propeller back on.
+    function enterRepair(planeColor) {
+        state.mode = "repair";
+        state.planes = [];
+        state.smoke = [];
+        state.skywrite = null;
+        state.particles = [];
+
+        const W = canvas.width, H = canvas.height;
+        const cx = W / 2, cy = H / 2 - 8;
+        // Scatter the loose parts along the bottom "workbench"
+        const benchY = H - 52;
+        const parts = [
+            { id: "wing", tx: cx - 14, ty: cy - 30, x: W * 0.24, y: benchY, placed: false },
+            { id: "tail", tx: cx - 56, ty: cy - 24, x: W * 0.5,  y: benchY, placed: false },
+            { id: "prop", tx: cx + 70, ty: cy,      x: W * 0.76, y: benchY, placed: false },
+        ];
+        // Shuffle which bench slot each part starts in
+        const xs = parts.map(p => p.x);
+        for (let i = xs.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [xs[i], xs[j]] = [xs[j], xs[i]];
+        }
+        parts.forEach((p, i) => { p.x = xs[i]; });
+
+        state.repair = {
+            color: planeColor || "#4a90d9",
+            cx, cy, parts,
+            drag: null,
+            done: false,
+            doneTimer: 0,
+            lift: 0,        // assembled plane lift-off offset
+            smokeTimer: 0,
+        };
+        playWrong(); // sputtering breakdown sound
+    }
+
+    const PART_HALF = { w: 42, h: 34 }; // generous grab box
+
+    function repairPartAt(x, y) {
+        const r = state.repair;
+        if (!r) return null;
+        // topmost (last drawn) unplaced part under the point
+        for (let i = r.parts.length - 1; i >= 0; i--) {
+            const p = r.parts[i];
+            if (p.placed) continue;
+            if (Math.abs(x - p.x) < PART_HALF.w && Math.abs(y - p.y) < PART_HALF.h) return p;
+        }
+        return null;
+    }
+
+    function repairPointerDown(x, y) {
+        const r = state.repair;
+        if (!r || r.done) return;
+        const p = repairPartAt(x, y);
+        if (p) r.drag = { part: p, ox: x - p.x, oy: y - p.y };
+    }
+
+    function repairPointerMove(x, y) {
+        const r = state.repair;
+        if (!r || !r.drag) return;
+        r.drag.part.x = x - r.drag.ox;
+        r.drag.part.y = y - r.drag.oy;
+    }
+
+    function repairPointerUp() {
+        const r = state.repair;
+        if (!r || !r.drag) return;
+        const p = r.drag.part;
+        const dist = Math.hypot(p.x - p.tx, p.y - p.ty);
+        if (dist < 52) {
+            // Snap into place!
+            p.x = p.tx; p.y = p.ty; p.placed = true;
+            playTone(440 + r.parts.filter(q => q.placed).length * 110, 0.1, "square", 0.25);
+            for (let i = 0; i < 12; i++) {
+                const a = Math.random() * Math.PI * 2, s = 2 + Math.random() * 3;
+                state.particles.push({ x: p.tx, y: p.ty, vx: Math.cos(a) * s, vy: Math.sin(a) * s,
+                    life: 0.7, col: "#ffd24a", r: 3 + Math.random() * 3 });
+            }
+            if (r.parts.every(q => q.placed)) { r.done = true; r.doneTimer = 1.8; playCorrect(); }
+        }
+        r.drag = null;
+    }
+
+    function updateRepair(dt) {
+        const r = state.repair;
+        if (!r) return;
+        if (!r.done) {
+            // Black smoke puffs from the broken engine
+            r.smokeTimer -= dt;
+            if (r.smokeTimer <= 0) {
+                r.smokeTimer = 0.1;
+                state.smoke.push({ x: r.cx + 50, y: r.cy - 6, r: 6, life: 1.2, max: 1.2, dark: true });
+            }
+        } else {
+            r.doneTimer -= dt;
+            r.lift += dt * 90; // assembled plane climbs away
+            if (r.doneTimer <= 0) exitRepair();
+        }
+        updateParticles(dt);
+        updateSmoke(dt);
+    }
+
+    function drawRepair() {
+        const r = state.repair;
+        const W = canvas.width, H = canvas.height;
+
+        // Sky
+        const sky = ctx.createLinearGradient(0, 0, 0, H);
+        sky.addColorStop(0, "#1a3a6e");
+        sky.addColorStop(1, "#0a1a3e");
+        ctx.fillStyle = sky;
+        ctx.fillRect(0, 0, W, H);
+
+        // Workbench floor
+        ctx.fillStyle = "rgba(255,255,255,0.08)";
+        ctx.fillRect(0, H - 76, W, 76);
+        ctx.font = "34px serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("🔧", W * 0.1, H - 38);
+        ctx.fillText("🛠️", W * 0.9, H - 38);
+
+        drawSmoke();
+
+        const placedCount = r.parts.filter(p => p.placed).length;
+        const fixed = r.done;
+        const liftY = -r.lift;
+
+        // Plane body (always present), lifts off once fixed
+        drawBodyPart(r.cx, r.cy + liftY, fixed ? r.color : "#3a3a3a", fixed);
+
+        // Placed parts ride with the body; loose parts sit where dragged
+        r.parts.forEach(p => {
+            const px = p.placed ? p.tx : p.x;
+            const py = (p.placed ? p.ty : p.y) + (p.placed ? liftY : 0);
+            const col = p.placed ? r.color : "#3a3a3a";
+            if (!p.placed) drawSlotGhost(p.tx, p.ty, p.id); // show where it goes
+            drawPart(p.id, px, py, col, !p.placed);
+        });
+
+        drawParticles();
+
+        // Prompt
+        ctx.textAlign = "center";
+        if (fixed) {
+            ctx.fillStyle = "#9effa0";
+            ctx.font = "bold 22px 'Segoe UI', sans-serif";
+            ctx.fillText("✈️ All fixed! Off we go!", W / 2, 60);
+        } else {
+            ctx.fillStyle = "#ffe07a";
+            ctx.font = "bold 20px 'Segoe UI', sans-serif";
+            ctx.fillText("Oh no, the plane broke!", W / 2, 50);
+            ctx.fillStyle = "#cfe3ff";
+            ctx.font = "16px 'Segoe UI', sans-serif";
+            ctx.fillText(`Drag the parts back on  (${placedCount}/${r.parts.length})`, W / 2, 76);
+        }
+    }
+
+    // Faint outline showing where a part belongs
+    function drawSlotGhost(x, y, id) {
+        ctx.save();
+        ctx.globalAlpha = 0.28;
+        ctx.setLineDash([5, 4]);
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 2;
+        drawPart(id, x, y, "rgba(255,255,255,0.08)", false, true);
+        ctx.restore();
+    }
+
+    function drawBodyPart(x, y, col, fixed) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 60, 17, 0, 0, Math.PI * 2);
+        ctx.fillStyle = col; ctx.fill();
+        // Cockpit
+        ctx.beginPath();
+        ctx.ellipse(40, -4, 12, 8, -0.2, 0, Math.PI * 2);
+        ctx.fillStyle = fixed ? "rgba(200,240,255,0.9)" : "rgba(120,140,160,0.6)"; ctx.fill();
+        // Face
+        ctx.strokeStyle = "#fff"; ctx.lineWidth = 2;
+        if (fixed) {
+            ctx.beginPath(); ctx.arc(38, 0, 5, 0.1 * Math.PI, 0.9 * Math.PI); ctx.stroke();
+        } else {
+            ctx.beginPath();
+            ctx.moveTo(34, -7); ctx.lineTo(40, -1); ctx.moveTo(40, -7); ctx.lineTo(34, -1);
+            ctx.stroke();
+        }
+        ctx.restore();
+    }
+
+    // Draw a single part centered at (x,y). `outline` only strokes the shape.
+    function drawPart(id, x, y, col, loose, outline) {
+        ctx.save();
+        ctx.translate(x, y);
+        if (loose && !outline) {
+            ctx.shadowColor = "rgba(0,0,0,0.4)";
+            ctx.shadowBlur = 6; ctx.shadowOffsetY = 3;
+        }
+        ctx.fillStyle = col;
+        ctx.beginPath();
+        if (id === "wing") {
+            ctx.moveTo(-26, 16); ctx.lineTo(-2, -16); ctx.lineTo(16, -16); ctx.lineTo(-8, 16);
+        } else if (id === "tail") {
+            ctx.moveTo(8, 16); ctx.lineTo(-8, -18); ctx.lineTo(16, -18); ctx.lineTo(24, 16);
+        } else { // prop (nose cone + propeller)
+            ctx.moveTo(-12, -10); ctx.lineTo(10, 0); ctx.lineTo(-12, 10);
+        }
+        ctx.closePath();
+        if (outline) ctx.stroke(); else ctx.fill();
+        if (id === "prop" && !outline) {
+            // propeller blades + hub
+            ctx.fillStyle = col;
+            ctx.fillRect(10, -22, 5, 44);
+            ctx.beginPath(); ctx.arc(12, 0, 6, 0, Math.PI * 2); ctx.fillStyle = "#222"; ctx.fill();
+        }
+        ctx.restore();
+    }
+
+    function exitRepair() {
+        state.repair = null;
+        state.mode = "flying";
+        state.smoke = [];
+        state.particles = [];
+        state.spawnTimer = 400;
+        pickTarget();
+    }
+
+    // Convert a client point to canvas coordinates
+    function canvasCoords(clientX, clientY) {
+        const rect = canvas.getBoundingClientRect();
+        return {
+            x: (clientX - rect.left) * (canvas.width / rect.width),
+            y: (clientY - rect.top) * (canvas.height / rect.height),
+        };
+    }
+
     canvas.addEventListener("click", e => onTap(e.clientX, e.clientY));
     canvas.addEventListener("touchstart", e => {
         e.preventDefault();
@@ -641,6 +898,20 @@
         onTap(t.clientX, t.clientY);
     }, { passive: false });
     canvas.addEventListener("touchmove", e => e.preventDefault(), { passive: false });
+
+    // Pointer drag — used to assemble parts in the repair-shop puzzle
+    canvas.addEventListener("pointerdown", e => {
+        if (state.mode !== "repair") return;
+        const c = canvasCoords(e.clientX, e.clientY);
+        repairPointerDown(c.x, c.y);
+    });
+    canvas.addEventListener("pointermove", e => {
+        if (state.mode !== "repair" || !state.repair || !state.repair.drag) return;
+        const c = canvasCoords(e.clientX, e.clientY);
+        repairPointerMove(c.x, c.y);
+    });
+    canvas.addEventListener("pointerup", () => { if (state.mode === "repair") repairPointerUp(); });
+    canvas.addEventListener("pointercancel", () => { if (state.mode === "repair") repairPointerUp(); });
     canvas.addEventListener("touchend", e => e.preventDefault(), { passive: false });
 
     // Name pre-fill
@@ -670,8 +941,16 @@
     startBtn.addEventListener("click", startGame);
     helpBtn.addEventListener("click", () => { helpModal.hidden = false; });
     helpClose.addEventListener("click", () => { helpModal.hidden = true; });
+    helpModal.addEventListener("click", (e) => { if (e.target === helpModal) helpModal.hidden = true; });
     bookBtn.addEventListener("click", openBook);
     bookClose.addEventListener("click", () => { bookModal.hidden = true; });
+    bookModal.addEventListener("click", (e) => { if (e.target === bookModal) bookModal.hidden = true; });
+    document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
+            if (!helpModal.hidden) helpModal.hidden = true;
+            if (!bookModal.hidden) bookModal.hidden = true;
+        }
+    });
 
     // Initial HUD
     updateHUD();
