@@ -571,19 +571,24 @@
         requestAnimationFrame(loop);
     }
 
-    function endGame() {
-        state.running = false;
-        const entry = { name: state.playerName, score: state.score, at: Date.now() };
-        state.leaderboard.push(entry);
+    // This game is endless (no timer or lives), so instead of a game-over
+    // save we record the running score to the leaderboard as it grows.
+    // Each player keeps a single best entry so the board never floods.
+    function recordBest() {
+        const name = state.playerName;
+        if (!name) return;
+        const existing = state.leaderboard.find(e => e.name === name);
+        if (existing) {
+            if (state.score <= existing.score) return; // no improvement
+            existing.score = state.score;
+            existing.at = Date.now();
+        } else {
+            state.leaderboard.push({ name, score: state.score, at: Date.now() });
+        }
         state.leaderboard.sort((a, b) => b.score - a.score);
         state.leaderboard = state.leaderboard.slice(0, LB_MAX);
         saveLeaderboard();
-        bestEl.textContent = personalBest(state.playerName);
-
-        overlayTitle.textContent = state.score > 0 ? "✈️ Great Flight!" : "✈️ Game Over";
-        overlayMsg.textContent = `You scored ${state.score} point${state.score !== 1 ? "s" : ""}! Tap to play again.`;
-        startBtn.textContent = "Fly Again!";
-        overlay.classList.remove("hidden");
+        bestEl.textContent = personalBest(name);
     }
 
     // Tap / click handler
@@ -637,6 +642,7 @@
                     });
                     pickTarget();
                     updateHUD();
+                    recordBest(); // leaderboard fills passively as score grows
 
                     // Every 10 words, the hard-working plane breaks down and
                     // needs a trip to the repair shop before flying again.
