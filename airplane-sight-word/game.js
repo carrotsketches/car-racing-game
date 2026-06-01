@@ -41,7 +41,7 @@
         canvas.height = Math.max(380, Math.min(window.innerHeight - 160, 520));
     }
     resize();
-    window.addEventListener("resize", () => { resize(); });
+    window.addEventListener("resize", () => { resize(); if (state.mode === "repair") repairLayout(); });
 
     const state = {
         running: false,
@@ -416,6 +416,14 @@
     // Game loop
     function loop(ts) {
         if (!state.running) return;
+        // A single bad frame must never freeze the game — always reschedule.
+        try {
+            frame(ts);
+        } catch (_) { /* swallow and keep animating */ }
+        requestAnimationFrame(loop);
+    }
+
+    function frame(ts) {
         const dt = Math.min((ts - (state.lastTime || ts)) / 1000, 0.05);
         state.lastTime = ts;
 
@@ -426,7 +434,6 @@
         if (state.mode === "repair") {
             updateRepair(dt);
             drawRepair();
-            requestAnimationFrame(loop);
             return;
         }
 
@@ -543,8 +550,6 @@
         drawCloud(state.targetWord);
 
         drawParticles();
-
-        requestAnimationFrame(loop);
     }
 
     function startGame() {
@@ -659,7 +664,7 @@
     }
 
     // ── Repair shop puzzle (every 10 words) ──
-    // The plane breaks apart; drag its wing, tail and propeller back on.
+    // The plane breaks apart; tap or drag its wing, tail and nose back on.
     function enterRepair(planeColor) {
         state.mode = "repair";
         state.planes = [];
@@ -667,36 +672,48 @@
         state.skywrite = null;
         state.particles = [];
 
-        const W = canvas.width, H = canvas.height;
-        const cx = W / 2, cy = H / 2 - 8;
-        // Scatter the loose parts along the bottom "workbench"
-        const benchY = H - 52;
-        const parts = [
-            { id: "wing", tx: cx - 2,  ty: cy + 4,  x: W * 0.24, y: benchY, placed: false },
-            { id: "tail", tx: cx - 56, ty: cy - 14, x: W * 0.5,  y: benchY, placed: false },
-            { id: "nose", tx: cx + 64, ty: cy,      x: W * 0.76, y: benchY, placed: false },
-        ];
-        // Shuffle which bench slot each part starts in
-        const xs = parts.map(p => p.x);
-        for (let i = xs.length - 1; i > 0; i--) {
+        const ids = ["wing", "tail", "nose"];
+        const slots = [0, 1, 2];
+        for (let i = slots.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
-            [xs[i], xs[j]] = [xs[j], xs[i]];
+            [slots[i], slots[j]] = [slots[j], slots[i]];
         }
-        parts.forEach((p, i) => { p.x = xs[i]; });
+        const parts = ids.map((id, i) => ({ id, benchSlot: slots[i], tx: 0, ty: 0, x: 0, y: 0, placed: false }));
 
         state.repair = {
             color: planeColor || "#4a90d9",
-            cx, cy, parts,
+            cx: 0, cy: 0, parts,
             drag: null,
             done: false,
             doneTimer: 0,
             lift: 0,        // assembled plane lift-off offset
             smokeTimer: 0,
         };
+        repairLayout();
         playWrong(); // sputtering breakdown sound
     }
 
-    const PART_HALF = { w: 46, h: 40 }; // generous grab box
+    // (Re)compute body centre, part targets and bench positions. Called on
+    // enter and on resize so a mobile address-bar change can't misplace parts.
+    function repairLayout() {
+        const r = state.repair;
+        if (!r) return;
+        const W = canvas.width, H = canvas.height;
+        const cx = W / 2, cy = H / 2 - 8;
+        r.cx = cx; r.cy = cy;
+        const targets = { wing: [cx - 2, cy + 4], tail: [cx - 56, cy - 14], nose: [cx + 64, cy] };
+        const benchY = H - 52;
+        const benchXs = [W * 0.24, W * 0.5, W * 0.76];
+        r.parts.forEach(p => {
+            p.tx = targets[p.id][0];
+            p.ty = targets[p.id][1];
+            const dragging = r.drag && r.drag.part === p;
+            if (!p.placed && !dragging) { p.x = benchXs[p.benchSlot]; p.y = benchY; }
+            else if (p.placed) { p.x = p.tx; p.y = p.ty; }
+        });
+    }
+
+    const PART_HALF = { w: 50, h: 44 }; // generous grab box
 
     function repairPartAt(x, y) {
         const r = state.repair;
@@ -710,11 +727,24 @@
         return null;
     }
 
+    function placePart(p) {
+        const r = state.repair;
+        p.x = p.tx; p.y = p.ty; p.placed = true;
+        playTone(440 + r.parts.filter(q => q.placed).length * 110, 0.1, "square", 0.25);
+        for (let i = 0; i < 12; i++) {
+            const a = Math.random() * Math.PI * 2, s = 2 + Math.random() * 3;
+            state.particles.push({ x: p.tx, y: p.ty, vx: Math.cos(a) * s, vy: Math.sin(a) * s,
+                life: 0.7, col: "#ffd24a", r: 3 + Math.random() * 3 });
+        }
+        if (r.parts.every(q => q.placed)) { r.done = true; r.doneTimer = 1.6; playCorrect(); }
+    }
+
     function repairPointerDown(x, y) {
         const r = state.repair;
-        if (!r || r.done) return;
+        if (!r) return;
+        if (r.done) { exitRepair(); return; }   // tap anywhere to keep flying
         const p = repairPartAt(x, y);
-        if (p) r.drag = { part: p, ox: x - p.x, oy: y - p.y };
+        if (p) r.drag = { part: p, ox: x - p.x, oy: y - p.y, sx: x, sy: y, moved: false };
     }
 
     function repairPointerMove(x, y) {
@@ -722,6 +752,7 @@
         if (!r || !r.drag) return;
         r.drag.part.x = x - r.drag.ox;
         r.drag.part.y = y - r.drag.oy;
+        if (Math.hypot(x - r.drag.sx, y - r.drag.sy) > 12) r.drag.moved = true;
     }
 
     function repairPointerUp() {
@@ -729,17 +760,9 @@
         if (!r || !r.drag) return;
         const p = r.drag.part;
         const dist = Math.hypot(p.x - p.tx, p.y - p.ty);
-        if (dist < 52) {
-            // Snap into place!
-            p.x = p.tx; p.y = p.ty; p.placed = true;
-            playTone(440 + r.parts.filter(q => q.placed).length * 110, 0.1, "square", 0.25);
-            for (let i = 0; i < 12; i++) {
-                const a = Math.random() * Math.PI * 2, s = 2 + Math.random() * 3;
-                state.particles.push({ x: p.tx, y: p.ty, vx: Math.cos(a) * s, vy: Math.sin(a) * s,
-                    life: 0.7, col: "#ffd24a", r: 3 + Math.random() * 3 });
-            }
-            if (r.parts.every(q => q.placed)) { r.done = true; r.doneTimer = 1.8; playCorrect(); }
-        }
+        // Snap if dropped near the slot, or if it was just a tap (no drag) —
+        // tapping a part sends it home, which is easiest for little hands.
+        if (dist < 85 || !r.drag.moved) placePart(p);
         r.drag = null;
     }
 
@@ -807,14 +830,17 @@
         if (fixed) {
             ctx.fillStyle = "#9effa0";
             ctx.font = "bold 22px 'Segoe UI', sans-serif";
-            ctx.fillText("✈️ All fixed! Off we go!", W / 2, 60);
+            ctx.fillText("✈️ All fixed!", W / 2, 52);
+            ctx.fillStyle = "#cfe3ff";
+            ctx.font = "16px 'Segoe UI', sans-serif";
+            ctx.fillText("Tap to keep flying!", W / 2, 78);
         } else {
             ctx.fillStyle = "#ffe07a";
             ctx.font = "bold 20px 'Segoe UI', sans-serif";
             ctx.fillText("Oh no, the plane broke!", W / 2, 50);
             ctx.fillStyle = "#cfe3ff";
             ctx.font = "16px 'Segoe UI', sans-serif";
-            ctx.fillText(`Drag the parts back on  (${placedCount}/${r.parts.length})`, W / 2, 76);
+            ctx.fillText(`Tap or drag the parts on  (${placedCount}/${r.parts.length})`, W / 2, 76);
         }
     }
 
