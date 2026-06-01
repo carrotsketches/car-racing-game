@@ -9,7 +9,6 @@
     const playerNameEl = document.getElementById("player-name");
     const scoreEl = document.getElementById("score");
     const bestEl = document.getElementById("best");
-    const livesEl = document.getElementById("lives");
     const helpBtn = document.getElementById("help-btn");
     const helpModal = document.getElementById("help-modal");
     const helpClose = document.getElementById("help-close");
@@ -40,7 +39,6 @@
     const state = {
         running: false,
         score: 0,
-        lives: 3,
         playerName: "",
         leaderboard: loadLeaderboard(),
         planes: [],
@@ -292,15 +290,8 @@
         });
     }
 
-    function livesDisplay() {
-        const full = "❤️".repeat(state.lives);
-        const empty = "🖤".repeat(3 - state.lives);
-        return full + empty;
-    }
-
     function updateHUD() {
         scoreEl.textContent = state.score;
-        livesEl.textContent = livesDisplay();
     }
 
     // Audio
@@ -369,12 +360,8 @@
             // Plane flew past without being tapped
             if ((p.vx > 0 && p.x > W + 220) || (p.vx < 0 && p.x < -220)) {
                 if (p.word === state.targetWord) {
-                    // missed the correct plane → lose a life
-                    state.lives--;
-                    playWrong();
-                    if (state.lives <= 0) { endGame(); return; }
+                    // missed the correct plane — just pick a new target, no penalty
                     pickTarget();
-                    updateHUD();
                 }
                 state.planes.splice(i, 1);
             }
@@ -438,7 +425,6 @@
         playerNameEl.textContent = state.playerName;
 
         state.score = 0;
-        state.lives = 3;
         state.planes = [];
         state.particles = [];
         state.spawnTimer = 500;
@@ -507,14 +493,9 @@
                     updateHUD();
                 } else {
                     p.correct = false;
-                    state.lives--;
                     state.flashColor = "#ff3333";
                     state.flashTimer = 1;
                     playWrong();
-                    updateHUD();
-                    if (state.lives <= 0) {
-                        setTimeout(() => endGame(), 700);
-                    }
                 }
                 return;
             }
