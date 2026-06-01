@@ -672,9 +672,9 @@
         // Scatter the loose parts along the bottom "workbench"
         const benchY = H - 52;
         const parts = [
-            { id: "wing", tx: cx - 14, ty: cy - 30, x: W * 0.24, y: benchY, placed: false },
-            { id: "tail", tx: cx - 56, ty: cy - 24, x: W * 0.5,  y: benchY, placed: false },
-            { id: "prop", tx: cx + 70, ty: cy,      x: W * 0.76, y: benchY, placed: false },
+            { id: "wing", tx: cx - 2,  ty: cy + 4,  x: W * 0.24, y: benchY, placed: false },
+            { id: "tail", tx: cx - 56, ty: cy - 14, x: W * 0.5,  y: benchY, placed: false },
+            { id: "nose", tx: cx + 64, ty: cy,      x: W * 0.76, y: benchY, placed: false },
         ];
         // Shuffle which bench slot each part starts in
         const xs = parts.map(p => p.x);
@@ -696,7 +696,7 @@
         playWrong(); // sputtering breakdown sound
     }
 
-    const PART_HALF = { w: 42, h: 34 }; // generous grab box
+    const PART_HALF = { w: 46, h: 40 }; // generous grab box
 
     function repairPartAt(x, y) {
         const r = state.repair;
@@ -829,29 +829,34 @@
         ctx.restore();
     }
 
+    // The plane body: a fuselage clearly missing its nose, wing and tail
     function drawBodyPart(x, y, col, fixed) {
         ctx.save();
         ctx.translate(x, y);
+        // Fuselage
         ctx.beginPath();
-        ctx.ellipse(0, 0, 60, 17, 0, 0, Math.PI * 2);
+        ctx.ellipse(0, 0, 66, 18, 0, 0, Math.PI * 2);
         ctx.fillStyle = col; ctx.fill();
-        // Cockpit
+        // Cockpit windshield
         ctx.beginPath();
-        ctx.ellipse(40, -4, 12, 8, -0.2, 0, Math.PI * 2);
-        ctx.fillStyle = fixed ? "rgba(200,240,255,0.9)" : "rgba(120,140,160,0.6)"; ctx.fill();
-        // Face
+        ctx.ellipse(46, -5, 11, 7, -0.2, 0, Math.PI * 2);
+        ctx.fillStyle = fixed ? "rgba(200,240,255,0.95)" : "rgba(120,140,160,0.6)"; ctx.fill();
+        // Passenger windows
+        ctx.fillStyle = fixed ? "rgba(200,240,255,0.8)" : "rgba(120,140,160,0.45)";
+        for (const wx of [12, -6, -24]) { ctx.beginPath(); ctx.arc(wx, -2, 4, 0, Math.PI * 2); ctx.fill(); }
+        // Face near the front
         ctx.strokeStyle = "#fff"; ctx.lineWidth = 2;
         if (fixed) {
-            ctx.beginPath(); ctx.arc(38, 0, 5, 0.1 * Math.PI, 0.9 * Math.PI); ctx.stroke();
+            ctx.beginPath(); ctx.arc(40, 5, 5, 0.1 * Math.PI, 0.9 * Math.PI); ctx.stroke();
         } else {
             ctx.beginPath();
-            ctx.moveTo(34, -7); ctx.lineTo(40, -1); ctx.moveTo(40, -7); ctx.lineTo(34, -1);
+            ctx.moveTo(34, 0); ctx.lineTo(40, 6); ctx.moveTo(40, 0); ctx.lineTo(34, 6);
             ctx.stroke();
         }
         ctx.restore();
     }
 
-    // Draw a single part centered at (x,y). `outline` only strokes the shape.
+    // Draw a single airplane part centered at (x,y). `outline` only strokes it.
     function drawPart(id, x, y, col, loose, outline) {
         ctx.save();
         ctx.translate(x, y);
@@ -860,21 +865,35 @@
             ctx.shadowBlur = 6; ctx.shadowOffsetY = 3;
         }
         ctx.fillStyle = col;
-        ctx.beginPath();
+        ctx.strokeStyle = outline ? "#ffffff" : "rgba(0,0,0,0.18)";
+        ctx.lineWidth = 2;
+        const draw = () => { if (outline) ctx.stroke(); else { ctx.fill(); ctx.stroke(); } };
+
         if (id === "wing") {
-            ctx.moveTo(-26, 16); ctx.lineTo(-2, -16); ctx.lineTo(16, -16); ctx.lineTo(-8, 16);
+            // Swept-back wing
+            ctx.beginPath();
+            ctx.moveTo(-36, 9); ctx.lineTo(-6, -11); ctx.lineTo(24, -11); ctx.lineTo(34, 9);
+            ctx.closePath(); draw();
         } else if (id === "tail") {
-            ctx.moveTo(8, 16); ctx.lineTo(-8, -18); ctx.lineTo(16, -18); ctx.lineTo(24, 16);
-        } else { // prop (nose cone + propeller)
-            ctx.moveTo(-12, -10); ctx.lineTo(10, 0); ctx.lineTo(-12, 10);
-        }
-        ctx.closePath();
-        if (outline) ctx.stroke(); else ctx.fill();
-        if (id === "prop" && !outline) {
-            // propeller blades + hub
-            ctx.fillStyle = col;
-            ctx.fillRect(10, -22, 5, 44);
-            ctx.beginPath(); ctx.arc(12, 0, 6, 0, Math.PI * 2); ctx.fillStyle = "#222"; ctx.fill();
+            // Vertical stabilizer fin + small rear stabilizer
+            ctx.beginPath();
+            ctx.moveTo(8, 12); ctx.lineTo(-12, -26); ctx.lineTo(10, -26); ctx.lineTo(22, 12);
+            ctx.closePath(); draw();
+            ctx.beginPath();
+            ctx.moveTo(-2, 10); ctx.lineTo(-22, 16); ctx.lineTo(-2, 16);
+            ctx.closePath(); draw();
+        } else { // nose cone + propeller
+            ctx.beginPath();
+            ctx.moveTo(-16, -13); ctx.lineTo(16, 0); ctx.lineTo(-16, 13);
+            ctx.closePath(); draw();
+            if (outline) {
+                ctx.strokeRect(14, -20, 6, 40);
+            } else {
+                ctx.fillStyle = "#cdd6e0";        // propeller blades
+                ctx.fillRect(14, -20, 6, 40);
+                ctx.beginPath(); ctx.arc(17, 0, 5, 0, Math.PI * 2); // hub
+                ctx.fillStyle = "#222"; ctx.fill();
+            }
         }
         ctx.restore();
     }
@@ -898,27 +917,44 @@
     }
 
     canvas.addEventListener("click", e => onTap(e.clientX, e.clientY));
+
+    // Touch (mobile): taps planes in flying mode, drags parts in repair mode.
+    // We handle the drag with touch events directly because preventDefault on
+    // touchstart suppresses pointer events on many mobile browsers.
     canvas.addEventListener("touchstart", e => {
         e.preventDefault();
         const t = e.changedTouches[0];
-        onTap(t.clientX, t.clientY);
+        if (state.mode === "repair") {
+            const c = canvasCoords(t.clientX, t.clientY);
+            repairPointerDown(c.x, c.y);
+        } else {
+            onTap(t.clientX, t.clientY);
+        }
     }, { passive: false });
-    canvas.addEventListener("touchmove", e => e.preventDefault(), { passive: false });
+    canvas.addEventListener("touchmove", e => {
+        e.preventDefault();
+        if (state.mode !== "repair") return;
+        const t = e.changedTouches[0];
+        const c = canvasCoords(t.clientX, t.clientY);
+        repairPointerMove(c.x, c.y);
+    }, { passive: false });
+    canvas.addEventListener("touchend", e => {
+        e.preventDefault();
+        if (state.mode === "repair") repairPointerUp();
+    }, { passive: false });
 
-    // Pointer drag — used to assemble parts in the repair-shop puzzle
-    canvas.addEventListener("pointerdown", e => {
+    // Mouse (desktop) drag for the repair-shop puzzle
+    canvas.addEventListener("mousedown", e => {
         if (state.mode !== "repair") return;
         const c = canvasCoords(e.clientX, e.clientY);
         repairPointerDown(c.x, c.y);
     });
-    canvas.addEventListener("pointermove", e => {
+    canvas.addEventListener("mousemove", e => {
         if (state.mode !== "repair" || !state.repair || !state.repair.drag) return;
         const c = canvasCoords(e.clientX, e.clientY);
         repairPointerMove(c.x, c.y);
     });
-    canvas.addEventListener("pointerup", () => { if (state.mode === "repair") repairPointerUp(); });
-    canvas.addEventListener("pointercancel", () => { if (state.mode === "repair") repairPointerUp(); });
-    canvas.addEventListener("touchend", e => e.preventDefault(), { passive: false });
+    window.addEventListener("mouseup", () => { if (state.mode === "repair") repairPointerUp(); });
 
     // Name pre-fill
     const saved = localStorage.getItem(NAME_KEY) || "";
