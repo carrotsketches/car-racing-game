@@ -12,7 +12,10 @@
     <div class="game-wrapper">
         <div class="nav-row">
             <a class="home-link" href="../">← Games</a>
-            <button class="help-btn" id="help-btn" aria-label="How to play">?</button>
+            <div class="nav-buttons">
+                <button class="help-btn" id="book-btn" aria-label="Word book">📖</button>
+                <button class="help-btn" id="help-btn" aria-label="How to play">?</button>
+            </div>
         </div>
         <header>
             <h1>✈️ Sight Words</h1>
@@ -20,6 +23,7 @@
                 <div class="stat" id="player-tag">👤 <span id="player-name">—</span></div>
                 <div class="stat">Score: <span id="score">0</span></div>
                 <div class="stat">Best: <span id="best">0</span></div>
+                <div class="stat">📖 <span id="word-count">0</span></div>
             </div>
         </header>
 
@@ -50,9 +54,20 @@
                     <li>A word appears in the cloud at the top ☁️</li>
                     <li>Airplanes fly across carrying different words ✈️</li>
                     <li>Tap the airplane with the <strong>same word</strong> as the cloud!</li>
+                    <li>The plane loops and skywrites your word ✍️</li>
+                    <li>Every word you catch is saved in your word book 📖</li>
                     <li>Wrong taps just flash red — keep going!</li>
                     <li>Words get harder as you score more!</li>
                 </ul>
+            </div>
+        </div>
+
+        <div id="book-modal" class="help-modal" hidden>
+            <div class="help-panel book-panel">
+                <button class="help-close" id="book-close" aria-label="Close">✕</button>
+                <h3>📖 My Word Book</h3>
+                <p id="book-empty" class="book-empty">Catch airplanes to collect words!</p>
+                <div id="book-grid" class="book-grid"></div>
             </div>
         </div>
     </div>

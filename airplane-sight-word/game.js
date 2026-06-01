@@ -12,9 +12,16 @@
     const helpBtn = document.getElementById("help-btn");
     const helpModal = document.getElementById("help-modal");
     const helpClose = document.getElementById("help-close");
+    const wordCountEl = document.getElementById("word-count");
+    const bookBtn = document.getElementById("book-btn");
+    const bookModal = document.getElementById("book-modal");
+    const bookClose = document.getElementById("book-close");
+    const bookGrid = document.getElementById("book-grid");
+    const bookEmpty = document.getElementById("book-empty");
 
     const NAME_KEY = "highway-dash-last-name";
     const LB_KEY = "airplane-sight-word-leaderboard";
+    const COLLECTION_KEY = "airplane-sight-word-collection";
     const LB_MAX = 20;
 
     // Dolch sight words grouped by difficulty
@@ -49,7 +56,26 @@
         flashTimer: 0,
         flashColor: "",
         particles: [],
+        smoke: [],          // skywriting smoke puffs
+        skywrite: null,      // { word, t } big drifting word after a catch
+        collection: loadCollection(),
     };
+
+    function loadCollection() {
+        try { const a = JSON.parse(localStorage.getItem(COLLECTION_KEY)); return Array.isArray(a) ? a : []; }
+        catch (_) { return []; }
+    }
+    function saveCollection() {
+        try { localStorage.setItem(COLLECTION_KEY, JSON.stringify(state.collection)); } catch (_) {}
+    }
+    function collectWord(word) {
+        if (!state.collection.includes(word)) {
+            state.collection.push(word);
+            saveCollection();
+            return true; // newly collected
+        }
+        return false;
+    }
 
     function loadLeaderboard() {
         try { const r = localStorage.getItem(LB_KEY); return Array.isArray(JSON.parse(r)) ? JSON.parse(r) : []; }
@@ -290,8 +316,65 @@
         });
     }
 
+    // Skywriting smoke: soft white puffs that swell and fade
+    function updateSmoke(dt) {
+        for (let i = state.smoke.length - 1; i >= 0; i--) {
+            const s = state.smoke[i];
+            s.life -= dt;
+            s.r += dt * 14;       // expand
+            s.y -= dt * 6;        // drift up gently
+            if (s.life <= 0) state.smoke.splice(i, 1);
+        }
+    }
+    function drawSmoke() {
+        state.smoke.forEach(s => {
+            ctx.save();
+            ctx.globalAlpha = Math.max(0, s.life / s.max) * 0.55;
+            ctx.beginPath();
+            ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+            ctx.fillStyle = "#ffffff";
+            ctx.fill();
+            ctx.restore();
+        });
+    }
+
+    // The caught word drifting up the sky as a celebratory banner
+    function updateSkywrite(dt) {
+        if (!state.skywrite) return;
+        state.skywrite.t += dt;
+        if (state.skywrite.t >= state.skywrite.dur) state.skywrite = null;
+    }
+    function drawSkywrite() {
+        const sw = state.skywrite;
+        if (!sw) return;
+        const prog = sw.t / sw.dur;
+        const W = canvas.width;
+        const cx = W / 2;
+        const cy = canvas.height * 0.42 - prog * 60; // rise upward
+        const alpha = prog < 0.15 ? prog / 0.15 : (1 - (prog - 0.15) / 0.85);
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, alpha);
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        const size = Math.min(64, 420 / sw.word.length) + 8;
+        ctx.font = `bold ${size}px 'Segoe UI', sans-serif`;
+        // Soft smoky glow
+        ctx.shadowColor = "rgba(255,255,255,0.9)";
+        ctx.shadowBlur = 18;
+        ctx.fillStyle = "rgba(255,255,255,0.95)";
+        ctx.fillText(sw.word, cx, cy);
+        ctx.shadowBlur = 0;
+        if (sw.isNew) {
+            ctx.font = "bold 16px 'Segoe UI', sans-serif";
+            ctx.fillStyle = "#ffe07a";
+            ctx.fillText("★ NEW WORD! ★", cx, cy + size * 0.7);
+        }
+        ctx.restore();
+    }
+
     function updateHUD() {
         scoreEl.textContent = state.score;
+        if (wordCountEl) wordCountEl.textContent = state.collection.length;
     }
 
     // Audio
@@ -349,6 +432,26 @@
             const p = state.planes[i];
             if (p.delay > 0) { p.delay -= dt * 1000; continue; }
             p.active = true;
+
+            // Skywriting victory loop — the caught plane loops and trails smoke
+            if (p.skywriting) {
+                const s = p.skywriting;
+                s.t += dt;
+                const prog = s.t / s.dur;
+                const angle = -Math.PI / 2 + prog * Math.PI * 2 * s.loops;
+                p.x = s.cx + Math.cos(angle) * s.r;
+                p.y = s.cy + Math.sin(angle) * s.r;
+                p.facingRight = Math.cos(angle) >= 0;
+                // Emit smoke along the loop path
+                state.smoke.push({ x: p.x, y: p.y, r: 5, life: 1.6, max: 1.6 });
+                if (s.t >= s.dur) {
+                    // Resume flying off in the original direction
+                    p.skywriting = null;
+                    p.vx = (p.facingRight ? 1 : -1) * planeSpeed();
+                }
+                continue;
+            }
+
             p.x += p.vx * dt;
 
             if (p.hitTimer > 0) {
@@ -375,6 +478,8 @@
         }
 
         updateParticles(dt);
+        updateSmoke(dt);
+        updateSkywrite(dt);
 
         // Draw
         ctx.clearRect(0, 0, W, H);
@@ -407,8 +512,14 @@
             state.flashTimer -= dt * 4;
         }
 
+        // Skywriting smoke sits behind the planes
+        drawSmoke();
+
         // Draw planes
         state.planes.forEach(p => { if (p.active) drawPlane(p); });
+
+        // Celebratory drifting word
+        drawSkywrite();
 
         // Target cloud
         drawCloud(state.targetWord);
@@ -427,6 +538,8 @@
         state.score = 0;
         state.planes = [];
         state.particles = [];
+        state.smoke = [];
+        state.skywrite = null;
         state.spawnTimer = 500;
         state.spawnInterval = 2800;
         state.lastTime = 0;
@@ -481,6 +594,17 @@
                     // Speed up slowly
                     state.spawnInterval = Math.max(1200, state.spawnInterval - 50);
                     playCorrect();
+
+                    // Add the word to the collection book (logbook)
+                    const isNew = collectWord(p.word);
+
+                    // Skywriting victory: the caught plane loops & trails smoke,
+                    // and the word drifts up the sky in puffy smoke letters.
+                    const cy = Math.max(120, Math.min(p.y, canvas.height - 80));
+                    p.hitTimer = 0; // cancel instant removal
+                    p.skywriting = { t: 0, dur: 1.5, loops: 1.5, cx: p.x, cy, r: 42 };
+                    state.skywrite = { word: p.word, t: 0, dur: 2.2, isNew };
+
                     // Remove all other planes from this wave
                     state.planes.forEach(other => {
                         if (other !== p && !other.hit) {
@@ -521,7 +645,26 @@
         bestEl.textContent = personalBest(n);
     });
 
+    // ── Word collection logbook ──
+    function renderBook() {
+        bookGrid.innerHTML = "";
+        const words = [...state.collection].sort();
+        bookEmpty.hidden = words.length > 0;
+        words.forEach(w => {
+            const tile = document.createElement("div");
+            tile.className = "sticker";
+            tile.innerHTML = `<span class="sticker-plane">✈️</span><span class="sticker-word">${w}</span>`;
+            bookGrid.appendChild(tile);
+        });
+    }
+    function openBook() { renderBook(); bookModal.hidden = false; }
+
     startBtn.addEventListener("click", startGame);
     helpBtn.addEventListener("click", () => { helpModal.hidden = false; });
     helpClose.addEventListener("click", () => { helpModal.hidden = true; });
+    bookBtn.addEventListener("click", openBook);
+    bookClose.addEventListener("click", () => { bookModal.hidden = true; });
+
+    // Initial HUD
+    updateHUD();
 })();
