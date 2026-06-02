@@ -69,6 +69,7 @@ A small collection of browser-based mini-games built with vanilla HTML5 Canvas a
 ├── earth-day/
 ├── cuckoo-clock/
 ├── unicorn-storyteller/
+├── pattern-party/
 ├── seahorse-game/
 ├── excavator-game/
 ├── letter-chef/
