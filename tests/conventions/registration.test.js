@@ -21,6 +21,15 @@ const CLAUDE = fs.readFileSync(path.join(ROOT, "CLAUDE.md"), "utf8");
 const README = fs.readFileSync(path.join(ROOT, "README.md"), "utf8");
 
 for (const g of games) {
+    test(`${g.slug}: index.html loads play-tracker.js with correct data-slug`, () => {
+        const html = fs.readFileSync(path.join(ROOT, g.slug, "index.html"), "utf8");
+        assert.match(
+            html,
+            new RegExp(`play-tracker\\.js[^>]*data-slug="${g.slug}"`),
+            `${g.slug}/index.html is missing <script src="../shared/play-tracker.js" data-slug="${g.slug}"> — game won't appear in stats`
+        );
+    });
+
     if (g.hidden) continue; // hidden games are intentionally omitted from docs
 
     test(`${g.slug}: registered in stats/stats.js`, () => {
