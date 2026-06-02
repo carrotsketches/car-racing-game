@@ -85,6 +85,7 @@ Each `.game-card` on the home page carries a `data-lb="<slug>-leaderboard"` attr
 - **Color theme**: dark radial background (`radial-gradient(circle at top, #1b2735 0%, #090a0f 100%)`), per-game accent color.
 - **Home link + help button** in every game: wrap in `.nav-row` with a `#help-btn` button. A `#help-modal` div at the bottom of `.game-wrapper` holds game-specific instructions (toggled via JS in `game.js`). CSS lives at the bottom of each `style.css` under `/* ── Help modal ── */`.
 - **Prevent stray touch behavior** on the game surface with `touchstart/move/end` preventDefault listeners.
+- **Play tracking**: every game's `index.html` must load `../shared/play-tracker.js` with `data-slug="<slug>"` just before `game.js`. This records a play the moment the page loads so the game appears in the stats page.
 
 ## Adding a new game
 
@@ -157,10 +158,13 @@ Use `whack-a-mole/` or `piano/` as the template (they share the cleanest structu
         </div>
     </div>
 
+    <script src="../shared/play-tracker.js" data-slug="<slug>"></script>
     <script src="game.js"></script>
 </body>
 </html>
 ```
+
+The `play-tracker.js` script **must** be included — it records a play in localStorage the moment the page loads, so the game shows up in the stats page. The `data-slug` must exactly match the game's folder name.
 
 ### 3. `<slug>/game.js` skeleton
 
