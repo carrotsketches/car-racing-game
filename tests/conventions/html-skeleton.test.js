@@ -45,6 +45,15 @@ for (const g of games) {
         assert.match(html, /id="help-modal"/, "missing #help-modal element");
     });
 
+    test(`${g.slug}: loads play-tracker.js with correct data-slug`, () => {
+        const { html } = readGame(g.slug);
+        assert.match(
+            html,
+            new RegExp(`play-tracker\\.js[^>]*data-slug="${g.slug}"`),
+            `${g.slug}/index.html missing <script src="../shared/play-tracker.js" data-slug="${g.slug}"> — game won't appear in stats`
+        );
+    });
+
     test(`${g.slug}: loads game.js relative`, () => {
         const { html } = readGame(g.slug);
         assert.match(html, /<script[^>]+src="game\.js"/);
