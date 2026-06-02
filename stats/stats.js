@@ -21,6 +21,8 @@
         { slug: "flappy-bird", name: "Flying Bird", emoji: "🐤" },
         { slug: "seahorse-game", name: "Seahorse Splash", emoji: "🐚" },
         { slug: "excavator-game", name: "Excavator Dig", emoji: "⛏️" },
+        { slug: "letter-chef", name: "Letter Chef", emoji: "👨‍🍳" },
+        { slug: "airplane-sight-word", name: "Airplane Sight Words", emoji: "✈️" },
     ];
     const BY_SLUG = Object.fromEntries(GAMES.map((g) => [g.slug, g]));
     function gameMeta(slug) {
