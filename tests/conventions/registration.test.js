@@ -10,7 +10,7 @@ const ROOT = path.resolve(__dirname, "../..");
 function loadStatsSlugs() {
     const src = fs.readFileSync(path.join(ROOT, "stats", "stats.js"), "utf8");
     const slugs = [];
-    const re = /\{\s*slug:\s*"([^"]+)"/g;
+    const re = /\bslug:\s*["']([^"']+)["']/g;
     let m;
     while ((m = re.exec(src))) slugs.push(m[1]);
     return new Set(slugs);
