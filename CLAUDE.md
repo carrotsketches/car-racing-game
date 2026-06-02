@@ -28,6 +28,11 @@ A static, no-build collection of small browser games. The root is a game launche
 ├── cuckoo-clock/            # Reaction-time tap when cuckoo pops out
 ├── unicorn-storyteller/     # Build magical sentences; unicorn acts them out
 ├── hotair-balloon/          # Hold-to-rise balloon + sight-word spelling (HIDDEN from home page)
+├── pattern-party/           # Match and extend color/shape patterns
+├── seahorse-game/           # Seahorse bubble-popping game
+├── excavator-game/          # Rotate arm to dig and dump dirt
+├── letter-chef/             # Drag letters to spell words in a kitchen
+├── airplane-sight-word/     # Tap matching airplane to catch Dolch sight words
 └── hard/                    # Sub-gateway for harder games (e.g. flappy-bird)
     └── flappy-bird/         # Tap-to-flap, dodge pipes (kids don't enjoy this style either)
 ```
@@ -58,6 +63,11 @@ Use this table instead of re-scanning each folder.
 | unicorn-storyteller | Story | Pick word tiles to build sentences; unicorn acts | tap | DOM |
 | hard/flappy-bird | Flappy | Tap to flap, dodge pipes | tap | canvas 2D |
 | hotair-balloon | Literacy | Hold to rise and tap letter balloons in order to spell sight words | hold/tap | canvas 2D | **hidden from home page** |
+| pattern-party | Patterns | Match and extend color/shape sequences | tap | canvas 2D |
+| seahorse-game | Ocean | Bubble-popping underwater adventure | tap | canvas 2D |
+| excavator-game | Construction | Rotate arm to dig dirt and dump in trucks | tap/drag | canvas 2D |
+| letter-chef | Spelling | Drag letters onto conveyor belt to spell words | drag | canvas 2D |
+| airplane-sight-word | Literacy | Tap matching airplane carrying Dolch sight words; skywriting reward; repair shop puzzle every 10 words | tap/drag | canvas 2D |
 
 Each `.game-card` on the home page carries a `data-lb="<slug>-leaderboard"` attribute; the home-page script reads it to render the card's top-3 entries inline.
 
@@ -263,7 +273,30 @@ The `data-lb` must match the game's `LB_KEY`. The home page auto-renders the top
 }
 ```
 
-### 5. Optional: mode toggles
+### 5. Register in the stats page
+
+**`stats/stats.js`** — add an entry to the `GAMES` array near the top:
+
+```js
+{ slug: "<slug>", name: "<Game Name>", emoji: "🎮" },
+```
+
+### 6. Register in the convention tests
+
+**`tests/conventions/games-list.js`** — add an entry to the `games` array:
+
+```js
+{ slug: "<slug>", lbKey: "<slug>-leaderboard", hasLeaderboard: true },
+```
+
+Use `hasLeaderboard: false` if the game doesn't use a leaderboard. Use `hidden: true` if it isn't linked from the home page.
+
+### 7. Update CLAUDE.md and README.md
+
+- **`CLAUDE.md`** — add the game folder to the folder tree and a row to the "Existing games at a glance" table.
+- **`README.md`** — add the game to the features list and the folder tree.
+
+### 8. Optional: mode toggles
 
 If the game has multiple modes (see `add-it-up` and `piano`), use pill-style toggles:
 

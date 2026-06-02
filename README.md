@@ -36,6 +36,10 @@ A small collection of browser-based mini-games built with vanilla HTML5 Canvas a
 ### Stories & Creativity
 - **Unicorn Storyteller** 🦄 — pick word tiles to build magical sentences and watch the unicorn act them out
 
+### Literacy
+- **Letter Chef** 👨‍🍳 — drag letters onto the conveyor belt to spell words
+- **Airplane Sight Words** ✈️ — tap the matching airplane to catch Dolch sight words; earn skywriting rewards and fix the plane in the repair shop
+
 ### Bonus (Hidden)
 - **Hot Air Balloon** 🎈 — hold to rise and tap letter balloons in order to spell sight words (hidden from home page)
 
@@ -67,6 +71,8 @@ A small collection of browser-based mini-games built with vanilla HTML5 Canvas a
 ├── unicorn-storyteller/
 ├── seahorse-game/
 ├── excavator-game/
+├── letter-chef/
+├── airplane-sight-word/
 ├── hotair-balloon/               # (hidden from home page)
 └── hard/                         # Sub-gateway for harder games
     └── flappy-bird/              # (hidden from home page)
