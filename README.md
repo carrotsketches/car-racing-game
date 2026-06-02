@@ -82,7 +82,7 @@ A small collection of browser-based mini-games built with vanilla HTML5 Canvas a
 ## Features
 
 - **Leaderboards**: Each game tracks the top 20 scores per device (stored in localStorage)
-- **Play Tracking**: Stats page shows most-played games and most-active players
+- **Play Tracking**: Stats page shows most-played games and most-active players — each game records a play on page load via `shared/play-tracker.js`
 - **Persistent Names**: Player names are saved across games
 - **Mobile-Friendly**: Touch controls and responsive design on all devices
 - **No Build Step**: Just open `index.html` in a browser — everything runs vanilla JS
